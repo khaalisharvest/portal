@@ -8,7 +8,12 @@
 const requiredEnvVars = {
   DATABASE_URL: process.env.DATABASE_URL,
   JWT_SECRET: process.env.JWT_SECRET,
+  JWT_EXPIRES_IN: process.env.JWT_EXPIRES_IN,
+  PORT: process.env.PORT,
+  NODE_ENV: process.env.NODE_ENV,
   FRONTEND_URL: process.env.FRONTEND_URL,
+  ADMIN_URL: process.env.ADMIN_URL,
+  ALLOWED_ORIGINS: process.env.ALLOWED_ORIGINS,
 };
 
 // Check for missing required environment variables
@@ -35,19 +40,16 @@ export const env = {
   
   // JWT
   JWT_SECRET: process.env.JWT_SECRET!,
-  JWT_EXPIRES_IN: process.env.JWT_EXPIRES_IN || '7d',
+  JWT_EXPIRES_IN: process.env.JWT_EXPIRES_IN!,
   
   // Server
-  PORT: parseInt(process.env.PORT || '3001', 10),
-  NODE_ENV: process.env.NODE_ENV || 'development',
+  PORT: parseInt(process.env.PORT!, 10),
+  NODE_ENV: process.env.NODE_ENV!,
   
   // URLs
   FRONTEND_URL: process.env.FRONTEND_URL!,
-  ADMIN_URL: process.env.ADMIN_URL || process.env.FRONTEND_URL!,
-  ALLOWED_ORIGINS: process.env.ALLOWED_ORIGINS?.split(',') || [
-    process.env.FRONTEND_URL!,
-    process.env.ADMIN_URL || process.env.FRONTEND_URL!
-  ],
+  ADMIN_URL: process.env.ADMIN_URL!,
+  ALLOWED_ORIGINS: process.env.ALLOWED_ORIGINS!.split(','),
   
   // Environment flags
   IS_PRODUCTION: process.env.NODE_ENV === 'production',

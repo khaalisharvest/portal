@@ -11,7 +11,7 @@
    DB_PORT=5432
    DB_USERNAME=postgres
    DB_PASSWORD=password
-   DB_NAME=livestock_ecosystem
+   DB_NAME=khaalis_harvest
    
    # Redis
    REDIS_HOST=localhost
@@ -31,7 +31,7 @@
    NEXT_PUBLIC_API_URL=http://localhost:3000/api/v1
    
    # App
-   NEXT_PUBLIC_APP_NAME=Livestock Ecosystem
+   NEXT_PUBLIC_APP_NAME=Khaalis Harvest
    ```
 
 2. **Start the applications:**

@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(data);
   } catch (error) {
     return NextResponse.json(
-      { error: 'Failed to fetch fruits' },
+      { error: 'Failed to fetch products' },
       { status: 500 }
     );
   }
@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(data);
   } catch (error) {
     return NextResponse.json(
-      { error: 'Failed to create fruit' },
+      { error: 'Failed to create product' },
       { status: 500 }
     );
   }

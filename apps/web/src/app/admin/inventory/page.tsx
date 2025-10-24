@@ -11,7 +11,7 @@ export default function AdminInventoryPage() {
         <div className="space-y-6">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Inventory Management</h1>
-            <p className="text-gray-600">Track and manage your fruit inventory levels</p>
+            <p className="text-gray-600">Track and manage your organic product inventory levels</p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">

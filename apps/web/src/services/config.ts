@@ -93,7 +93,7 @@ class ConfigService {
         maxSearchResults: 1000,
         
         // App Info
-        appName: 'Nature Mandi',
+        appName: 'Khaalis Harvest',
         appDescription: 'Fresh organic products marketplace'
       };
     } catch (error) {

@@ -20,7 +20,8 @@ import { ProductTypesModule } from './modules/product-types/product-types.module
 import { OrdersModule } from './modules/orders/orders.module';
 import { SettingsModule } from './modules/settings/settings.module';
 import { HealthModule } from './health/health.module';
-import { SeederModule } from './seeders/seeder.module';
+import { SeederService } from './seeders/seeder.service';
+import { User } from './modules/users/entities/user.entity';
 
 @Module({
   imports: [
@@ -34,21 +35,24 @@ import { SeederModule } from './seeders/seeder.module';
     TypeOrmModule.forRootAsync({
       useClass: DatabaseConfig,
     }),
+    
+    // User entity for seeding
+    TypeOrmModule.forFeature([User]),
 
-    // Cache
-    CacheModule.registerAsync({
-      useClass: RedisConfig,
-      isGlobal: true,
-    }),
+    // Cache - Temporarily disabled for Docker
+    // CacheModule.registerAsync({
+    //   useClass: RedisConfig,
+    //   isGlobal: true,
+    // }),
 
-    // Queue
-    BullModule.forRoot({
-      redis: {
-        host: process.env.REDIS_HOST || 'localhost',
-        port: parseInt(process.env.REDIS_PORT) || 6379,
-        password: process.env.REDIS_PASSWORD,
-      },
-    }),
+    // Queue - Temporarily disabled for Docker
+    // BullModule.forRoot({
+    //   redis: {
+    //     host: process.env.REDIS_HOST || 'redis',
+    //     port: parseInt(process.env.REDIS_PORT) || 6379,
+    //     password: process.env.REDIS_PASSWORD,
+    //   },
+    // }),
 
     // Scheduler
     ScheduleModule.forRoot(),
@@ -66,7 +70,7 @@ import { SeederModule } from './seeders/seeder.module';
     ProductTypesModule,
     OrdersModule,
     SettingsModule,
-    SeederModule,
   ],
+  providers: [SeederService],
 })
 export class AppModule {}

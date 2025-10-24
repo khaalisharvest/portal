@@ -1,13 +1,27 @@
 {
   "$schema": "https://railway.app/railway.schema.json",
   "build": {
-    "builder": "NIXPACKS"
+    "builder": "DOCKERFILE",
+    "dockerfilePath": "Dockerfile",
+    "buildArgs": {
+      "NODE_ENV": "production"
+    }
   },
   "deploy": {
-    "startCommand": "yarn start:prod",
+    "startCommand": "/app/start.sh",
     "healthcheckPath": "/api/v1/health",
-    "healthcheckTimeout": 100,
+    "healthcheckTimeout": 30,
     "restartPolicyType": "ON_FAILURE",
-    "restartPolicyMaxRetries": 10
+    "restartPolicyMaxRetries": 5,
+    "numReplicas": 1
+  },
+  "environments": {
+    "production": {
+      "variables": {
+        "NODE_ENV": "production",
+        "PORT": "3000",
+        "FRONTEND_PORT": "3001"
+      }
+    }
   }
 }

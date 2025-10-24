@@ -1,7 +1,7 @@
 {
-  "name": "fruit-mandi-platform",
+  "name": "khaalis-harvest-platform",
   "version": "1.0.0",
-  "description": "Pakistan's premier online fruit market platform - تازہ پھل، بہترین قیمت، گھر تک ڈیلیوری",
+  "description": "Pakistan's premier organic marketplace - Khaalis Harvest - تازہ، خالص، قدرتی مصنوعات",
   "private": true,
   "workspaces": [
     "apps/*",

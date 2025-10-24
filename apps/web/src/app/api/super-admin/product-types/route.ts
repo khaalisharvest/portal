@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-// Mock data for fruit types
+// Mock data for product types
 const mockProductTypes = [
   {
     id: '1',

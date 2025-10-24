@@ -79,7 +79,7 @@ export const getBackgroundOverlay = (type: string) => {
       return <div className="absolute inset-0 bg-gradient-to-r from-black/40 via-black/30 to-black/40"></div>;
     case 'products':
       return <div className="absolute inset-0 bg-gradient-to-b from-white/90 via-white/80 to-white/90"></div>;
-    case 'fruits': // Keep for backward compatibility
+    case 'organic_products': // Updated for organic products
       return <div className="absolute inset-0 bg-gradient-to-b from-white/90 via-white/80 to-white/90"></div>;
     case 'home':
       return <div className="absolute inset-0 bg-gradient-to-b from-white/90 via-white/80 to-white/90"></div>;
@@ -100,7 +100,7 @@ export const BackgroundOverlays = {
   contact: 'contact',
   about: 'about',
   products: 'products',
-  fruits: 'fruits', // Keep for backward compatibility
+  organic_products: 'organic_products', // Updated for organic products
   home: 'home',
   subtle: 'subtle',
   dark: 'dark',

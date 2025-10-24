@@ -423,7 +423,7 @@ export default function OrderDetailsPage() {
                   </button>
 
                   <button
-                    onClick={() => router.push('/fruits')}
+                    onClick={() => router.push('/products')}
                     className="w-full bg-gradient-to-r from-orange-500 to-green-500 text-white py-2 px-3 sm:px-4 rounded-lg hover:from-orange-600 hover:to-green-600 transition-all duration-200 flex items-center justify-center space-x-2 text-xs sm:text-sm"
                   >
                     <Icon name="plus" className="w-3 h-3 sm:w-4 sm:h-4" />

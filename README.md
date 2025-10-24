@@ -1,6 +1,6 @@
 # 🌿 Khaalis Harvest Platform
 
-Pakistan's premier online fruit market platform - تازہ پھل، بہترین قیمت، گھر تک ڈیلیوری۔ Connecting fruit lovers with the freshest fruits from orchards and farms.
+Pakistan's premier organic marketplace - تازہ، خالص، قدرتی مصنوعات۔ Connecting organic product lovers with the freshest, purest products from farms and suppliers.
 
 ## 🏗️ Architecture
 

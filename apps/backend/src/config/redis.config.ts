@@ -10,10 +10,10 @@ export class RedisConfig implements CacheOptionsFactory {
   createCacheOptions(): CacheModuleOptions {
     return {
       store: redisStore as any,
-      host: this.configService.get('REDIS_HOST', 'localhost'),
-      port: this.configService.get('REDIS_PORT', 6379),
+      host: this.configService.get('REDIS_HOST')!,
+      port: this.configService.get('REDIS_PORT')!,
       password: this.configService.get('REDIS_PASSWORD'),
-      ttl: 300, // 5 minutes default TTL
+      ttl: parseInt(this.configService.get('REDIS_TTL') || '300'),
     };
   }
 }

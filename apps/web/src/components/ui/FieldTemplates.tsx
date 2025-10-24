@@ -3,8 +3,8 @@
 import { DynamicFieldConfig } from './DynamicField';
 
 export const NATURAL_PRODUCT_FIELD_TEMPLATES: Record<string, DynamicFieldConfig[]> = {
-  // Fruits
-  'fruits': [
+  // Organic Products
+  'organic_products': [
     {
       id: 'variety',
       name: 'variety',
@@ -12,7 +12,7 @@ export const NATURAL_PRODUCT_FIELD_TEMPLATES: Record<string, DynamicFieldConfig[
       type: 'text',
       required: true,
       placeholder: 'e.g., Red Delicious, Granny Smith',
-      description: 'The specific variety of the fruit',
+      description: 'The specific variety of the product',
       category: 'Basic Information'
     },
     {

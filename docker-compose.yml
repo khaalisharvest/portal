@@ -1,83 +1,99 @@
-version: '3.8'
-
 services:
   # PostgreSQL Database
   postgres:
     image: postgres:15-alpine
-    container_name: livestock-postgres
+    container_name: khaalis-postgres
     environment:
-      POSTGRES_DB: livestock_ecosystem
+      POSTGRES_DB: khaalis_harvest
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: password
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
-      - livestock-network
+      - khaalis-network
+    restart: unless-stopped
 
   # Redis Cache
   redis:
     image: redis:7-alpine
-    container_name: livestock-redis
+    container_name: khaalis-redis
     ports:
       - "6379:6379"
     volumes:
       - redis_data:/data
     networks:
-      - livestock-network
+      - khaalis-network
+    restart: unless-stopped
 
-  # Backend API
-  backend:
+  # Complete Application (Backend + Frontend)
+  app:
     build:
-      context: ./apps/backend
+      context: .
       dockerfile: Dockerfile
-    container_name: livestock-backend
+    container_name: khaalis-app
+    env_file:
+      - .env
     environment:
+      # Application Configuration
       NODE_ENV: development
+      PORT: 3000
+      FRONTEND_PORT: 3001
+      
+      # Database Configuration
       DB_HOST: postgres
       DB_PORT: 5432
       DB_USERNAME: postgres
       DB_PASSWORD: password
-      DB_NAME: livestock_ecosystem
+      DB_NAME: khaalis_harvest
+      DATABASE_URL: postgresql://postgres:password@postgres:5432/khaalis_harvest
+      
+      # Redis Configuration
       REDIS_HOST: redis
       REDIS_PORT: 6379
-      JWT_SECRET: your-super-secret-jwt-key
-      PORT: 3000
+      REDIS_PASSWORD: ""
+      
+      # JWT Configuration
+      JWT_SECRET: your-super-secret-jwt-key-for-fruit-mandi-2024
+      JWT_EXPIRES_IN: 7d
+      
+      # API Configuration
+      NEXT_PUBLIC_API_URL: http://localhost:3000/api/v1
+      NEXT_PUBLIC_APP_URL: http://localhost:3001
+      BACKEND_URL: http://localhost:3000
+      FRONTEND_URL: http://localhost:3001
+      
+      # CORS Configuration
+      ALLOWED_ORIGINS: http://localhost:3000,http://localhost:3001,http://localhost:3002
+      
+      # App Configuration
+      NEXT_PUBLIC_APP_NAME: Khaalis Harvest
+      
+      # Admin Configuration
+      NEXT_PUBLIC_ADMIN_WHATSAPP: +923204749700
+      SUPER_ADMIN_EMAIL: admin@khaalisharvest.pk
+      SUPER_ADMIN_PHONE: +923204749700
+      
+      # Bank Configuration
+      NEXT_PUBLIC_BANK_NAME: Allied Bank Limited
+      NEXT_PUBLIC_BANK_ACCOUNT_NAME: Khaalis Harvest
+      NEXT_PUBLIC_BANK_ACCOUNT_NUMBER: 1234567890123456
+      NEXT_PUBLIC_BANK_IBAN: PK36ABPA0000001234567890123456
     ports:
-      - "3000:3000"
+      - "3001:3001"  # Backend API
+      - "3000:3000"  # Frontend Web App
     depends_on:
       - postgres
       - redis
-    volumes:
-      - ./apps/backend:/app
-      - /app/node_modules
     networks:
-      - livestock-network
-
-  # Web Application
-  web:
-    build:
-      context: ./apps/web
-      dockerfile: Dockerfile
-    container_name: livestock-web
-    environment:
-      NODE_ENV: development
-      API_BASE_URL: http://localhost:3000/api/v1
-    ports:
-      - "3001:3000"
-    depends_on:
-      - backend
-    volumes:
-      - ./apps/web:/app
-      - /app/node_modules
-    networks:
-      - livestock-network
+      - khaalis-network
+    restart: unless-stopped
 
 volumes:
   postgres_data:
   redis_data:
 
 networks:
-  livestock-network:
+  khaalis-network:
     driver: bridge

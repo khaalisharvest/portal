@@ -55,7 +55,7 @@ export default function FeaturedProducts() {
   });
 
   useEffect(() => {
-    fetchFeaturedFruits();
+    fetchFeaturedProducts();
     fetchCategories();
     fetchProductTypes();
   }, []);
@@ -65,7 +65,7 @@ export default function FeaturedProducts() {
   }, [categoryDropdown.value, typeDropdown.value, allProducts]);
 
 
-  const fetchFeaturedFruits = async () => {
+  const fetchFeaturedProducts = async () => {
     try {
       const response = await fetch(`${API_URL}/products`);
       const data = await response.json();
@@ -121,16 +121,16 @@ export default function FeaturedProducts() {
     
     // Filter by categories (multi-select)
     if (selectedCategories.length > 0) {
-      filtered = filtered.filter(fruit => selectedCategories.includes(fruit.categoryId));
+      filtered = filtered.filter(product => selectedCategories.includes(product.categoryId));
     }
     
     // Filter by product types (multi-select)
     if (selectedTypes.length > 0) {
-      filtered = filtered.filter(fruit => {
+      filtered = filtered.filter(product => {
         return selectedTypes.some(type => {
-          if (type === 'fresh') return fruit.isFresh;
-          if (type === 'organic') return fruit.isOrganic;
-          if (type === 'premium') return fruit.specifications?.quality === 'Premium' || fruit.specifications?.quality === 'premium';
+          if (type === 'fresh') return product.isFresh;
+          if (type === 'organic') return product.isOrganic;
+          if (type === 'premium') return product.specifications?.quality === 'Premium' || product.specifications?.quality === 'premium';
           return false;
         });
       });

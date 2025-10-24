@@ -87,22 +87,32 @@ export class SettingsService {
    * Set setting value
    */
   async setSetting(key: string, value: any): Promise<void> {
-    const setting = await this.settingsRepository.findOne({
+    let setting = await this.settingsRepository.findOne({
       where: { key }
     });
 
     if (!setting) {
-      throw new Error(`Setting '${key}' not found`);
+      // Create new setting if it doesn't exist
+      const newSetting = new Setting();
+      newSetting.key = key;
+      newSetting.name = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+      newSetting.value = this.serializeSettingValue(SettingType.STRING, value);
+      newSetting.type = SettingType.STRING;
+      newSetting.category = SettingCategory.DELIVERY;
+      newSetting.isActive = true;
+      newSetting.isRequired = false;
+      
+      await this.settingsRepository.save(newSetting);
+    } else {
+      // Validate value for existing setting
+      this.validateSettingValue(setting, value);
+
+      // Update existing setting
+      await this.settingsRepository.update(
+        { key },
+        { value: this.serializeSettingValue(setting.type, value) }
+      );
     }
-
-    // Validate value
-    this.validateSettingValue(setting, value);
-
-    // Update setting
-    await this.settingsRepository.update(
-      { key },
-      { value: this.serializeSettingValue(setting.type, value) }
-    );
 
     // Clear cache
     this.settingsCache.delete(key);
@@ -151,23 +161,28 @@ export class SettingsService {
    * Get delivery settings
    */
   async getDeliverySettings(): Promise<{
-    isDeliveryEnabled: boolean;
-    deliveryFee: number;
-    freeDeliveryThreshold: number;
+    isDeliveryEnabled: boolean | null;
+    deliveryFee: number | null;
+    freeDeliveryThreshold: number | null;
   }> {
-    const isDeliveryEnabled = await this.getSetting('delivery_enabled');
-    const deliveryFee = await this.getSetting('delivery_fee');
-    const freeDeliveryThreshold = await this.getSetting('free_delivery_threshold');
+    try {
+      const isDeliveryEnabled = await this.getSetting('delivery_enabled');
+      const deliveryFee = await this.getSetting('delivery_fee');
+      const freeDeliveryThreshold = await this.getSetting('free_delivery_threshold');
 
-    if (!isDeliveryEnabled || !deliveryFee || !freeDeliveryThreshold) {
-      throw new Error('Delivery settings not configured');
+      return {
+        isDeliveryEnabled: isDeliveryEnabled === 'true',
+        deliveryFee: parseFloat(deliveryFee),
+        freeDeliveryThreshold: parseFloat(freeDeliveryThreshold)
+      };
+    } catch (error) {
+      // If settings don't exist, return null values so user can see empty form
+      return {
+        isDeliveryEnabled: null,
+        deliveryFee: null,
+        freeDeliveryThreshold: null
+      };
     }
-
-    return {
-      isDeliveryEnabled: isDeliveryEnabled === 'true',
-      deliveryFee: parseFloat(deliveryFee),
-      freeDeliveryThreshold: parseFloat(freeDeliveryThreshold)
-    };
   }
 
   /**
