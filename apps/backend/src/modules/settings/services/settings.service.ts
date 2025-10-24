@@ -1,0 +1,462 @@
+import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { Setting, SettingType, SettingCategory } from '../entities/setting.entity';
+
+@Injectable()
+export class SettingsService {
+  private settingsCache: Map<string, any> = new Map();
+  private cacheExpiry: Map<string, number> = new Map();
+  private readonly CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
+  constructor(
+    @InjectRepository(Setting)
+    private settingsRepository: Repository<Setting>
+  ) {}
+
+  /**
+   * Get setting value with caching
+   */
+  async getSetting(key: string, defaultValue?: any): Promise<any> {
+    // Check cache first
+    if (this.settingsCache.has(key)) {
+      const expiry = this.cacheExpiry.get(key);
+      if (expiry && Date.now() < expiry) {
+        return this.settingsCache.get(key);
+      }
+    }
+
+    // Fetch from database
+    const setting = await this.settingsRepository.findOne({
+      where: { key, isActive: true }
+    });
+
+    if (!setting) {
+      if (defaultValue !== undefined) {
+        return defaultValue;
+      }
+      throw new Error(`Setting '${key}' not found`);
+    }
+
+    // Parse value based on type
+    const value = this.parseSettingValue(setting);
+    
+    // Cache the value
+    this.settingsCache.set(key, value);
+    this.cacheExpiry.set(key, Date.now() + this.CACHE_DURATION);
+
+    return value;
+  }
+
+  /**
+   * Get multiple settings at once
+   */
+  async getSettings(keys: string[]): Promise<Record<string, any>> {
+    const result: Record<string, any> = {};
+    
+    for (const key of keys) {
+      try {
+        result[key] = await this.getSetting(key);
+      } catch (error) {
+        // Skip missing settings
+        continue;
+      }
+    }
+
+    return result;
+  }
+
+  /**
+   * Get all settings by category
+   */
+  async getSettingsByCategory(category: SettingCategory): Promise<Record<string, any>> {
+    const settings = await this.settingsRepository.find({
+      where: { category, isActive: true },
+      order: { sortOrder: 'ASC' }
+    });
+
+    const result: Record<string, any> = {};
+    for (const setting of settings) {
+      result[setting.key] = this.parseSettingValue(setting);
+    }
+
+    return result;
+  }
+
+  /**
+   * Set setting value
+   */
+  async setSetting(key: string, value: any): Promise<void> {
+    const setting = await this.settingsRepository.findOne({
+      where: { key }
+    });
+
+    if (!setting) {
+      throw new Error(`Setting '${key}' not found`);
+    }
+
+    // Validate value
+    this.validateSettingValue(setting, value);
+
+    // Update setting
+    await this.settingsRepository.update(
+      { key },
+      { value: this.serializeSettingValue(setting.type, value) }
+    );
+
+    // Clear cache
+    this.settingsCache.delete(key);
+    this.cacheExpiry.delete(key);
+  }
+
+  /**
+   * Create new setting
+   */
+  async createSetting(data: {
+    key: string;
+    name: string;
+    description?: string;
+    value: any;
+    type: SettingType;
+    category: SettingCategory;
+    isRequired?: boolean;
+    validation?: any;
+    defaultValue?: any;
+    options?: any;
+    helpText?: string;
+    sortOrder?: number;
+    metadata?: Record<string, any>;
+  }): Promise<Setting> {
+    const setting = this.settingsRepository.create({
+      key: data.key,
+      name: data.name,
+      description: data.description,
+      value: this.serializeSettingValue(data.type, data.value),
+      type: data.type,
+      category: data.category,
+      isActive: true,
+      isRequired: false,
+      defaultValue: data.defaultValue ? this.serializeSettingValue(data.type, data.defaultValue) : null,
+      validation: data.validation ? JSON.stringify(data.validation) : null,
+      options: data.options ? JSON.stringify(data.options) : null,
+      helpText: data.helpText,
+      sortOrder: data.sortOrder ?? 0,
+      metadata: data.metadata || null
+    });
+
+    return this.settingsRepository.save(setting);
+  }
+
+  /**
+   * Get delivery settings
+   */
+  async getDeliverySettings(): Promise<{
+    isDeliveryEnabled: boolean;
+    deliveryFee: number;
+    freeDeliveryThreshold: number;
+  }> {
+    const isDeliveryEnabled = await this.getSetting('delivery_enabled');
+    const deliveryFee = await this.getSetting('delivery_fee');
+    const freeDeliveryThreshold = await this.getSetting('free_delivery_threshold');
+
+    if (!isDeliveryEnabled || !deliveryFee || !freeDeliveryThreshold) {
+      throw new Error('Delivery settings not configured');
+    }
+
+    return {
+      isDeliveryEnabled: isDeliveryEnabled === 'true',
+      deliveryFee: parseFloat(deliveryFee),
+      freeDeliveryThreshold: parseFloat(freeDeliveryThreshold)
+    };
+  }
+
+  /**
+   * Get all settings
+   */
+  async getAllSettings(): Promise<Record<string, any>> {
+    const settings = await this.settingsRepository.find({
+      where: { isActive: true },
+      order: { category: 'ASC', sortOrder: 'ASC' }
+    });
+
+    const result: Record<string, any> = {};
+    for (const setting of settings) {
+      result[setting.key] = this.parseSettingValue(setting);
+    }
+
+    return result;
+  }
+
+  /**
+   * Clear settings cache
+   */
+  clearCache(): void {
+    this.settingsCache.clear();
+    this.cacheExpiry.clear();
+  }
+
+  /**
+   * Parse setting value based on type
+   */
+  private parseSettingValue(setting: Setting): any {
+    switch (setting.type) {
+      case SettingType.STRING:
+        return setting.value;
+      case SettingType.NUMBER:
+        return parseFloat(setting.value);
+      case SettingType.BOOLEAN:
+        return setting.value === 'true';
+      case SettingType.JSON:
+        return JSON.parse(setting.value);
+      case SettingType.ARRAY:
+        return JSON.parse(setting.value);
+      default:
+        return setting.value;
+    }
+  }
+
+  /**
+   * Serialize setting value based on type
+   */
+  private serializeSettingValue(type: SettingType, value: any): string {
+    switch (type) {
+      case SettingType.STRING:
+        return String(value);
+      case SettingType.NUMBER:
+        return String(Number(value));
+      case SettingType.BOOLEAN:
+        return String(Boolean(value));
+      case SettingType.JSON:
+        return JSON.stringify(value);
+      case SettingType.ARRAY:
+        return JSON.stringify(value);
+      default:
+        return String(value);
+    }
+  }
+
+  /**
+   * Validate setting value
+   */
+  private validateSettingValue(setting: Setting, value: any): void {
+    if (setting.validation) {
+      const validation = JSON.parse(setting.validation);
+      
+      if (validation.min !== undefined && value < validation.min) {
+        throw new Error(`Value must be at least ${validation.min}`);
+      }
+      
+      if (validation.max !== undefined && value > validation.max) {
+        throw new Error(`Value must be at most ${validation.max}`);
+      }
+      
+      if (validation.pattern && !new RegExp(validation.pattern).test(String(value))) {
+        throw new Error(`Value does not match required pattern`);
+      }
+      
+      if (validation.options && !validation.options.includes(value)) {
+        throw new Error(`Value must be one of: ${validation.options.join(', ')}`);
+      }
+    }
+  }
+
+  /**
+   * Initialize default settings
+   */
+  async initializeDefaultSettings(): Promise<void> {
+    const defaultSettings = [
+      // General Settings
+      {
+        key: 'app_name',
+        name: 'Application Name',
+        description: 'Name of the application',
+        value: 'Khaalis Harvest',
+        type: SettingType.STRING,
+        category: SettingCategory.GENERAL,
+        isRequired: true,
+        sortOrder: 1
+      },
+      {
+        key: 'app_description',
+        name: 'Application Description',
+        description: 'Description of the application',
+        value: 'Fresh organic products marketplace',
+        type: SettingType.STRING,
+        category: SettingCategory.GENERAL,
+        sortOrder: 2
+      },
+
+      // Inventory Settings
+      {
+        key: 'default_pagination_limit',
+        name: 'Default Pagination Limit',
+        description: 'Default number of items per page',
+        value: 20,
+        type: SettingType.NUMBER,
+        category: SettingCategory.INVENTORY,
+        validation: { min: 1, max: 100 },
+        sortOrder: 1
+      },
+      {
+        key: 'max_pagination_limit',
+        name: 'Maximum Pagination Limit',
+        description: 'Maximum number of items per page',
+        value: 100,
+        type: SettingType.NUMBER,
+        category: SettingCategory.INVENTORY,
+        validation: { min: 1, max: 1000 },
+        sortOrder: 2
+      },
+      {
+        key: 'low_stock_threshold',
+        name: 'Low Stock Threshold',
+        description: 'Threshold for low stock alerts',
+        value: 10,
+        type: SettingType.NUMBER,
+        category: SettingCategory.INVENTORY,
+        validation: { min: 0, max: 1000 },
+        sortOrder: 3
+      },
+      {
+        key: 'default_marketplace_min_quantity',
+        name: 'Default Marketplace Minimum Quantity',
+        description: 'Default minimum order quantity for marketplace products',
+        value: 1,
+        type: SettingType.NUMBER,
+        category: SettingCategory.INVENTORY,
+        validation: { min: 1, max: 1000 },
+        sortOrder: 4
+      },
+      {
+        key: 'default_marketplace_max_quantity',
+        name: 'Default Marketplace Maximum Quantity',
+        description: 'Default maximum order quantity for marketplace products',
+        value: 999999,
+        type: SettingType.NUMBER,
+        category: SettingCategory.INVENTORY,
+        validation: { min: 1, max: 9999999 },
+        sortOrder: 5
+      },
+
+      // Order Settings
+      {
+        key: 'min_order_amount',
+        name: 'Minimum Order Amount',
+        description: 'Minimum order amount in PKR',
+        value: 500,
+        type: SettingType.NUMBER,
+        category: SettingCategory.ORDERS,
+        validation: { min: 0, max: 100000 },
+        sortOrder: 1
+      },
+      {
+        key: 'max_order_amount',
+        name: 'Maximum Order Amount',
+        description: 'Maximum order amount in PKR',
+        value: 50000,
+        type: SettingType.NUMBER,
+        category: SettingCategory.ORDERS,
+        validation: { min: 0, max: 1000000 },
+        sortOrder: 2
+      },
+
+      // Delivery Settings
+      {
+        key: 'delivery_fee',
+        name: 'Delivery Fee',
+        description: 'Standard delivery fee in PKR',
+        value: 150,
+        type: SettingType.NUMBER,
+        category: SettingCategory.DELIVERY,
+        validation: { min: 0, max: 10000 },
+        sortOrder: 1
+      },
+      {
+        key: 'free_delivery_threshold',
+        name: 'Free Delivery Threshold',
+        description: 'Minimum order amount for free delivery in PKR',
+        value: 2000,
+        type: SettingType.NUMBER,
+        category: SettingCategory.DELIVERY,
+        validation: { min: 0, max: 100000 },
+        sortOrder: 2
+      },
+      {
+        key: 'is_delivery_enabled',
+        name: 'Delivery Enabled',
+        description: 'Whether delivery service is enabled',
+        value: true,
+        type: SettingType.BOOLEAN,
+        category: SettingCategory.DELIVERY,
+        sortOrder: 3
+      },
+
+      // UI Settings
+      {
+        key: 'default_currency',
+        name: 'Default Currency',
+        description: 'Default currency code',
+        value: 'PKR',
+        type: SettingType.STRING,
+        category: SettingCategory.UI,
+        options: ['PKR', 'USD', 'EUR', 'GBP'],
+        sortOrder: 1
+      },
+      {
+        key: 'default_language',
+        name: 'Default Language',
+        description: 'Default language code',
+        value: 'en',
+        type: SettingType.STRING,
+        category: SettingCategory.UI,
+        options: ['en', 'ur', 'ar'],
+        sortOrder: 2
+      },
+
+      // Performance Settings
+      {
+        key: 'cache_duration',
+        name: 'Cache Duration',
+        description: 'Cache duration in milliseconds',
+        value: 300000,
+        type: SettingType.NUMBER,
+        category: SettingCategory.PERFORMANCE,
+        validation: { min: 60000, max: 3600000 },
+        sortOrder: 1
+      },
+      {
+        key: 'max_search_results',
+        name: 'Maximum Search Results',
+        description: 'Maximum number of search results to return',
+        value: 1000,
+        type: SettingType.NUMBER,
+        category: SettingCategory.PERFORMANCE,
+        validation: { min: 10, max: 10000 },
+        sortOrder: 2
+      }
+    ];
+
+    for (const settingData of defaultSettings) {
+      const existing = await this.settingsRepository.findOne({
+        where: { key: settingData.key }
+      });
+
+      if (!existing) {
+        await this.createSetting(settingData);
+      }
+    }
+  }
+
+  /**
+   * Update delivery settings
+   */
+  async updateDeliverySettings(data: {
+    deliveryFee: number;
+    freeDeliveryThreshold: number;
+    isDeliveryEnabled: boolean;
+  }): Promise<void> {
+    await this.setSetting('delivery_fee', data.deliveryFee);
+    await this.setSetting('free_delivery_threshold', data.freeDeliveryThreshold);
+    await this.setSetting('delivery_enabled', data.isDeliveryEnabled);
+  }
+}
