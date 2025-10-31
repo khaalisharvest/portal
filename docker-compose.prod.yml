@@ -1,0 +1,101 @@
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: khaalis-postgres
+    environment:
+      POSTGRES_DB: ${DB_NAME:-khaalis_harvest}
+      POSTGRES_USER: ${DB_USERNAME:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - khaalis-network
+    restart: unless-stopped
+    # Memory optimization for Azure B1s (1GB RAM)
+    command: postgres -c shared_buffers=128MB -c effective_cache_size=256MB -c max_connections=50
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: khaalis-redis
+    volumes:
+      - redis_data:/data
+    networks:
+      - khaalis-network
+    restart: unless-stopped
+    # Memory optimization - limit Redis to 128MB
+    command: redis-server --maxmemory 128mb --maxmemory-policy allkeys-lru
+
+  # Complete Application (Backend + Frontend)
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: khaalis-app
+    env_file:
+      - .env
+    environment:
+      # Application Configuration (from .env)
+      NODE_ENV: ${NODE_ENV:-production}
+      PORT: ${PORT:-3000}
+      FRONTEND_PORT: ${FRONTEND_PORT:-3001}
+      
+      # Database Configuration (from .env)
+      DB_HOST: ${DB_HOST:-postgres}
+      DB_PORT: ${DB_PORT:-5432}
+      DB_USERNAME: ${DB_USERNAME:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: ${DB_NAME:-khaalis_harvest}
+      DATABASE_URL: ${DATABASE_URL}
+      
+      # Redis Configuration (from .env)
+      REDIS_HOST: ${REDIS_HOST:-redis}
+      REDIS_PORT: ${REDIS_PORT:-6379}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+      
+      # JWT Configuration (from .env)
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
+      
+      # API Configuration (from .env)
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
+      NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL}
+      BACKEND_URL: ${BACKEND_URL}
+      FRONTEND_URL: ${FRONTEND_URL}
+      ADMIN_URL: ${ADMIN_URL}
+      
+      # CORS Configuration (from .env)
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS}
+      
+      # App Configuration (from .env)
+      NEXT_PUBLIC_APP_NAME: ${NEXT_PUBLIC_APP_NAME:-Khaalis Harvest}
+      
+      # Admin Configuration (from .env)
+      NEXT_PUBLIC_ADMIN_WHATSAPP: ${NEXT_PUBLIC_ADMIN_WHATSAPP}
+      SUPER_ADMIN_EMAIL: ${SUPER_ADMIN_EMAIL}
+      SUPER_ADMIN_PHONE: ${SUPER_ADMIN_PHONE}
+      
+      # Bank Configuration (from .env)
+      NEXT_PUBLIC_BANK_NAME: ${NEXT_PUBLIC_BANK_NAME}
+      NEXT_PUBLIC_BANK_ACCOUNT_NAME: ${NEXT_PUBLIC_BANK_ACCOUNT_NAME}
+      NEXT_PUBLIC_BANK_ACCOUNT_NUMBER: ${NEXT_PUBLIC_BANK_ACCOUNT_NUMBER}
+      NEXT_PUBLIC_BANK_IBAN: ${NEXT_PUBLIC_BANK_IBAN}
+    ports:
+      - "3000:3000"  # Backend API
+      - "3001:3001"  # Frontend Web App
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - khaalis-network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  khaalis-network:
+    driver: bridge
+
