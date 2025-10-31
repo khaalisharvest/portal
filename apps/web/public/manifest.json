@@ -1,0 +1,18 @@
+{
+  "name": "Khaalis Harvest - Pure Organic Products",
+  "short_name": "Khaalis Harvest",
+  "description": "Pakistan's premier organic marketplace. Pure, unadulterated products delivered to your door.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#4B8B3B",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/images/favicon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

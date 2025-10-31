@@ -38,6 +38,10 @@ RUN cd apps/web && \
 # Verify public directory exists (required for static assets)
 RUN ls -la apps/web/public/images/ || echo "Warning: public/images directory missing"
 
+# Ensure public directory is preserved (Next.js needs it at runtime)
+# Next.js automatically serves public folder, but we need to verify it exists
+RUN test -d apps/web/public && echo "✅ Public directory found" || echo "❌ Public directory missing"
+
 # Create startup script with optimized memory settings
 RUN echo '#!/bin/sh' > /app/start.sh && \
     echo 'set -e' >> /app/start.sh && \
