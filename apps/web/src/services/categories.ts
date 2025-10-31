@@ -1,4 +1,5 @@
-import { API_BASE_URL } from '@/config/env';
+// Use relative URLs to go through Next.js API routes
+const API_BASE = '/api/v1';
 
 export interface Category {
   id: string;
@@ -22,9 +23,11 @@ export interface CreateCategoryDto {
 
 export const categoriesApi = {
   async getAll(): Promise<Category[]> {
-    const response = await fetch(`${API_BASE_URL}/categories`, {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('backend_token') : '';
+    
+    const response = await fetch(`${API_BASE}/categories`, {
       headers: {
-        'Authorization': `Bearer ${typeof window !== 'undefined' ? localStorage.getItem('backend_token') : ''}`,
+        ...(token && { 'Authorization': `Bearer ${token}` }),
       },
     });
     
@@ -37,11 +40,13 @@ export const categoriesApi = {
   },
 
   async create(category: CreateCategoryDto): Promise<Category> {
-    const response = await fetch(`${API_BASE_URL}/categories`, {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('backend_token') : '';
+    
+    const response = await fetch(`${API_BASE}/categories`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${typeof window !== 'undefined' ? localStorage.getItem('backend_token') : ''}`,
+        ...(token && { 'Authorization': `Bearer ${token}` }),
       },
       body: JSON.stringify(category),
     });
@@ -56,11 +61,13 @@ export const categoriesApi = {
   },
 
   async update(id: string, category: Partial<CreateCategoryDto>): Promise<Category> {
-    const response = await fetch(`${API_BASE_URL}/categories/${id}`, {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('backend_token') : '';
+    
+    const response = await fetch(`${API_BASE}/categories/${id}`, {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${typeof window !== 'undefined' ? localStorage.getItem('backend_token') : ''}`,
+        ...(token && { 'Authorization': `Bearer ${token}` }),
       },
       body: JSON.stringify(category),
     });
@@ -75,10 +82,12 @@ export const categoriesApi = {
   },
 
   async delete(id: string): Promise<void> {
-    const response = await fetch(`${API_BASE_URL}/categories/${id}`, {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('backend_token') : '';
+    
+    const response = await fetch(`${API_BASE}/categories/${id}`, {
       method: 'DELETE',
       headers: {
-        'Authorization': `Bearer ${typeof window !== 'undefined' ? localStorage.getItem('backend_token') : ''}`,
+        ...(token && { 'Authorization': `Bearer ${token}` }),
       },
     });
     

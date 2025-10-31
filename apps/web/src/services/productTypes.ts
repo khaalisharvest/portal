@@ -1,4 +1,5 @@
-import { API_BASE_URL } from '@/config/env';
+// Use relative URLs to go through Next.js API routes
+const API_BASE = '/api/v1';
 
 export interface ProductType {
   id: string;
@@ -105,7 +106,7 @@ export interface CreateProductTypeDto {
 
 export const productTypesApi = {
   async getAll(): Promise<ProductType[]> {
-    const response = await fetch(`${API_BASE_URL}/product-types`, {
+    const response = await fetch(`${API_BASE}/product-types`, {
       headers: {
         'Authorization': `Bearer ${typeof window !== 'undefined' ? localStorage.getItem('backend_token') : ''}`,
       },
@@ -120,7 +121,7 @@ export const productTypesApi = {
   },
 
   async create(productType: CreateProductTypeDto): Promise<ProductType> {
-    const response = await fetch(`${API_BASE_URL}/product-types`, {
+    const response = await fetch(`${API_BASE}/product-types`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -139,7 +140,7 @@ export const productTypesApi = {
   },
 
   async update(id: string, productType: Partial<CreateProductTypeDto>): Promise<ProductType> {
-    const response = await fetch(`${API_BASE_URL}/product-types/${id}`, {
+    const response = await fetch(`${API_BASE}/product-types/${id}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -158,7 +159,7 @@ export const productTypesApi = {
   },
 
   async delete(id: string): Promise<void> {
-    const response = await fetch(`${API_BASE_URL}/product-types/${id}`, {
+    const response = await fetch(`${API_BASE}/product-types/${id}`, {
       method: 'DELETE',
       headers: {
         'Authorization': `Bearer ${typeof window !== 'undefined' ? localStorage.getItem('backend_token') : ''}`,
