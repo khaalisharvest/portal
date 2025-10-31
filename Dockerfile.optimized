@@ -35,6 +35,9 @@ RUN cd apps/web && \
     NEXT_TELEMETRY_DISABLED=1 \
     yarn build
 
+# Verify public directory exists (required for static assets)
+RUN ls -la apps/web/public/images/ || echo "Warning: public/images directory missing"
+
 # Create startup script with optimized memory settings
 RUN echo '#!/bin/sh' > /app/start.sh && \
     echo 'set -e' >> /app/start.sh && \
