@@ -1,0 +1,89 @@
+# Khaalis Harvest Platform - Optimized Multi-Stage Build for Azure
+# This reduces build time and memory usage significantly
+
+# ============================================
+# Stage 1: Build Stage
+# ============================================
+FROM node:18-alpine AS builder
+
+# Install build dependencies
+RUN apk add --no-cache python3 make g++ wget
+
+# Set working directory
+WORKDIR /app
+
+# Copy package files first (for better layer caching)
+COPY package.json yarn.lock turbo.json ./
+COPY apps/backend/package.json ./apps/backend/
+COPY apps/web/package.json ./apps/web/
+COPY packages/shared/package.json ./packages/shared/
+
+# Install dependencies with memory limit
+RUN NODE_OPTIONS="--max-old-space-size=2048" yarn install --frozen-lockfile --network-timeout 600000
+
+# Copy source code
+COPY apps/backend ./apps/backend
+COPY apps/web ./apps/web
+COPY packages/shared ./packages/shared
+
+# Build backend with memory limit
+RUN cd apps/backend && NODE_OPTIONS="--max-old-space-size=1024" yarn build
+
+# Build frontend with memory limit and reduced workers
+RUN cd apps/web && \
+    NODE_OPTIONS="--max-old-space-size=2048" \
+    NEXT_TELEMETRY_DISABLED=1 \
+    yarn build
+
+# ============================================
+# Stage 2: Production Stage
+# ============================================
+FROM node:18-alpine AS production
+
+# Install runtime dependencies only
+RUN apk add --no-cache wget
+
+WORKDIR /app
+
+# Copy package files
+COPY package.json yarn.lock turbo.json ./
+COPY apps/backend/package.json ./apps/backend/
+COPY apps/web/package.json ./apps/web/
+COPY packages/shared/package.json ./packages/shared/
+
+# Install production dependencies only
+RUN yarn install --frozen-lockfile --production --network-timeout 600000
+
+# Copy built artifacts from builder stage
+COPY --from=builder /app/apps/backend/dist ./apps/backend/dist
+COPY --from=builder /app/apps/backend/package.json ./apps/backend/package.json
+COPY --from=builder /app/apps/web/.next ./apps/web/.next
+COPY --from=builder /app/apps/web/public ./apps/web/public
+COPY --from=builder /app/apps/web/package.json ./apps/web/package.json
+COPY --from=builder /app/apps/web/next.config.js ./apps/web/next.config.js
+COPY --from=builder /app/packages/shared ./packages/shared
+
+# Copy source files needed at runtime (if any)
+COPY apps/backend/src ./apps/backend/src
+COPY apps/web/src ./apps/web/src
+
+# Create startup script with optimized memory settings
+RUN echo '#!/bin/sh' > /app/start.sh && \
+    echo 'set -e' >> /app/start.sh && \
+    echo 'echo "🚀 Starting Khaalis Harvest Platform..."' >> /app/start.sh && \
+    echo 'cd /app/apps/backend && NODE_OPTIONS="--max-old-space-size=512" PORT=${PORT:-3000} yarn start:prod &' >> /app/start.sh && \
+    echo 'cd /app/apps/web && NODE_OPTIONS="--max-old-space-size=768" PORT=${FRONTEND_PORT:-3001} yarn start &' >> /app/start.sh && \
+    echo 'echo "✅ Both applications started"' >> /app/start.sh && \
+    echo 'wait' >> /app/start.sh && \
+    chmod +x /app/start.sh
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD wget --no-verbose --tries=1 --spider http://localhost:${PORT:-3000}/api/v1/health || exit 1
+
+# Expose ports
+EXPOSE 3000 3001
+
+# Start applications
+CMD ["/app/start.sh"]
+

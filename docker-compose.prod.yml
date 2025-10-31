@@ -31,7 +31,7 @@ services:
   app:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.optimized
     container_name: khaalis-app
     env_file:
       - .env
