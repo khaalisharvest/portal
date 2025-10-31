@@ -1,35 +1,37 @@
 # Khaalis Harvest Platform - Optimized Multi-Stage Build for Azure
-# This reduces build time and memory usage significantly
+# Optimized for B2als_v2 (2 vCPU, 4GB RAM) or larger VMs
 
 # ============================================
 # Stage 1: Build Stage
 # ============================================
 FROM node:18-alpine AS builder
 
-# Install build dependencies
-RUN apk add --no-cache python3 make g++ wget
+# Install build dependencies only
+RUN apk add --no-cache python3 make g++
 
-# Set working directory
 WORKDIR /app
 
-# Copy package files first (for better layer caching)
+# Copy package files first (better Docker layer caching)
 COPY package.json yarn.lock turbo.json ./
 COPY apps/backend/package.json ./apps/backend/
 COPY apps/web/package.json ./apps/web/
 COPY packages/shared/package.json ./packages/shared/
 
-# Install dependencies with memory limit
-RUN NODE_OPTIONS="--max-old-space-size=2048" yarn install --frozen-lockfile --network-timeout 600000
+# Install all dependencies (needed for building)
+RUN NODE_OPTIONS="--max-old-space-size=2048" \
+    yarn install --frozen-lockfile --network-timeout 600000
 
 # Copy source code
 COPY apps/backend ./apps/backend
 COPY apps/web ./apps/web
 COPY packages/shared ./packages/shared
 
-# Build backend with memory limit
-RUN cd apps/backend && NODE_OPTIONS="--max-old-space-size=1024" yarn build
+# Build backend (uses less memory)
+RUN cd apps/backend && \
+    NODE_OPTIONS="--max-old-space-size=1024" \
+    yarn build
 
-# Build frontend with memory limit and reduced workers
+# Build frontend (needs more memory for Next.js)
 RUN cd apps/web && \
     NODE_OPTIONS="--max-old-space-size=2048" \
     NEXT_TELEMETRY_DISABLED=1 \
@@ -51,23 +53,28 @@ COPY apps/backend/package.json ./apps/backend/
 COPY apps/web/package.json ./apps/web/
 COPY packages/shared/package.json ./packages/shared/
 
-# Install production dependencies only
+# Install production dependencies only (smaller image)
 RUN yarn install --frozen-lockfile --production --network-timeout 600000
 
-# Copy built artifacts from builder stage
+# Copy built backend artifacts
 COPY --from=builder /app/apps/backend/dist ./apps/backend/dist
 COPY --from=builder /app/apps/backend/package.json ./apps/backend/package.json
+
+# Copy built frontend artifacts
 COPY --from=builder /app/apps/web/.next ./apps/web/.next
-COPY --from=builder /app/apps/web/public ./apps/web/public
 COPY --from=builder /app/apps/web/package.json ./apps/web/package.json
 COPY --from=builder /app/apps/web/next.config.js ./apps/web/next.config.js
+# Copy public directory from source (static files)
+COPY apps/web/public ./apps/web/public
+
+# Copy shared package
 COPY --from=builder /app/packages/shared ./packages/shared
 
-# Copy source files needed at runtime (if any)
+# Copy source files needed at runtime
 COPY apps/backend/src ./apps/backend/src
 COPY apps/web/src ./apps/web/src
 
-# Create startup script with optimized memory settings
+# Create optimized startup script
 RUN echo '#!/bin/sh' > /app/start.sh && \
     echo 'set -e' >> /app/start.sh && \
     echo 'echo "🚀 Starting Khaalis Harvest Platform..."' >> /app/start.sh && \
@@ -86,4 +93,3 @@ EXPOSE 3000 3001
 
 # Start applications
 CMD ["/app/start.sh"]
-
