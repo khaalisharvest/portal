@@ -1,23 +1,21 @@
-# Khaalis Harvest Platform - Optimized Multi-Stage Build for Azure
-# Optimized for B2als_v2 (2 vCPU, 4GB RAM) or larger VMs
+# Khaalis Harvest Platform - Optimized Single-Stage Build for Azure
+# Based on working Dockerfile, with memory optimizations for 4GB RAM VMs
 
-# ============================================
-# Stage 1: Build Stage
-# ============================================
-FROM node:18-alpine AS builder
+FROM node:18-alpine
 
-# Install build dependencies only
-RUN apk add --no-cache python3 make g++
+# Install build dependencies
+RUN apk add --no-cache python3 make g++ wget
 
+# Set working directory
 WORKDIR /app
 
-# Copy package files first (better Docker layer caching)
+# Copy package files first (for better layer caching)
 COPY package.json yarn.lock turbo.json ./
 COPY apps/backend/package.json ./apps/backend/
 COPY apps/web/package.json ./apps/web/
 COPY packages/shared/package.json ./packages/shared/
 
-# Install all dependencies (needed for building)
+# Install dependencies with memory limit
 RUN NODE_OPTIONS="--max-old-space-size=2048" \
     yarn install --frozen-lockfile --network-timeout 600000
 
@@ -26,57 +24,18 @@ COPY apps/backend ./apps/backend
 COPY apps/web ./apps/web
 COPY packages/shared ./packages/shared
 
-# Build backend (uses less memory)
+# Build backend with memory limit
 RUN cd apps/backend && \
     NODE_OPTIONS="--max-old-space-size=1024" \
     yarn build
 
-# Build frontend (needs more memory for Next.js)
+# Build frontend with memory limit
 RUN cd apps/web && \
     NODE_OPTIONS="--max-old-space-size=2048" \
     NEXT_TELEMETRY_DISABLED=1 \
     yarn build
 
-# ============================================
-# Stage 2: Production Stage
-# ============================================
-FROM node:18-alpine AS production
-
-# Install runtime dependencies only
-RUN apk add --no-cache wget
-
-WORKDIR /app
-
-# Copy package files
-COPY package.json yarn.lock turbo.json ./
-COPY apps/backend/package.json ./apps/backend/
-COPY apps/web/package.json ./apps/web/
-COPY packages/shared/package.json ./packages/shared/
-
-# Install production dependencies only (smaller image)
-RUN yarn install --frozen-lockfile --production --network-timeout 600000
-
-# Copy built backend artifacts from builder
-COPY --from=builder /app/apps/backend/dist ./apps/backend/dist
-COPY --from=builder /app/apps/backend/package.json ./apps/backend/package.json
-
-# Copy built frontend artifacts from builder
-COPY --from=builder /app/apps/web/.next ./apps/web/.next
-COPY --from=builder /app/apps/web/package.json ./apps/web/package.json
-COPY --from=builder /app/apps/web/next.config.js ./apps/web/next.config.js
-
-# Copy public directory from source (available in build context)
-# This is safe because public directory is static and doesn't change during build
-COPY apps/web/public ./apps/web/public
-
-# Copy shared package from builder
-COPY --from=builder /app/packages/shared ./packages/shared
-
-# Copy source files needed at runtime
-COPY apps/backend/src ./apps/backend/src
-COPY apps/web/src ./apps/web/src
-
-# Create optimized startup script
+# Create startup script with optimized memory settings
 RUN echo '#!/bin/sh' > /app/start.sh && \
     echo 'set -e' >> /app/start.sh && \
     echo 'echo "🚀 Starting Khaalis Harvest Platform..."' >> /app/start.sh && \
