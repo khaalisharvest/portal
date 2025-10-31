@@ -20,7 +20,7 @@ export class DatabaseConfig implements TypeOrmOptionsFactory {
       database: this.configService.get('DB_NAME')!,
       entities: [__dirname + '/../**/*.entity{.ts,.js}'],
       migrations: [__dirname + '/../migrations/*{.ts,.js}'],
-      synchronize: nodeEnv === 'development',
+      synchronize: true, // Temporarily enabled to create initial schema
       logging: nodeEnv === 'development',
       // Only use SSL for remote databases, not local Docker containers
       ssl: nodeEnv === 'production' && !isLocalDatabase ? { rejectUnauthorized: false } : false,
