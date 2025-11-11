@@ -3,10 +3,9 @@ import { BACKEND_URL } from '@/config/env';
 
 export async function GET(request: NextRequest) {
   try {
-    // Get Authorization header from request
     const authHeader = request.headers.get('Authorization');
     
-    const response = await fetch(`${BACKEND_URL}/api/v1/categories`, {
+    const response = await fetch(`${BACKEND_URL}/api/v1/suppliers`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
@@ -15,15 +14,14 @@ export async function GET(request: NextRequest) {
     });
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(`Backend responded with status: ${response.status} - ${errorData.message || 'Unknown error'}`);
+      throw new Error(`Backend responded with status: ${response.status}`);
     }
 
     const data = await response.json();
     return NextResponse.json(data);
   } catch (error) {
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to fetch categories' },
+      { error: error instanceof Error ? error.message : 'Failed to fetch suppliers' },
       { status: 500 }
     );
   }
@@ -32,11 +30,9 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    
-    // Get Authorization header from request
     const authHeader = request.headers.get('Authorization');
     
-    const response = await fetch(`${BACKEND_URL}/api/v1/categories`, {
+    const response = await fetch(`${BACKEND_URL}/api/v1/suppliers`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -54,15 +50,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(data);
   } catch (error) {
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to create category' },
+      { error: error instanceof Error ? error.message : 'Failed to create supplier' },
       { status: 500 }
     );
   }
 }
-
-
-
-
-
-
 

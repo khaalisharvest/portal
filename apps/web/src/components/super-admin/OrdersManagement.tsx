@@ -118,7 +118,7 @@ export default function OrdersManagement() {
         params.append('paymentStatus', selectedPaymentStatus);
       }
 
-      const response = await fetch(`${API_URL}/admin/orders?${params}`, {
+      const response = await fetch(`/api/v1/admin/orders?${params}`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('backend_token')}`,
         },
@@ -143,7 +143,7 @@ export default function OrdersManagement() {
   const updateOrderStatus = async (orderId: string, status: string, additionalData: any = {}) => {
     try {
       setIsUpdating(true);
-      const response = await fetch(`${API_URL}/admin/orders/${orderId}/status`, {
+      const response = await fetch(`/api/v1/admin/orders/${orderId}/status`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -171,7 +171,7 @@ export default function OrdersManagement() {
   const updatePaymentStatus = async (orderId: string, paymentStatus: string) => {
     try {
       setIsUpdating(true);
-      const response = await fetch(`${API_URL}/admin/orders/${orderId}/status`, {
+      const response = await fetch(`/api/v1/admin/orders/${orderId}/status`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',

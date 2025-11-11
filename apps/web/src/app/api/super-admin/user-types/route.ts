@@ -1,70 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { BACKEND_URL } from '@/config/env';
 
-// Mock data for user types
-const mockUserTypes = [
-  {
-    id: '1',
-    name: 'customer',
-    displayName: 'Customer',
-    description: 'Regular customers who buy organic products',
-    permissions: {
-      canBuyProducts: true,
-      canAccessAdmin: false,
-      canManageUsers: false,
-      canManageCategories: false,
-      canManageProducts: false,
-      canViewAnalytics: false,
-      canManageSettings: false,
-    },
-    features: {
-      hasDashboard: true,
-      hasProfile: true,
-      hasProductCatalog: true,
-      hasOrders: true,
-      hasAnalytics: false,
-      hasNotifications: true,
-    },
-    isActive: true,
-    sortOrder: 1,
-    icon: '🛒',
-    color: '#3B82F6',
-  },
-  {
-    id: '2',
-    name: 'admin',
-    displayName: 'Khaalis Harvest Admin',
-    description: 'Administrators who manage the organic platform',
-    permissions: {
-      canBuyProducts: true,
-      canAccessAdmin: true,
-      canManageUsers: true,
-      canManageCategories: true,
-      canManageProducts: true,
-      canViewAnalytics: true,
-      canManageSettings: true,
-    },
-    features: {
-      hasDashboard: true,
-      hasProfile: true,
-      hasProductCatalog: true,
-      hasOrders: true,
-      hasAnalytics: true,
-      hasNotifications: true,
-    },
-    isActive: true,
-    sortOrder: 2,
-    icon: '🍎',
-    color: '#F97316',
-  },
-];
-
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    // TODO: Replace with actual backend API call
-    return NextResponse.json(mockUserTypes);
+    const authHeader = request.headers.get('Authorization');
+    
+    const response = await fetch(`${BACKEND_URL}/api/v1/super-admin/user-types`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(authHeader && { 'Authorization': authHeader }),
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Backend responded with status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return NextResponse.json(data);
   } catch (error) {
     return NextResponse.json(
-      { message: 'Internal server error' },
+      { error: error instanceof Error ? error.message : 'Failed to fetch user types' },
       { status: 500 }
     );
   }
@@ -72,19 +29,28 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
-    const userType = await request.json();
+    const body = await request.json();
+    const authHeader = request.headers.get('Authorization');
     
-    // TODO: Replace with actual backend API call
-    const newUserType = {
-      id: Date.now().toString(),
-      ...userType,
-      createdAt: new Date().toISOString(),
-    };
+    const response = await fetch(`${BACKEND_URL}/api/v1/super-admin/user-types`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(authHeader && { 'Authorization': authHeader }),
+      },
+      body: JSON.stringify(body),
+    });
 
-    return NextResponse.json(newUserType, { status: 201 });
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(`Backend responded with status: ${response.status} - ${errorData.message || 'Unknown error'}`);
+    }
+
+    const data = await response.json();
+    return NextResponse.json(data, { status: 201 });
   } catch (error) {
     return NextResponse.json(
-      { message: 'Internal server error' },
+      { error: error instanceof Error ? error.message : 'Failed to create user type' },
       { status: 500 }
     );
   }

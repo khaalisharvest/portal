@@ -44,21 +44,21 @@ export default function DashboardOverview() {
       setLoading(true);
       
       // Fetch orders data
-      const ordersResponse = await fetch(`${API_URL}/admin/orders?page=1&limit=10`, {
+      const ordersResponse = await fetch(`/api/v1/admin/orders?page=1&limit=10`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('backend_token')}`,
         },
       });
 
       // Fetch products data
-      const productsResponse = await fetch(`${API_URL}/products?page=1&limit=10`, {
+      const productsResponse = await fetch(`/api/v1/products?page=1&limit=10`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('backend_token')}`,
         },
       });
 
       // Fetch suppliers data
-      const suppliersResponse = await fetch(`${API_URL}/suppliers`, {
+      const suppliersResponse = await fetch(`/api/v1/suppliers`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('backend_token')}`,
         },

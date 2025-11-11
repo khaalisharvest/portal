@@ -88,7 +88,7 @@ export default function AdminCustomersPage() {
         ...(searchTerm && { search: searchTerm })
       });
 
-      const response = await fetch(`${API_URL}/admin/users/customers?${params}`, {
+      const response = await fetch(`/api/v1/admin/users/customers?${params}`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('backend_token')}`,
         },
@@ -156,7 +156,7 @@ export default function AdminCustomersPage() {
   const handleUpdateStatus = async (customerId: string, isActive: boolean) => {
     try {
       setUpdating(customerId);
-      const response = await fetch(`${API_URL}/admin/users/${customerId}/status`, {
+      const response = await fetch(`/api/v1/admin/users/${customerId}/status`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',

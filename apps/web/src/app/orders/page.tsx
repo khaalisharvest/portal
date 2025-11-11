@@ -105,7 +105,7 @@ export default function OrdersPage() {
       params.append('page', '1');
       params.append('limit', '100'); // Fetch more orders to have enough for filtering
 
-      const response = await fetch(`${API_URL}/orders?${params}`, {
+      const response = await fetch(`/api/v1/orders?${params}`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('backend_token')}`,
         },

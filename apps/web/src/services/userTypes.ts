@@ -1,4 +1,5 @@
-import { API_BASE_URL } from '@/config/env';
+// Use relative URLs to go through Next.js API routes
+const API_BASE = '/api/super-admin';
 
 export interface UserType {
   id: string;
@@ -75,9 +76,9 @@ export interface CreateUserTypeDto {
 
 export const userTypesApi = {
   async getAll(): Promise<UserType[]> {
-    const response = await fetch(`${API_BASE_URL}/super-admin/user-types`, {
+    const response = await fetch(`${API_BASE}/user-types`, {
       headers: {
-        'Authorization': `Bearer ${localStorage.getItem('backend_token')}`,
+        ...(typeof window !== 'undefined' && localStorage.getItem('backend_token') && { 'Authorization': `Bearer ${localStorage.getItem('backend_token')}` }),
       },
     });
     
@@ -90,11 +91,11 @@ export const userTypesApi = {
   },
 
   async create(userType: CreateUserTypeDto): Promise<UserType> {
-    const response = await fetch(`${API_BASE_URL}/super-admin/user-types`, {
+    const response = await fetch(`${API_BASE}/user-types`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${localStorage.getItem('backend_token')}`,
+        ...(typeof window !== 'undefined' && localStorage.getItem('backend_token') && { 'Authorization': `Bearer ${localStorage.getItem('backend_token')}` }),
       },
       body: JSON.stringify(userType),
     });
@@ -109,11 +110,11 @@ export const userTypesApi = {
   },
 
   async update(id: string, userType: Partial<CreateUserTypeDto>): Promise<UserType> {
-    const response = await fetch(`${API_BASE_URL}/super-admin/user-types/${id}`, {
+    const response = await fetch(`${API_BASE}/user-types/${id}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${localStorage.getItem('backend_token')}`,
+        ...(typeof window !== 'undefined' && localStorage.getItem('backend_token') && { 'Authorization': `Bearer ${localStorage.getItem('backend_token')}` }),
       },
       body: JSON.stringify(userType),
     });
@@ -128,10 +129,10 @@ export const userTypesApi = {
   },
 
   async delete(id: string): Promise<void> {
-    const response = await fetch(`${API_BASE_URL}/super-admin/user-types/${id}`, {
+    const response = await fetch(`${API_BASE}/user-types/${id}`, {
       method: 'DELETE',
       headers: {
-        'Authorization': `Bearer ${localStorage.getItem('backend_token')}`,
+        ...(typeof window !== 'undefined' && localStorage.getItem('backend_token') && { 'Authorization': `Bearer ${localStorage.getItem('backend_token')}` }),
       },
     });
     

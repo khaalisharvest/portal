@@ -67,7 +67,7 @@ export default function FeaturedProducts() {
 
   const fetchFeaturedProducts = async () => {
     try {
-      const response = await fetch(`${API_URL}/products`);
+      const response = await fetch(`/api/v1/products`);
       const data = await response.json();
       
       if (data.success && data.data?.products) {
@@ -93,7 +93,7 @@ export default function FeaturedProducts() {
 
   const fetchCategories = async () => {
     try {
-      const response = await fetch(`${API_URL}/categories`);
+      const response = await fetch(`/api/v1/categories`);
       const data = await response.json();
       if (data.success && data.data?.categories) {
         setCategories(data.data.categories);

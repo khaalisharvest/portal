@@ -233,7 +233,7 @@ export default function ProductsManagement() {
     try {
       // Fetch all categories with their product types in a single API call
       // This provides complete data for admin forms and maintains relationships
-      const response = await fetch(`${API_URL}/products/categories-with-types`, {
+      const response = await fetch(`/api/v1/products/categories-with-types`, {
         headers: {
           'Authorization': `Bearer ${typeof window !== 'undefined' ? localStorage.getItem('backend_token') : ''}`,
         },
@@ -276,7 +276,7 @@ export default function ProductsManagement() {
       if (category) params.append('category', category);
       if (type) params.append('type', type);
       
-      const response = await fetch(`${API_URL}/products?${params}`, {
+      const response = await fetch(`/api/v1/products?${params}`, {
         headers: {
           'Authorization': `Bearer ${typeof window !== 'undefined' ? localStorage.getItem('backend_token') : ''}`,
         },
@@ -374,8 +374,8 @@ export default function ProductsManagement() {
       console.log('📤 Final Product Data - categoryId:', productData.categoryId);
 
       const url = editingProduct 
-        ? `${API_URL}/products/${editingProduct.id}` 
-        : `${API_URL}/products`;
+        ? `/api/v1/products/${editingProduct.id}` 
+        : `/api/v1/products`;
       const method = editingProduct ? 'PUT' : 'POST';
 
       const backendToken = localStorage.getItem('backend_token');
@@ -462,7 +462,7 @@ export default function ProductsManagement() {
     try {
       const backendToken = localStorage.getItem('backend_token');
       
-      const response = await fetch(`${API_URL}/products/${pendingDelete.id}`, {
+      const response = await fetch(`/api/v1/products/${pendingDelete.id}`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
@@ -973,7 +973,7 @@ export default function ProductsManagement() {
                             onClick={async () => {
                               try {
                                 const updatedProduct = { ...product, isAvailable: !product.isAvailable };
-                                const response = await fetch(`${API_URL}/products/${product.id}`, {
+                                const response = await fetch(`/api/v1/products/${product.id}`, {
                                   method: 'PUT',
                                   headers: {
                                     'Content-Type': 'application/json',

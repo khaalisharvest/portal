@@ -1,4 +1,5 @@
-import { API_BASE_URL } from '@/config/env';
+// Use relative URLs to go through Next.js API routes
+const API_BASE = '/api/v1';
 
 export interface Supplier {
   id: string;
@@ -61,9 +62,9 @@ export interface CreateSupplierDto {
 
 export const suppliersApi = {
   async getAll(): Promise<Supplier[]> {
-    const response = await fetch(`${API_BASE_URL}/suppliers`, {
+    const response = await fetch(`${API_BASE}/suppliers`, {
       headers: {
-        'Authorization': `Bearer ${typeof window !== 'undefined' ? localStorage.getItem('backend_token') : ''}`,
+        ...(typeof window !== 'undefined' && localStorage.getItem('backend_token') && { 'Authorization': `Bearer ${localStorage.getItem('backend_token')}` }),
       },
     });
     
@@ -76,11 +77,11 @@ export const suppliersApi = {
   },
 
   async create(supplier: CreateSupplierDto): Promise<Supplier> {
-    const response = await fetch(`${API_BASE_URL}/suppliers`, {
+    const response = await fetch(`${API_BASE}/suppliers`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${typeof window !== 'undefined' ? localStorage.getItem('backend_token') : ''}`,
+        ...(typeof window !== 'undefined' && localStorage.getItem('backend_token') && { 'Authorization': `Bearer ${localStorage.getItem('backend_token')}` }),
       },
       body: JSON.stringify(supplier),
     });
@@ -95,11 +96,11 @@ export const suppliersApi = {
   },
 
   async update(id: string, supplier: Partial<CreateSupplierDto>): Promise<Supplier> {
-    const response = await fetch(`${API_BASE_URL}/suppliers/${id}`, {
+    const response = await fetch(`${API_BASE}/suppliers/${id}`, {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${typeof window !== 'undefined' ? localStorage.getItem('backend_token') : ''}`,
+        ...(typeof window !== 'undefined' && localStorage.getItem('backend_token') && { 'Authorization': `Bearer ${localStorage.getItem('backend_token')}` }),
       },
       body: JSON.stringify(supplier),
     });
@@ -114,10 +115,10 @@ export const suppliersApi = {
   },
 
   async delete(id: string): Promise<void> {
-    const response = await fetch(`${API_BASE_URL}/suppliers/${id}`, {
+    const response = await fetch(`${API_BASE}/suppliers/${id}`, {
       method: 'DELETE',
       headers: {
-        'Authorization': `Bearer ${typeof window !== 'undefined' ? localStorage.getItem('backend_token') : ''}`,
+        ...(typeof window !== 'undefined' && localStorage.getItem('backend_token') && { 'Authorization': `Bearer ${localStorage.getItem('backend_token')}` }),
       },
     });
     

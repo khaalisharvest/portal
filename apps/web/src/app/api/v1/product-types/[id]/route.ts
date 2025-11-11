@@ -8,7 +8,7 @@ export async function GET(
   try {
     const authHeader = request.headers.get('Authorization');
     
-    const response = await fetch(`${BACKEND_URL}/api/v1/categories/${params.id}`, {
+    const response = await fetch(`${BACKEND_URL}/api/v1/product-types/${params.id}`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
@@ -24,13 +24,13 @@ export async function GET(
     return NextResponse.json(data);
   } catch (error) {
     return NextResponse.json(
-      { error: 'Failed to fetch category' },
+      { error: 'Failed to fetch product type' },
       { status: 500 }
     );
   }
 }
 
-export async function PATCH(
+export async function PUT(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
@@ -38,8 +38,8 @@ export async function PATCH(
     const body = await request.json();
     const authHeader = request.headers.get('Authorization');
     
-    const response = await fetch(`${BACKEND_URL}/api/v1/categories/${params.id}`, {
-      method: 'PATCH',
+    const response = await fetch(`${BACKEND_URL}/api/v1/product-types/${params.id}`, {
+      method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
         ...(authHeader && { 'Authorization': authHeader }),
@@ -56,7 +56,7 @@ export async function PATCH(
     return NextResponse.json(data);
   } catch (error) {
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to update category' },
+      { error: error instanceof Error ? error.message : 'Failed to update product type' },
       { status: 500 }
     );
   }
@@ -69,7 +69,7 @@ export async function DELETE(
   try {
     const authHeader = request.headers.get('Authorization');
     
-    const response = await fetch(`${BACKEND_URL}/api/v1/categories/${params.id}`, {
+    const response = await fetch(`${BACKEND_URL}/api/v1/product-types/${params.id}`, {
       method: 'DELETE',
       headers: {
         'Content-Type': 'application/json',
@@ -85,15 +85,9 @@ export async function DELETE(
     return NextResponse.json({ success: true });
   } catch (error) {
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to delete category' },
+      { error: error instanceof Error ? error.message : 'Failed to delete product type' },
       { status: 500 }
     );
   }
 }
-
-
-
-
-
-
 

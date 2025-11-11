@@ -1,4 +1,5 @@
-import { API_URL } from '@/config/env';
+// Use relative URLs to go through Next.js API routes
+const API_BASE = '/api/v1';
 
 export interface DeliverySettings {
   deliveryFee: number;
@@ -14,9 +15,9 @@ export interface DeliveryCalculation {
 
 export const settingsApi = {
   async getDeliverySettings(): Promise<DeliverySettings> {
-    const response = await fetch(`${API_URL}/settings/delivery`, {
+    const response = await fetch(`${API_BASE}/settings/delivery`, {
       headers: {
-        'Authorization': `Bearer ${localStorage.getItem('backend_token')}`,
+        ...(typeof window !== 'undefined' && localStorage.getItem('backend_token') && { 'Authorization': `Bearer ${localStorage.getItem('backend_token')}` }),
       },
     });
 
@@ -35,11 +36,11 @@ export const settingsApi = {
   },
 
   async updateDeliverySettings(settings: DeliverySettings): Promise<void> {
-    const response = await fetch(`${API_URL}/settings/delivery`, {
+    const response = await fetch(`${API_BASE}/settings/delivery`, {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${localStorage.getItem('backend_token')}`,
+        ...(typeof window !== 'undefined' && localStorage.getItem('backend_token') && { 'Authorization': `Bearer ${localStorage.getItem('backend_token')}` }),
       },
       body: JSON.stringify(settings),
     });
@@ -50,7 +51,7 @@ export const settingsApi = {
   },
 
   async calculateDeliveryFee(orderAmount: number): Promise<DeliveryCalculation> {
-    const response = await fetch(`${API_URL}/public/settings/delivery/calculate`, {
+    const response = await fetch(`/api/public/settings/delivery/calculate`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

@@ -1,5 +1,6 @@
 // API service for fetching dynamic data
-import { API_BASE_URL } from '@/config/env';
+// Use relative URLs to go through Next.js API routes
+const API_BASE = '/api/v1';
 
 export interface Product {
   id: string;
@@ -81,7 +82,7 @@ export const api = {
   // Products
   async getProducts(): Promise<Product[]> {
     try {
-      const response = await fetch(`${API_BASE_URL}/products`);
+      const response = await fetch(`${API_BASE}/products`);
       if (!response.ok) throw new Error('Failed to fetch products');
       const data = await response.json();
       return data.products || data;
@@ -92,7 +93,7 @@ export const api = {
 
   async getProduct(id: string): Promise<Product | null> {
     try {
-      const response = await fetch(`${API_BASE_URL}/products/${id}`);
+      const response = await fetch(`${API_BASE}/products/${id}`);
       if (!response.ok) throw new Error('Failed to fetch product');
       return response.json();
     } catch (error) {
@@ -103,7 +104,7 @@ export const api = {
   // Categories
   async getCategories(): Promise<Category[]> {
     try {
-      const response = await fetch(`${API_BASE_URL}/products/categories`);
+      const response = await fetch(`${API_BASE}/products/categories`);
       if (!response.ok) throw new Error('Failed to fetch categories');
       return response.json();
     } catch (error) {
@@ -114,7 +115,7 @@ export const api = {
   // Featured products
   async getFeaturedProducts(): Promise<Product[]> {
     try {
-      const response = await fetch(`${API_BASE_URL}/products/featured`);
+      const response = await fetch(`${API_BASE}/products/featured`);
       if (!response.ok) throw new Error('Failed to fetch featured products');
       return response.json();
     } catch (error) {
@@ -124,7 +125,7 @@ export const api = {
 
   // Admin operations
   async post(url: string, data: any) {
-    const response = await fetch(`${API_BASE_URL}${url}`, {
+    const response = await fetch(`${API_BASE}${url}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -136,7 +137,7 @@ export const api = {
   },
 
   async delete(url: string) {
-    const response = await fetch(`${API_BASE_URL}${url}`, {
+    const response = await fetch(`${API_BASE}${url}`, {
       method: 'DELETE',
     });
     if (!response.ok) throw new Error(`Failed to delete ${url}`);
@@ -144,7 +145,7 @@ export const api = {
   },
 
   async put(url: string, data: any) {
-    const response = await fetch(`${API_BASE_URL}${url}`, {
+    const response = await fetch(`${API_BASE}${url}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',

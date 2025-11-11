@@ -52,7 +52,7 @@ export default function AdminSettingsPage() {
       setSaving(true);
       
       // Update settings using the existing settings API
-      const response = await fetch(`${API_URL}/settings/delivery`, {
+      const response = await fetch(`/api/v1/settings/delivery`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',

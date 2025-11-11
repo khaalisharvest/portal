@@ -158,7 +158,7 @@ export default function CheckoutPage() {
 
     setIsFetchingAddresses(true);
     try {
-      const response = await fetch(`${API_URL}/orders/addresses`, {
+      const response = await fetch(`/api/v1/orders/addresses`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('backend_token')}`,
         },
@@ -217,7 +217,7 @@ export default function CheckoutPage() {
         phone: newAddress.phone ? validateAddressPhone(newAddress.phone) : newAddress.phone
       };
 
-      const response = await fetch(`${API_URL}/orders/addresses`, {
+      const response = await fetch(`/api/v1/orders/addresses`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -323,7 +323,7 @@ export default function CheckoutPage() {
           notes
         };
 
-        const response = await fetch(`${API_URL}/orders`, {
+        const response = await fetch(`/api/v1/orders`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -355,7 +355,7 @@ export default function CheckoutPage() {
           notes
         };
 
-        const response = await fetch(`${API_URL}/orders`, {
+        const response = await fetch(`/api/v1/orders`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

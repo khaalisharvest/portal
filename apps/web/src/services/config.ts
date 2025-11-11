@@ -52,7 +52,7 @@ class ConfigService {
 
   private async fetchConfig(): Promise<AppConfig> {
     try {
-      const deliveryResponse = await fetch(`${API_URL}/settings/delivery`, {
+      const deliveryResponse = await fetch(`/api/v1/settings/delivery`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('backend_token')}`,
         },
