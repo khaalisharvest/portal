@@ -7,16 +7,32 @@ export async function GET(request: NextRequest) {
     const queryString = searchParams.toString();
     const authHeader = request.headers.get('Authorization');
     
+    if (!authHeader) {
+      return NextResponse.json(
+        { error: 'Authorization header is required' },
+        { status: 401 }
+      );
+    }
+    
     const response = await fetch(`${BACKEND_URL}/api/v1/orders?${queryString}`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
-        ...(authHeader && { 'Authorization': authHeader }),
+        'Authorization': authHeader,
       },
     });
 
     if (!response.ok) {
-      throw new Error(`Backend responded with status: ${response.status}`);
+      let errorData;
+      try {
+        errorData = await response.json();
+      } catch {
+        errorData = { message: `Backend responded with status: ${response.status}` };
+      }
+      return NextResponse.json(
+        { error: errorData.message || errorData.error || `Backend responded with status: ${response.status}` },
+        { status: response.status }
+      );
     }
 
     const data = await response.json();

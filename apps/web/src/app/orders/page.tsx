@@ -8,7 +8,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import Icon from '@/components/ui/Icon';
 import ConfirmationDialog from '@/components/ui/ConfirmationDialog';
 import toast from 'react-hot-toast';
-import { API_URL } from '@/config/env';
 
 interface OrderItem {
   id: string;
@@ -71,6 +70,8 @@ export default function OrdersPage() {
   // Confirmation dialog states
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [pendingCancel, setPendingCancel] = useState<{ id: string; orderNumber: string } | null>(null);
+  const [cancellationReason, setCancellationReason] = useState('');
+  const [isCancelling, setIsCancelling] = useState(false);
 
   useEffect(() => {
     if (!user) {
@@ -105,9 +106,16 @@ export default function OrdersPage() {
       params.append('page', '1');
       params.append('limit', '100'); // Fetch more orders to have enough for filtering
 
+      const backendToken = localStorage.getItem('backend_token');
+      
+      if (!backendToken) {
+        router.push('/auth/login');
+        return;
+      }
+
       const response = await fetch(`/api/v1/orders?${params}`, {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('backend_token')}`,
+          'Authorization': `Bearer ${backendToken}`,
         },
       });
 
@@ -115,8 +123,15 @@ export default function OrdersPage() {
         const data = await response.json();
         const fetchedOrders = data.data?.orders || data.orders || [];
         setAllOrders(fetchedOrders);
+      } else if (response.status === 401) {
+        // Token expired or invalid - redirect to login
+        localStorage.removeItem('auth_token');
+        localStorage.removeItem('backend_token');
+        localStorage.removeItem('user');
+        router.push('/auth/login');
       } else {
-        throw new Error('Failed to fetch orders');
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Failed to fetch orders');
       }
     } catch (error) {
       console.error('Error fetching orders:', error);
@@ -176,9 +191,45 @@ export default function OrdersPage() {
     if (!pendingCancel) return;
 
     try {
-      // TODO: Implement cancel order
-      toast.error('Cancel order functionality coming soon');
+      setIsCancelling(true);
+      const backendToken = localStorage.getItem('backend_token');
+      
+      if (!backendToken) {
+        toast.error('Please login to cancel orders');
+        router.push('/auth/login');
+        return;
+      }
+
+      const response = await fetch(`/api/v1/orders/${pendingCancel.id}/cancel`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${backendToken}`,
+        },
+        body: JSON.stringify({
+          reason: cancellationReason || 'Customer requested cancellation',
+        }),
+      });
+
+      if (response.ok) {
+        toast.success(`Order #${pendingCancel.orderNumber} has been cancelled`);
+        setCancellationReason('');
+        // Refresh orders list
+        await fetchOrders();
+      } else if (response.status === 401) {
+        localStorage.removeItem('auth_token');
+        localStorage.removeItem('backend_token');
+        localStorage.removeItem('user');
+        router.push('/auth/login');
+      } else {
+        const errorData = await response.json().catch(() => ({}));
+        toast.error(errorData.error || 'Failed to cancel order');
+      }
+    } catch (error) {
+      console.error('Error cancelling order:', error);
+      toast.error('Failed to cancel order. Please try again.');
     } finally {
+      setIsCancelling(false);
       setShowConfirmDialog(false);
       setPendingCancel(null);
     }
@@ -187,6 +238,7 @@ export default function OrdersPage() {
   const handleCancelCancel = () => {
     setShowConfirmDialog(false);
     setPendingCancel(null);
+    setCancellationReason('');
   };
 
   if (!user) {
@@ -392,7 +444,7 @@ export default function OrdersPage() {
                         <span>View Details</span>
                       </button>
                       
-                      {order.status === 'pending' && (
+                      {order.status !== 'delivered' && order.status !== 'cancelled' && (
                         <button
                           onClick={() => {
                             setPendingCancel({ id: order.id, orderNumber: order.orderNumber });
@@ -476,7 +528,23 @@ export default function OrdersPage() {
           confirmText="Cancel Order"
           cancelText="Keep Order"
           type="warning"
-        />
+          isLoading={isCancelling}
+        >
+          <div className="mt-4">
+            <label htmlFor="cancellation-reason" className="block text-sm font-medium text-gray-700 mb-2">
+              Reason for cancellation (optional)
+            </label>
+            <textarea
+              id="cancellation-reason"
+              value={cancellationReason}
+              onChange={(e) => setCancellationReason(e.target.value)}
+              placeholder="Please provide a reason for cancelling this order..."
+              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 text-sm"
+              rows={3}
+              disabled={isCancelling}
+            />
+          </div>
+        </ConfirmationDialog>
       </div>
     </div>
   );
