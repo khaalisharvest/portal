@@ -103,7 +103,7 @@ export default function ProductDetailsPage() {
       setLoading(true);
       
       // Single API call that returns complete product data with category and productType
-      const productResponse = await fetch(`${API_URL}/products/${id}`);
+      const productResponse = await fetch(`/api/v1/products/${id}`);
       if (!productResponse.ok) throw new Error('Product not found');
       
       const productData = await productResponse.json();
