@@ -61,8 +61,8 @@ COPY packages/shared ./packages/shared
 # Reinstall dependencies after copying source (to ensure all files are in place)
 RUN yarn install --frozen-lockfile
 
-# Build backend first
-RUN cd apps/backend && yarn build
+# Build backend first (use yarn workspace to ensure dependencies are available)
+RUN yarn workspace @khaalis-harvest/backend build
 
 # Build frontend
 # Create minimal prerender-manifest.json if build fails on error pages
