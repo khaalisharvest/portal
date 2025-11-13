@@ -4,9 +4,14 @@ import './globals.css';
 import { Providers } from './providers';
 import ConditionalHeader from '@/components/layout/ConditionalHeader';
 import ConditionalFooter from '@/components/layout/ConditionalFooter';
+import WhatsAppButton from '@/components/ui/WhatsAppButton';
 import { APP_URL } from '@/config/env';
 
 const inter = Inter({ subsets: ['latin'] });
+
+// Disable static generation - app uses React Context (AuthContext, CartContext, FilterContext)
+// which requires dynamic rendering at request time, not static generation at build time
+export const dynamic = 'force-dynamic';
 
 export const viewport: Viewport = {
   width: 'device-width',
@@ -68,6 +73,7 @@ export default function RootLayout({
             {children}
           </main>
           <ConditionalFooter />
+          <WhatsAppButton />
         </Providers>
       </body>
     </html>

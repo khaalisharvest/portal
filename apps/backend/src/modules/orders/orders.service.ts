@@ -5,6 +5,7 @@ import { Order, OrderStatus, PaymentStatus } from './entities/order.entity';
 import { OrderItem } from './entities/order-item.entity';
 import { Address } from './entities/address.entity';
 import { Product } from '../products/entities/product.entity';
+import { User } from '../users/entities/user.entity';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderDto } from './dto/update-order.dto';
 import { CreateAddressDto } from './dto/create-address.dto';
@@ -22,6 +23,8 @@ export class OrdersService {
     private addressRepository: Repository<Address>,
     @InjectRepository(Product)
     private productRepository: Repository<Product>,
+    @InjectRepository(User)
+    private userRepository: Repository<User>,
     private dataSource: DataSource,
     private settingsService: SettingsService,
   ) {}
@@ -322,6 +325,72 @@ export class OrdersService {
       orders,
       total,
       totalPages: Math.ceil(total / limit)
+    };
+  }
+
+  // Dashboard statistics for admin
+  async getDashboardStats() {
+    // Fetch all data in parallel for better performance
+    const [
+      totalOrders,
+      orders,
+      totalRevenueResult,
+      pendingOrders,
+      completedOrders,
+      totalProducts,
+      topProducts,
+      totalCustomers
+    ] = await Promise.all([
+      // Total orders count
+      this.orderRepository.count(),
+      
+      // Recent orders (last 5)
+      this.orderRepository.find({
+        order: { createdAt: 'DESC' },
+        take: 5,
+        relations: ['user', 'items'],
+        select: ['id', 'orderNumber', 'status', 'totalAmount', 'createdAt']
+      }),
+      
+      // Total revenue (sum of all delivered orders)
+      this.orderRepository
+        .createQueryBuilder('order')
+        .select('SUM(order.totalAmount)', 'total')
+        .where('order.status = :status', { status: OrderStatus.DELIVERED })
+        .getRawOne(),
+      
+      // Pending orders count
+      this.orderRepository.count({ where: { status: OrderStatus.PENDING } }),
+      
+      // Completed orders count
+      this.orderRepository.count({ where: { status: OrderStatus.DELIVERED } }),
+      
+      // Total products count
+      this.productRepository.count({ where: { isAvailable: true } }),
+      
+      // Top products (first 5 available products)
+      this.productRepository.find({
+        where: { isAvailable: true },
+        take: 5,
+        relations: ['category'],
+        select: ['id', 'name', 'price', 'unit', 'images', 'category']
+      }),
+      
+      // Total customers count
+      this.userRepository.count({ where: { role: 'customer' } })
+    ]);
+
+    const totalRevenue = totalRevenueResult?.total ? parseFloat(totalRevenueResult.total) : 0;
+
+    return {
+      totalOrders,
+      totalRevenue,
+      totalCustomers,
+      totalProducts,
+      pendingOrders,
+      completedOrders,
+      recentOrders: orders,
+      topProducts
     };
   }
 

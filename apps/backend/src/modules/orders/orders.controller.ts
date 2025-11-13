@@ -143,6 +143,13 @@ export class OrdersController {
 export class AdminOrdersController {
   constructor(private readonly ordersService: OrdersService) {}
 
+  @Get('dashboard')
+  @ApiOperation({ summary: 'Get dashboard statistics (Admin)' })
+  @ApiResponse({ status: 200, description: 'Dashboard statistics retrieved successfully' })
+  getDashboardStats() {
+    return this.ordersService.getDashboardStats();
+  }
+
   @Get()
   @ApiOperation({ summary: 'Get all orders (Admin)' })
   @ApiResponse({ status: 200, description: 'Orders retrieved successfully' })

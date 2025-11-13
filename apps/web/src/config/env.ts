@@ -49,13 +49,19 @@ export const env = {
   BANK_ACCOUNT_NUMBER: process.env.NEXT_PUBLIC_BANK_ACCOUNT_NUMBER,
   BANK_IBAN: process.env.NEXT_PUBLIC_BANK_IBAN,
   
-  // Environment
-  NODE_ENV: process.env.NODE_ENV || 'development',
+  // App configuration
+  APP_NAME: process.env.NEXT_PUBLIC_APP_NAME,
+  APP_DESCRIPTION: process.env.NEXT_PUBLIC_APP_DESCRIPTION,
+  DEFAULT_CURRENCY: process.env.NEXT_PUBLIC_DEFAULT_CURRENCY,
+  DEFAULT_LANGUAGE: process.env.NEXT_PUBLIC_DEFAULT_LANGUAGE,
+  
+  // Environment - NODE_ENV is always set by Node.js/Docker
+  NODE_ENV: process.env.NODE_ENV!,
   IS_PRODUCTION: process.env.NODE_ENV === 'production',
   IS_DEVELOPMENT: process.env.NODE_ENV === 'development',
 } as const;
 
-// Export individual URLs for convenience
+// Export individual values for convenience
 export const {
   APP_URL,
   API_URL,
@@ -66,6 +72,10 @@ export const {
   BANK_ACCOUNT_NAME,
   BANK_ACCOUNT_NUMBER,
   BANK_IBAN,
+  APP_NAME,
+  APP_DESCRIPTION,
+  DEFAULT_CURRENCY,
+  DEFAULT_LANGUAGE,
   NODE_ENV,
   IS_PRODUCTION,
   IS_DEVELOPMENT,

@@ -1,10 +1,21 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import Image from 'next/image';
 import { validatePakistaniPhone, getPhonePlaceholder } from '@/utils/phoneValidation';
 import ResponsiveBackgroundImage from '@/components/ui/ResponsiveBackgroundImage';
+import Dropdown, { DropdownOption } from '@/components/ui/Dropdown';
+import { toast } from 'react-hot-toast';
+
+const subjectOptions: DropdownOption[] = [
+  { value: 'general', label: 'General Inquiry', icon: 'chat-bubble-left-right' },
+  { value: 'delivery', label: 'Delivery Issue', icon: 'truck' },
+  { value: 'product', label: 'Product Question', icon: 'cube' },
+  { value: 'support', label: 'Technical Support', icon: 'wrench-screwdriver' },
+  { value: 'feedback', label: 'Feedback', icon: 'star' },
+  { value: 'other', label: 'Other', icon: 'ellipsis-horizontal' },
+];
 
 export default function ContactPage() {
   const [formData, setFormData] = useState({
@@ -15,6 +26,7 @@ export default function ContactPage() {
     message: ''
   });
   const [phoneError, setPhoneError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const validatePhone = (phone: string) => {
     const validation = validatePakistaniPhone(phone);
@@ -26,8 +38,24 @@ export default function ContactPage() {
     return validation.normalizedNumber;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // Validate form to enable/disable submit button
+  const isFormValid = useMemo(() => {
+    const hasName = formData.name.trim().length >= 2;
+    const hasEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email);
+    const hasSubject = formData.subject.length > 0;
+    const hasMessage = formData.message.trim().length >= 10;
+    const phoneValid = !formData.phone || !phoneError;
+    
+    return hasName && hasEmail && hasSubject && hasMessage && phoneValid;
+  }, [formData, phoneError]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!isFormValid) {
+      toast.error('Please fill all required fields correctly');
+      return;
+    }
     
     // Validate phone number if provided
     if (formData.phone) {
@@ -37,16 +65,50 @@ export default function ContactPage() {
       }
     }
     
-    // Handle form submission here
-    console.log('Form submitted:', formData);
-    alert('Thank you for your message! We will get back to you soon.');
-    setFormData({ name: '', email: '', phone: '', subject: '', message: '' });
+    setIsSubmitting(true);
+    
+    try {
+      const response = await fetch('/api/v1/contacts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: formData.name.trim(),
+          email: formData.email.trim(),
+          phone: formData.phone ? validatePhone(formData.phone) : undefined,
+          subject: formData.subject,
+          message: formData.message.trim(),
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Failed to send message');
+      }
+
+      toast.success('Thank you for your message! We will get back to you soon.');
+      setFormData({ name: '', email: '', phone: '', subject: '', message: '' });
+      setPhoneError('');
+    } catch (error) {
+      console.error('Error submitting contact form:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to send message. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value
+    });
+  };
+
+  const handleSubjectChange = (value: string | string[]) => {
+    setFormData({
+      ...formData,
+      subject: Array.isArray(value) ? value[0] : value
     });
   };
 
@@ -222,22 +284,16 @@ export default function ContactPage() {
                       <label htmlFor="subject" className="block text-sm font-medium text-neutral-700 mb-2">
                         Subject *
                       </label>
-                      <select
-                        id="subject"
-                        name="subject"
+                      <Dropdown
+                        options={subjectOptions}
                         value={formData.subject}
-                        onChange={handleChange}
-                        required
-                        className="select-field"
-                      >
-                        <option value="">Select a subject</option>
-                        <option value="general">General Inquiry</option>
-                        <option value="delivery">Delivery Issue</option>
-                        <option value="product">Product Question</option>
-                        <option value="support">Technical Support</option>
-                        <option value="feedback">Feedback</option>
-                        <option value="other">Other</option>
-                      </select>
+                        onChange={handleSubjectChange}
+                        placeholder="Select a subject"
+                        size="md"
+                        variant="default"
+                        className="w-full"
+                        showCheckmark={false}
+                      />
                     </div>
                   </div>
 
@@ -259,9 +315,14 @@ export default function ContactPage() {
 
                   <button
                     type="submit"
-                    className="btn-primary w-full"
+                    disabled={!isFormValid || isSubmitting}
+                    className={`btn-primary w-full ${
+                      !isFormValid || isSubmitting
+                        ? 'opacity-50 cursor-not-allowed'
+                        : ''
+                    }`}
                   >
-                    Send Message
+                    {isSubmitting ? 'Sending...' : 'Send Message'}
                   </button>
                 </form>
               </motion.div>

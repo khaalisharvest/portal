@@ -2,7 +2,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import { BACKEND_URL } from '@/config/env';
 import jwt from 'jsonwebtoken';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-jwt-key';
+// Get JWT_SECRET from environment - validated at runtime
+const getJwtSecret = (): string => {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    throw new Error('JWT_SECRET environment variable is required');
+  }
+  return secret;
+};
 
 export async function GET(request: NextRequest) {
   try {
@@ -18,7 +25,7 @@ export async function GET(request: NextRequest) {
     const frontendToken = authHeader.substring(7);
     
     try {
-      const decoded = jwt.verify(frontendToken, JWT_SECRET) as any;
+      const decoded = jwt.verify(frontendToken, getJwtSecret()) as any;
       
       // Get the backend access token from the request headers
       const backendToken = request.headers.get('x-backend-token');

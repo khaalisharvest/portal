@@ -4,91 +4,168 @@ services:
     image: postgres:15-alpine
     container_name: khaalis-postgres
     environment:
-      POSTGRES_DB: khaalis_harvest
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: password
+      POSTGRES_DB: ${DB_NAME:-khaalis_harvest}
+      POSTGRES_USER: ${DB_USERNAME:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-password}
+    # Expose port for local development (doesn't hurt in production)
     ports:
-      - "5433:5432"
+      - "${DB_PORT:-5433}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
       - khaalis-network
     restart: unless-stopped
+    # Memory optimization (set POSTGRES_COMMAND in .env for Azure)
+    # Default: standard postgres (for local dev)
+    command: ${POSTGRES_COMMAND:-postgres}
+    # Health check for PostgreSQL
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-postgres} -d ${DB_NAME:-khaalis_harvest}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    # Resource limits for Azure VM (optional - uncomment if needed)
+    # deploy:
+    #   resources:
+    #     limits:
+    #       memory: 512M
+    #     reservations:
+    #       memory: 256M
 
   # Redis Cache
   redis:
     image: redis:7-alpine
     container_name: khaalis-redis
+    # Expose port for local development (doesn't hurt in production)
     ports:
-      - "6379:6379"
+      - "${REDIS_PORT:-6379}:6379"
     volumes:
       - redis_data:/data
     networks:
       - khaalis-network
     restart: unless-stopped
+    # Memory optimization (set REDIS_COMMAND in .env for Azure: "redis-server --maxmemory 128mb --maxmemory-policy allkeys-lru")
+    # Default: standard redis-server (for local dev)
+    command: ${REDIS_COMMAND:-redis-server}
+    # Health check for Redis
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    # Resource limits for Azure VM (optional - uncomment if needed)
+    # deploy:
+    #   resources:
+    #     limits:
+    #       memory: 256M
+    #     reservations:
+    #       memory: 128M
 
   # Complete Application (Backend + Frontend)
   app:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        # Pass env vars as build args so they're available during build
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
+        NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL}
+        NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-}
+        BACKEND_URL: ${BACKEND_URL}
+        JWT_SECRET: ${JWT_SECRET}
+        NEXT_PUBLIC_ADMIN_WHATSAPP: ${NEXT_PUBLIC_ADMIN_WHATSAPP}
+        NEXT_PUBLIC_BANK_NAME: ${NEXT_PUBLIC_BANK_NAME}
+        NEXT_PUBLIC_BANK_ACCOUNT_NAME: ${NEXT_PUBLIC_BANK_ACCOUNT_NAME}
+        NEXT_PUBLIC_BANK_ACCOUNT_NUMBER: ${NEXT_PUBLIC_BANK_ACCOUNT_NUMBER}
+        NEXT_PUBLIC_BANK_IBAN: ${NEXT_PUBLIC_BANK_IBAN}
+        NEXT_PUBLIC_APP_NAME: ${NEXT_PUBLIC_APP_NAME}
+        NEXT_PUBLIC_APP_DESCRIPTION: ${NEXT_PUBLIC_APP_DESCRIPTION}
+        NEXT_PUBLIC_DEFAULT_CURRENCY: ${NEXT_PUBLIC_DEFAULT_CURRENCY}
+        NEXT_PUBLIC_DEFAULT_LANGUAGE: ${NEXT_PUBLIC_DEFAULT_LANGUAGE}
+        NODE_ENV: ${NODE_ENV:-development}
     container_name: khaalis-app
+    # Load all env vars from .env file (most efficient - single source of truth)
     env_file:
       - .env
     environment:
       # Application Configuration
-      NODE_ENV: development
-      PORT: 3000
-      FRONTEND_PORT: 3001
+      NODE_ENV: ${NODE_ENV:-development}
+      PORT: ${PORT:-3000}
+      FRONTEND_PORT: ${FRONTEND_PORT:-3001}
       
       # Database Configuration
+      # DB_HOST must be 'postgres' (Docker service name) for container-to-container communication
+      # DB_PORT must be 5432 (internal Docker network port, not host port)
       DB_HOST: postgres
       DB_PORT: 5432
-      DB_USERNAME: postgres
-      DB_PASSWORD: password
-      DB_NAME: khaalis_harvest
-      DATABASE_URL: postgresql://postgres:password@postgres:5432/khaalis_harvest
+      DB_USERNAME: ${DB_USERNAME:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:-password}
+      DB_NAME: ${DB_NAME:-khaalis_harvest}
+      DATABASE_URL: ${DATABASE_URL:-postgresql://${DB_USERNAME:-postgres}:${DB_PASSWORD:-password}@postgres:5432/${DB_NAME:-khaalis_harvest}}
       
       # Redis Configuration
+      # REDIS_HOST must be 'redis' (Docker service name) for container-to-container communication
       REDIS_HOST: redis
-      REDIS_PORT: 6379
-      REDIS_PASSWORD: ""
+      REDIS_PORT: ${REDIS_PORT:-6379}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
       
       # JWT Configuration
-      JWT_SECRET: your-super-secret-jwt-key-for-fruit-mandi-2024
-      JWT_EXPIRES_IN: 7d
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
       
       # API Configuration
-      NEXT_PUBLIC_API_URL: http://localhost:3000/api/v1
-      NEXT_PUBLIC_APP_URL: http://localhost:3001
-      BACKEND_URL: http://localhost:3000
-      FRONTEND_URL: http://localhost:3001
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
+      NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL}
+      BACKEND_URL: ${BACKEND_URL}
+      FRONTEND_URL: ${FRONTEND_URL}
+      ADMIN_URL: ${ADMIN_URL}
       
       # CORS Configuration
-      ALLOWED_ORIGINS: http://localhost:3000,http://localhost:3001,http://localhost:3002
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS}
       
       # App Configuration
-      NEXT_PUBLIC_APP_NAME: Khaalis Harvest
+      NEXT_PUBLIC_APP_NAME: ${NEXT_PUBLIC_APP_NAME:-Khaalis Harvest}
+      NEXT_PUBLIC_APP_DESCRIPTION: ${NEXT_PUBLIC_APP_DESCRIPTION}
+      NEXT_PUBLIC_DEFAULT_CURRENCY: ${NEXT_PUBLIC_DEFAULT_CURRENCY}
+      NEXT_PUBLIC_DEFAULT_LANGUAGE: ${NEXT_PUBLIC_DEFAULT_LANGUAGE}
       
       # Admin Configuration
-      NEXT_PUBLIC_ADMIN_WHATSAPP: +923204749700
-      SUPER_ADMIN_EMAIL: admin@khaalisharvest.pk
-      SUPER_ADMIN_PHONE: +923204749700
+      NEXT_PUBLIC_ADMIN_WHATSAPP: ${NEXT_PUBLIC_ADMIN_WHATSAPP}
+      SUPER_ADMIN_EMAIL: ${SUPER_ADMIN_EMAIL}
+      SUPER_ADMIN_PHONE: ${SUPER_ADMIN_PHONE}
       
       # Bank Configuration
-      NEXT_PUBLIC_BANK_NAME: Allied Bank Limited
-      NEXT_PUBLIC_BANK_ACCOUNT_NAME: Khaalis Harvest
-      NEXT_PUBLIC_BANK_ACCOUNT_NUMBER: 1234567890123456
-      NEXT_PUBLIC_BANK_IBAN: PK36ABPA0000001234567890123456
+      NEXT_PUBLIC_BANK_NAME: ${NEXT_PUBLIC_BANK_NAME}
+      NEXT_PUBLIC_BANK_ACCOUNT_NAME: ${NEXT_PUBLIC_BANK_ACCOUNT_NAME}
+      NEXT_PUBLIC_BANK_ACCOUNT_NUMBER: ${NEXT_PUBLIC_BANK_ACCOUNT_NUMBER}
+      NEXT_PUBLIC_BANK_IBAN: ${NEXT_PUBLIC_BANK_IBAN}
+      
+      # Memory optimization (set NODE_OPTIONS_BACKEND/FRONTEND in .env for Azure)
+      # Defaults to higher memory for local dev, lower for production
+      NODE_OPTIONS_BACKEND: ${NODE_OPTIONS_BACKEND:-1536}
+      NODE_OPTIONS_FRONTEND: ${NODE_OPTIONS_FRONTEND:-2048}
     ports:
       - "3000:3000"  # Backend API
       - "3001:3001"  # Frontend Web App
     depends_on:
-      - postgres
-      - redis
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     networks:
       - khaalis-network
     restart: unless-stopped
+    # Resource limits for Azure VM (optional - uncomment if needed)
+    # deploy:
+    #   resources:
+    #     limits:
+    #       memory: 2G
+    #       cpus: '1.0'
+    #     reservations:
+    #       memory: 1G
+    #       cpus: '0.5'
 
 volumes:
   postgres_data:

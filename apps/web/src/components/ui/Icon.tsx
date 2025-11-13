@@ -43,6 +43,7 @@ import {
   MapPinIcon,
   PhoneIcon,
   EnvelopeIcon,
+  ChatBubbleLeftRightIcon,
   GlobeAltIcon,
   DocumentTextIcon,
   PhotoIcon,
@@ -196,6 +197,12 @@ const iconMap: Record<string, ReactNode> = {
   'location': <MapPinIcon className="w-4 h-4" />,
   'phone': <PhoneIcon className="w-4 h-4" />,
   'email': <EnvelopeIcon className="w-4 h-4" />,
+  'envelope': <EnvelopeIcon className="w-4 h-4" />,
+  'chat': <ChatBubbleLeftRightIcon className="w-4 h-4" />,
+  'chat-bubble': <ChatBubbleLeftRightIcon className="w-4 h-4" />,
+  'chat-bubble-left-right': <ChatBubbleLeftRightIcon className="w-4 h-4" />,
+  'message': <ChatBubbleLeftRightIcon className="w-4 h-4" />,
+  'reply': <ChatBubbleLeftRightIcon className="w-4 h-4" />,
   'globe': <GlobeAltIcon className="w-4 h-4" />,
   
   // Media

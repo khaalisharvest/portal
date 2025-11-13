@@ -2,7 +2,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import { BACKEND_URL } from '@/config/env';
 import jwt from 'jsonwebtoken';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-jwt-key';
+// Get JWT_SECRET from environment - validated at runtime
+const getJwtSecret = (): string => {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    throw new Error('JWT_SECRET environment variable is required');
+  }
+  return secret;
+};
 
 export async function POST(request: NextRequest) {
   try {
@@ -48,7 +55,7 @@ export async function POST(request: NextRequest) {
           role: user.role,
           phone: user.phone 
         },
-        JWT_SECRET,
+        getJwtSecret(),
         { expiresIn: '7d' }
       );
 

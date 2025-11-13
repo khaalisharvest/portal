@@ -65,31 +65,10 @@ const getSidebarItems = (userRole: string): SidebarItem[] => {
       roles: ['super_admin', 'admin']
     },
     {
-      id: 'analytics',
-      label: 'Analytics',
-      icon: 'chart',
-      href: '/admin/analytics',
-      roles: ['super_admin', 'admin']
-    },
-    {
-      id: 'suppliers',
-      label: 'Suppliers',
-      icon: 'truck',
-      href: '/admin/suppliers',
-      roles: ['super_admin', 'admin']
-    },
-    {
-      id: 'inventory',
-      label: 'Inventory',
-      icon: 'archive',
-      href: '/admin/inventory',
-      roles: ['super_admin', 'admin']
-    },
-    {
-      id: 'payments',
-      label: 'Payments',
-      icon: 'credit-card',
-      href: '/admin/payments',
+      id: 'contacts',
+      label: 'Contact Messages',
+      icon: 'envelope',
+      href: '/admin/contacts',
       roles: ['super_admin', 'admin']
     },
     {

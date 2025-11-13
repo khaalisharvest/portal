@@ -1,4 +1,4 @@
-import { API_URL } from '@/config/env';
+import { API_URL, APP_NAME, APP_DESCRIPTION, DEFAULT_CURRENCY, DEFAULT_LANGUAGE } from '@/config/env';
 
 export interface AppConfig {
   // Pagination
@@ -20,16 +20,16 @@ export interface AppConfig {
   isDeliveryEnabled: boolean;
   
   // UI
-  defaultCurrency: string;
-  defaultLanguage: string;
+  defaultCurrency: string | undefined;
+  defaultLanguage: string | undefined;
   
   // Performance
   cacheDuration: number;
   maxSearchResults: number;
   
   // App Info
-  appName: string;
-  appDescription: string;
+  appName: string | undefined;
+  appDescription: string | undefined;
 }
 
 class ConfigService {
@@ -84,17 +84,17 @@ class ConfigService {
         freeDeliveryThreshold: deliverySettings.freeDeliveryThreshold,
         isDeliveryEnabled: deliverySettings.isDeliveryEnabled,
         
-        // UI
-        defaultCurrency: 'PKR',
-        defaultLanguage: 'en',
+        // UI - Only from .env, no fallbacks
+        defaultCurrency: DEFAULT_CURRENCY,
+        defaultLanguage: DEFAULT_LANGUAGE,
         
         // Performance
         cacheDuration: 300000,
         maxSearchResults: 1000,
         
-        // App Info
-        appName: 'Khaalis Harvest',
-        appDescription: 'Fresh organic products marketplace'
+        // App Info - Only from .env, no fallbacks
+        appName: APP_NAME,
+        appDescription: APP_DESCRIPTION
       };
     } catch (error) {
       console.error('Failed to fetch configuration:', error);

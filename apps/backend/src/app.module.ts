@@ -19,6 +19,7 @@ import { ProductsModule } from './modules/products/products.module';
 import { ProductTypesModule } from './modules/product-types/product-types.module';
 import { OrdersModule } from './modules/orders/orders.module';
 import { SettingsModule } from './modules/settings/settings.module';
+import { ContactsModule } from './modules/contacts/contacts.module';
 import { HealthModule } from './health/health.module';
 import { SeederService } from './seeders/seeder.service';
 import { User } from './modules/users/entities/user.entity';
@@ -70,6 +71,7 @@ import { User } from './modules/users/entities/user.entity';
     ProductTypesModule,
     OrdersModule,
     SettingsModule,
+    ContactsModule,
   ],
   providers: [SeederService],
 })

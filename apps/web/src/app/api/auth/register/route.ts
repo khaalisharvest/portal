@@ -2,7 +2,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import { BACKEND_URL } from '@/config/env';
 import jwt from 'jsonwebtoken';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-jwt-key';
+// Get JWT_SECRET from environment - validated at runtime
+const getJwtSecret = (): string => {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    throw new Error('JWT_SECRET environment variable is required');
+  }
+  return secret;
+};
 
 export async function POST(request: NextRequest) {
   try {
@@ -45,7 +52,7 @@ export async function POST(request: NextRequest) {
             role: userData.role,
             phone: userData.phone 
           },
-          JWT_SECRET,
+          getJwtSecret(),
           { expiresIn: '7d' }
         );
 
@@ -62,35 +69,11 @@ export async function POST(request: NextRequest) {
         );
       }
     } catch (backendError) {
-      // Fallback to mock registration if backend is not available
-      
-      // Simulate successful registration
-      const newUser = {
-        id: Date.now().toString(),
-        name,
-        phone,
-        email: email || null,
-        role,
-        isActive: true,
-        createdAt: new Date().toISOString()
-      };
-
-      // Generate JWT token
-      const token = jwt.sign(
-        { 
-          userId: newUser.id, 
-          role: newUser.role,
-          phone: newUser.phone 
-        },
-        JWT_SECRET,
-        { expiresIn: '7d' }
+      console.error('Backend registration error:', backendError);
+      return NextResponse.json(
+        { message: 'Registration service is currently unavailable. Please try again later.' },
+        { status: 503 }
       );
-
-      return NextResponse.json({
-        user: newUser,
-        token,
-        message: 'Account created successfully'
-      });
     }
   } catch (error) {
     return NextResponse.json(

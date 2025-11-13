@@ -8,10 +8,10 @@ import { useCart } from '@/contexts/CartContext';
 import { useAuth } from '@/contexts/AuthContext';
 import Icon from '@/components/ui/Icon';
 import toast from 'react-hot-toast';
-import { settingsApi, DeliveryCalculation } from '@/services/settings';
+import {  DeliveryCalculation } from '@/services/settings';
 import { configService } from '@/services/config';
 import { validatePakistaniPhone, getPhonePlaceholder } from '@/utils/phoneValidation';
-import { API_URL, ADMIN_WHATSAPP, BANK_NAME, BANK_ACCOUNT_NAME, BANK_ACCOUNT_NUMBER, BANK_IBAN } from '@/config/env';
+import {  ADMIN_WHATSAPP, BANK_NAME, BANK_ACCOUNT_NAME, BANK_ACCOUNT_NUMBER, BANK_IBAN } from '@/config/env';
 
 interface Address {
   id: string;
@@ -917,10 +917,10 @@ export default function CheckoutPage() {
                       <div className="bg-white p-3 sm:p-4 rounded-lg border border-green-100">
                         <h4 className="text-xs sm:text-sm font-medium text-gray-900 mb-2 sm:mb-3">Account Information</h4>
                         <div className="space-y-1 sm:space-y-2 text-xs sm:text-sm text-gray-700">
-                          <p><span className="font-medium">Bank:</span> {BANK_NAME || 'Allied Bank Limited'}</p>
-                          <p><span className="font-medium">Account:</span> {BANK_ACCOUNT_NAME || 'Khaalis Harvest'}</p>
-                          <p><span className="font-medium">Account Number:</span> {BANK_ACCOUNT_NUMBER || '1234567890123456'}</p>
-                          <p className="break-all"><span className="font-medium">IBAN:</span> {BANK_IBAN || 'PK36ABPA0000001234567890123456'}</p>
+                          {BANK_NAME && <p><span className="font-medium">Bank:</span> {BANK_NAME}</p>}
+                          {BANK_ACCOUNT_NAME && <p><span className="font-medium">Account:</span> {BANK_ACCOUNT_NAME}</p>}
+                          {BANK_ACCOUNT_NUMBER && <p><span className="font-medium">Account Number:</span> {BANK_ACCOUNT_NUMBER}</p>}
+                          {BANK_IBAN && <p className="break-all"><span className="font-medium">IBAN:</span> {BANK_IBAN}</p>}
                         </div>
                       </div>
 
@@ -934,7 +934,9 @@ export default function CheckoutPage() {
                       <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
                         <p className="text-xs sm:text-sm text-blue-800">
                           <strong>Simple Process:</strong> Transfer the exact amount above to our account.
-                          Send payment screenshot to <strong>{ADMIN_WHATSAPP}</strong> on WhatsApp to confirm your order.
+                          {ADMIN_WHATSAPP && (
+                            <> Send payment screenshot to <strong>{ADMIN_WHATSAPP}</strong> on WhatsApp to confirm your order.</>
+                          )}
                         </p>
                       </div>
                     </div>

@@ -4,14 +4,12 @@ import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { useAuth } from '@/contexts/AuthContext';
 import Icon from '@/components/ui/Icon';
-import { API_URL } from '@/config/env';
 
 interface DashboardStats {
   totalOrders: number;
   totalRevenue: number;
   totalCustomers: number;
   totalProducts: number;
-  totalSuppliers: number;
   pendingOrders: number;
   completedOrders: number;
   recentOrders: any[];
@@ -25,7 +23,6 @@ export default function DashboardOverview() {
     totalRevenue: 0,
     totalCustomers: 0,
     totalProducts: 0,
-    totalSuppliers: 0,
     pendingOrders: 0,
     completedOrders: 0,
     recentOrders: [],
@@ -43,65 +40,30 @@ export default function DashboardOverview() {
     try {
       setLoading(true);
       
-      // Fetch orders data
-      const ordersResponse = await fetch(`/api/v1/admin/orders?page=1&limit=10`, {
+      // Single API call to fetch all dashboard statistics
+      const response = await fetch(`/api/v1/admin/dashboard`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('backend_token')}`,
         },
       });
 
-      // Fetch products data
-      const productsResponse = await fetch(`/api/v1/products?page=1&limit=10`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('backend_token')}`,
-        },
-      });
-
-      // Fetch suppliers data
-      const suppliersResponse = await fetch(`/api/v1/suppliers`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('backend_token')}`,
-        },
-      });
-
-      if (ordersResponse.ok) {
-        const ordersData = await ordersResponse.json();
-        const orders = ordersData.data?.orders || ordersData.orders || [];
+      if (response.ok) {
+        const responseData = await response.json();
+        // Backend wraps response in { success: true, data: {...}, timestamp: "..." }
+        const data = responseData.data || responseData;
         
-        const totalRevenue = orders.reduce((sum: number, order: any) => sum + Number(order.totalAmount), 0);
-        const pendingOrders = orders.filter((order: any) => order.status === 'pending').length;
-        const completedOrders = orders.filter((order: any) => order.status === 'delivered').length;
-
-        setStats(prev => ({
-          ...prev,
-          totalOrders: orders.length,
-          totalRevenue,
-          pendingOrders,
-          completedOrders,
-          recentOrders: orders.slice(0, 5)
-        }));
-      }
-
-      if (productsResponse.ok) {
-        const productsData = await productsResponse.json();
-        const products = productsData.data?.products || productsData.products || [];
-        
-        setStats(prev => ({
-          ...prev,
-          totalProducts: products.length,
-          topProducts: products.slice(0, 5)
-        }));
-      }
-
-      if (suppliersResponse.ok) {
-        const suppliersData = await suppliersResponse.json();
-        const suppliers = suppliersData.data?.suppliers || suppliersData.suppliers || suppliersData || [];
-        const activeSuppliers = suppliers.filter((supplier: any) => supplier.isActive).length;
-        
-        setStats(prev => ({
-          ...prev,
-          totalSuppliers: activeSuppliers
-        }));
+        setStats({
+          totalOrders: data.totalOrders || 0,
+          totalRevenue: data.totalRevenue || 0,
+          totalCustomers: data.totalCustomers || 0,
+          totalProducts: data.totalProducts || 0,
+          pendingOrders: data.pendingOrders || 0,
+          completedOrders: data.completedOrders || 0,
+          recentOrders: data.recentOrders || [],
+          topProducts: data.topProducts || []
+        });
+      } else {
+        console.error('Failed to fetch dashboard data:', response.status);
       }
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
@@ -209,13 +171,13 @@ export default function DashboardOverview() {
         <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
           <div className="flex items-center">
             <div className="p-2 bg-orange-100 rounded-lg">
-              <Icon name="truck" className="w-6 h-6 text-orange-600" />
+              <Icon name="user" className="w-6 h-6 text-orange-600" />
             </div>
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600 font-['Open_Sans']">
-                Active Suppliers
+                Total Customers
               </p>
-              <p className="text-2xl font-bold text-gray-900 font-['Poppins']">{stats.totalSuppliers}</p>
+              <p className="text-2xl font-bold text-gray-900 font-['Poppins']">{stats.totalCustomers}</p>
             </div>
           </div>
         </div>
