@@ -61,8 +61,9 @@ COPY packages/shared ./packages/shared
 # Reinstall dependencies after copying source (to ensure all files are in place)
 RUN yarn install --frozen-lockfile
 
-# Build backend first (use yarn workspace to ensure dependencies are available)
-RUN yarn workspace @khaalis-harvest/backend build
+# Build backend first
+# Install dev dependencies and use npx to run nest CLI
+RUN cd apps/backend && yarn install --frozen-lockfile && npx nest build
 
 # Build frontend
 # Create minimal prerender-manifest.json if build fails on error pages
