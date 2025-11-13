@@ -62,9 +62,9 @@ COPY packages/shared ./packages/shared
 # Reinstall dependencies after copying source (ensures all workspace dependencies are linked)
 RUN yarn install --frozen-lockfile
 
-# Build backend - use yarn build which resolves nest CLI via workspace PATH
-# yarn automatically adds node_modules/.bin to PATH for workspace commands
-RUN cd apps/backend && yarn build
+# Build backend - use yarn workspace command from root
+# This ensures nest CLI is resolved from hoisted node_modules/.bin
+RUN yarn workspace @khaalis-harvest/backend build
 
 # Build frontend using yarn workspace command
 # Create minimal prerender-manifest.json if build fails on error pages
