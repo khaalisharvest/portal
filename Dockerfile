@@ -50,13 +50,16 @@ COPY apps/backend/package.json ./apps/backend/
 COPY apps/web/package.json ./apps/web/
 COPY packages/shared/package.json ./packages/shared/
 
-# Install dependencies
+# Install dependencies (installs for all workspaces including backend and web)
 RUN yarn install --frozen-lockfile
 
 # Copy source code
 COPY apps/backend ./apps/backend
 COPY apps/web ./apps/web
 COPY packages/shared ./packages/shared
+
+# Reinstall dependencies after copying source (to ensure all files are in place)
+RUN yarn install --frozen-lockfile
 
 # Build backend first
 RUN cd apps/backend && yarn build
