@@ -52,7 +52,8 @@ COPY packages/shared/package.json ./packages/shared/
 
 # Install dependencies (installs for all workspaces including backend and web)
 # This installs dependencies for root and all workspace packages
-RUN yarn install --frozen-lockfile
+# --production=false ensures devDependencies (like @nestjs/cli) are installed
+RUN yarn install --frozen-lockfile --production=false
 
 # Copy source code
 COPY apps/backend ./apps/backend
@@ -60,7 +61,7 @@ COPY apps/web ./apps/web
 COPY packages/shared ./packages/shared
 
 # Reinstall dependencies after copying source (ensures all workspace dependencies are linked)
-RUN yarn install --frozen-lockfile
+RUN yarn install --frozen-lockfile --production=false
 
 # Build backend - use yarn workspace command from root
 # This ensures nest CLI is resolved from hoisted node_modules/.bin
