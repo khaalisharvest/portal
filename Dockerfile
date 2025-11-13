@@ -1,11 +1,22 @@
-# Khaalis Harvest Platform - Production Build
-# Works for both local development and production deployments (Azure, AWS, etc.)
+# ============================================================================
+# Khaalis Harvest Platform - Production Dockerfile
+# ============================================================================
+# Architecture:
+# - Monorepo with Yarn Workspaces (apps/backend, apps/web, packages/shared)
+# - Backend: NestJS (TypeScript → JavaScript, needs @nestjs/cli for build)
+# - Frontend: Next.js (React, needs NEXT_PUBLIC_* env vars at build time)
+# - Both apps run in single container for simplicity
+# ============================================================================
+
 FROM node:18-alpine
 
-# Install build dependencies for Alpine
+# Install build dependencies for Alpine Linux
 RUN apk add --no-cache python3 make g++ wget
 
-# Build arguments - Environment variables needed during build
+# ============================================================================
+# Build Arguments - Environment variables needed during Docker build
+# These are passed from docker-compose.yml build.args section
+# ============================================================================
 ARG NEXT_PUBLIC_API_URL
 ARG NEXT_PUBLIC_APP_URL
 ARG NEXT_PUBLIC_API_BASE_URL=
@@ -22,7 +33,10 @@ ARG NEXT_PUBLIC_DEFAULT_CURRENCY
 ARG NEXT_PUBLIC_DEFAULT_LANGUAGE
 ARG NODE_ENV=production
 
-# Set as environment variables for build process
+# ============================================================================
+# Environment Variables - Set from build args for build process
+# Next.js needs NEXT_PUBLIC_* vars at BUILD time (embedded in client bundle)
+# ============================================================================
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 ENV NEXT_PUBLIC_APP_URL=$NEXT_PUBLIC_APP_URL
 ENV NEXT_PUBLIC_API_BASE_URL=$NEXT_PUBLIC_API_BASE_URL
@@ -42,33 +56,52 @@ ENV NODE_ENV=$NODE_ENV
 # Set working directory
 WORKDIR /app
 
-# Copy root files
+# ============================================================================
+# Step 1: Copy package files first (for better Docker layer caching)
+# ============================================================================
 COPY package.json yarn.lock turbo.json ./
-
-# Copy workspace package files
 COPY apps/backend/package.json ./apps/backend/
 COPY apps/web/package.json ./apps/web/
 COPY packages/shared/package.json ./packages/shared/
 
-# Install dependencies (installs for all workspaces including backend and web)
-# This installs dependencies for root and all workspace packages
-# --production=false ensures devDependencies (like @nestjs/cli) are installed
-RUN yarn install --frozen-lockfile --production=false
+# ============================================================================
+# Step 2: Install root and workspace dependencies
+# Yarn workspaces hoist common dependencies to root node_modules
+# This installs dependencies for all workspaces
+# ============================================================================
+RUN yarn install --frozen-lockfile
 
-# Copy source code
+# ============================================================================
+# Step 3: Copy source code
+# ============================================================================
 COPY apps/backend ./apps/backend
 COPY apps/web ./apps/web
 COPY packages/shared ./packages/shared
 
-# Reinstall dependencies after copying source (ensures all workspace dependencies are linked)
-RUN yarn install --frozen-lockfile --production=false
+# ============================================================================
+# Step 4: Reinstall dependencies after copying source
+# This ensures workspace dependencies are properly linked
+# ============================================================================
+RUN yarn install --frozen-lockfile
 
-# Build backend - cd into backend and use node to run nest.js from root node_modules
-# This works because yarn workspaces hoist @nestjs/cli to root node_modules
-RUN cd apps/backend && node ../../node_modules/@nestjs/cli/bin/nest.js build
+# ============================================================================
+# Step 5: Build Backend (NestJS)
+# ============================================================================
+# Strategy: Install dependencies in backend directory first, then build
+# Why: @nestjs/cli is a devDependency. Installing in backend directory ensures
+#      nest CLI is available in apps/backend/node_modules/.bin (in PATH)
+#      when yarn build runs the "nest build" script
+RUN cd apps/backend && \
+    yarn install --frozen-lockfile && \
+    yarn build
 
-# Build frontend using yarn workspace command
-# Create minimal prerender-manifest.json if build fails on error pages
+# ============================================================================
+# Step 6: Build Frontend (Next.js)
+# ============================================================================
+# Strategy: Use yarn workspace command from root
+# Why: Next.js build needs NEXT_PUBLIC_* env vars (already set above)
+#      Workspace command properly resolves dependencies from hoisted node_modules
+#      Handle prerender errors gracefully (we use dynamic rendering anyway)
 RUN (NEXT_TELEMETRY_DISABLED=1 yarn workspace @khaalis-harvest/web build 2>&1 || true) && \
     if [ -d apps/web/.next ] && [ -f apps/web/.next/BUILD_ID ] && [ ! -f apps/web/.next/prerender-manifest.json ]; then \
       echo "✅ Core build succeeded, creating minimal prerender-manifest.json..." && \
@@ -80,8 +113,11 @@ RUN (NEXT_TELEMETRY_DISABLED=1 yarn workspace @khaalis-harvest/web build 2>&1 ||
       exit 1; \
     fi
 
-# Create startup script with proper error handling and signal trapping
-# Memory limits can be overridden via NODE_OPTIONS_BACKEND and NODE_OPTIONS_FRONTEND env vars
+# ============================================================================
+# Step 7: Create startup script
+# ============================================================================
+# Runs both backend and frontend in the same container
+# Memory limits configurable via NODE_OPTIONS_BACKEND/FRONTEND env vars
 RUN echo '#!/bin/sh' > /app/start.sh && \
     echo 'set -e' >> /app/start.sh && \
     echo 'echo "🚀 Starting Khaalis Harvest Platform..."' >> /app/start.sh && \
@@ -101,8 +137,10 @@ RUN echo '#!/bin/sh' > /app/start.sh && \
     echo 'wait' >> /app/start.sh && \
     chmod +x /app/start.sh
 
-# Health check (60s start period allows time for services to start in production)
-# Uses fixed port 3000 for backend health check
+# ============================================================================
+# Health Check
+# ============================================================================
+# Checks backend health endpoint (frontend depends on backend)
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
     CMD wget --no-verbose --tries=1 --spider http://localhost:3000/api/v1/health || exit 1
 

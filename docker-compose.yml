@@ -1,5 +1,17 @@
+# ============================================================================
+# Khaalis Harvest Platform - Docker Compose Configuration
+# ============================================================================
+# Architecture:
+# - Monorepo: NestJS Backend (port 3000) + Next.js Frontend (port 3001)
+# - PostgreSQL Database (port 5432 internally, 5433 externally)
+# - Redis Cache (port 6379)
+# - Works for both local development and Azure production
+# ============================================================================
+
 services:
+  # ==========================================================================
   # PostgreSQL Database
+  # ==========================================================================
   postgres:
     image: postgres:15-alpine
     container_name: khaalis-postgres
@@ -17,6 +29,7 @@ services:
     restart: unless-stopped
     # Memory optimization (set POSTGRES_COMMAND in .env for Azure)
     # Default: standard postgres (for local dev)
+    # Example for Azure: postgres -c shared_buffers=128MB -c effective_cache_size=256MB -c max_connections=50
     command: ${POSTGRES_COMMAND:-postgres}
     # Health check for PostgreSQL
     healthcheck:
@@ -33,7 +46,9 @@ services:
     #     reservations:
     #       memory: 256M
 
+  # ==========================================================================
   # Redis Cache
+  # ==========================================================================
   redis:
     image: redis:7-alpine
     container_name: khaalis-redis
@@ -45,8 +60,9 @@ services:
     networks:
       - khaalis-network
     restart: unless-stopped
-    # Memory optimization (set REDIS_COMMAND in .env for Azure: "redis-server --maxmemory 128mb --maxmemory-policy allkeys-lru")
+    # Memory optimization (set REDIS_COMMAND in .env for Azure)
     # Default: standard redis-server (for local dev)
+    # Example for Azure: redis-server --maxmemory 128mb --maxmemory-policy allkeys-lru
     command: ${REDIS_COMMAND:-redis-server}
     # Health check for Redis
     healthcheck:
@@ -63,13 +79,16 @@ services:
     #     reservations:
     #       memory: 128M
 
-  # Complete Application (Backend + Frontend)
+  # ==========================================================================
+  # Application Container (Backend + Frontend)
+  # ==========================================================================
   app:
     build:
       context: .
       dockerfile: Dockerfile
       args:
-        # Pass env vars as build args so they're available during build
+        # Build-time environment variables (needed during Docker build)
+        # Next.js embeds NEXT_PUBLIC_* vars into client bundle at build time
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
         NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL}
         NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-}
@@ -84,66 +103,21 @@ services:
         NEXT_PUBLIC_APP_DESCRIPTION: ${NEXT_PUBLIC_APP_DESCRIPTION}
         NEXT_PUBLIC_DEFAULT_CURRENCY: ${NEXT_PUBLIC_DEFAULT_CURRENCY}
         NEXT_PUBLIC_DEFAULT_LANGUAGE: ${NEXT_PUBLIC_DEFAULT_LANGUAGE}
-        NODE_ENV: ${NODE_ENV:-development}
+        NODE_ENV: ${NODE_ENV:-production}
     container_name: khaalis-app
-    # Load all env vars from .env file (most efficient - single source of truth)
+    # Load all environment variables from .env file (single source of truth)
     env_file:
       - .env
     environment:
-      # Application Configuration
-      NODE_ENV: ${NODE_ENV:-development}
-      PORT: ${PORT:-3000}
-      FRONTEND_PORT: ${FRONTEND_PORT:-3001}
-      
-      # Database Configuration
-      # DB_HOST must be 'postgres' (Docker service name) for container-to-container communication
-      # DB_PORT must be 5432 (internal Docker network port, not host port)
-      DB_HOST: postgres
-      DB_PORT: 5432
-      DB_USERNAME: ${DB_USERNAME:-postgres}
-      DB_PASSWORD: ${DB_PASSWORD:-password}
-      DB_NAME: ${DB_NAME:-khaalis_harvest}
-      DATABASE_URL: ${DATABASE_URL:-postgresql://${DB_USERNAME:-postgres}:${DB_PASSWORD:-password}@postgres:5432/${DB_NAME:-khaalis_harvest}}
-      
-      # Redis Configuration
-      # REDIS_HOST must be 'redis' (Docker service name) for container-to-container communication
-      REDIS_HOST: redis
-      REDIS_PORT: ${REDIS_PORT:-6379}
-      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
-      
-      # JWT Configuration
-      JWT_SECRET: ${JWT_SECRET}
-      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
-      
-      # API Configuration
-      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
-      NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL}
-      BACKEND_URL: ${BACKEND_URL}
-      FRONTEND_URL: ${FRONTEND_URL}
-      ADMIN_URL: ${ADMIN_URL}
-      
-      # CORS Configuration
-      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS}
-      
-      # App Configuration
-      NEXT_PUBLIC_APP_NAME: ${NEXT_PUBLIC_APP_NAME:-Khaalis Harvest}
-      NEXT_PUBLIC_APP_DESCRIPTION: ${NEXT_PUBLIC_APP_DESCRIPTION}
-      NEXT_PUBLIC_DEFAULT_CURRENCY: ${NEXT_PUBLIC_DEFAULT_CURRENCY}
-      NEXT_PUBLIC_DEFAULT_LANGUAGE: ${NEXT_PUBLIC_DEFAULT_LANGUAGE}
-      
-      # Admin Configuration
-      NEXT_PUBLIC_ADMIN_WHATSAPP: ${NEXT_PUBLIC_ADMIN_WHATSAPP}
-      SUPER_ADMIN_EMAIL: ${SUPER_ADMIN_EMAIL}
-      SUPER_ADMIN_PHONE: ${SUPER_ADMIN_PHONE}
-      
-      # Bank Configuration
-      NEXT_PUBLIC_BANK_NAME: ${NEXT_PUBLIC_BANK_NAME}
-      NEXT_PUBLIC_BANK_ACCOUNT_NAME: ${NEXT_PUBLIC_BANK_ACCOUNT_NAME}
-      NEXT_PUBLIC_BANK_ACCOUNT_NUMBER: ${NEXT_PUBLIC_BANK_ACCOUNT_NUMBER}
-      NEXT_PUBLIC_BANK_IBAN: ${NEXT_PUBLIC_BANK_IBAN}
+      # Override Docker-specific values (container-to-container communication)
+      # These MUST be set here because they differ from .env values
+      DB_HOST: postgres  # Docker service name (not localhost)
+      DB_PORT: 5432       # Internal Docker port (not host port 5433)
+      REDIS_HOST: redis   # Docker service name (not localhost)
       
       # Memory optimization (set NODE_OPTIONS_BACKEND/FRONTEND in .env for Azure)
-      # Defaults to higher memory for local dev, lower for production
+      # Defaults: Higher memory for local dev, can be reduced for Azure
+      # Format: MB value (e.g., 1536 = 1.5GB)
       NODE_OPTIONS_BACKEND: ${NODE_OPTIONS_BACKEND:-1536}
       NODE_OPTIONS_FRONTEND: ${NODE_OPTIONS_FRONTEND:-2048}
     ports:
@@ -167,10 +141,20 @@ services:
     #       memory: 1G
     #       cpus: '0.5'
 
+# ============================================================================
+# Volumes (persistent data storage)
+# ============================================================================
 volumes:
   postgres_data:
+    # PostgreSQL data persists here
   redis_data:
+    # Redis data persists here
 
+# ============================================================================
+# Networks (container-to-container communication)
+# ============================================================================
 networks:
   khaalis-network:
     driver: bridge
+    # All containers communicate via this network
+    # Use service names (postgres, redis) as hostnames
