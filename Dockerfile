@@ -51,6 +51,7 @@ COPY apps/web/package.json ./apps/web/
 COPY packages/shared/package.json ./packages/shared/
 
 # Install dependencies (installs for all workspaces including backend and web)
+# This installs dependencies for root and all workspace packages
 RUN yarn install --frozen-lockfile
 
 # Copy source code
@@ -58,23 +59,22 @@ COPY apps/backend ./apps/backend
 COPY apps/web ./apps/web
 COPY packages/shared ./packages/shared
 
-# Reinstall dependencies after copying source (to ensure all files are in place)
+# Reinstall dependencies after copying source (ensures all workspace dependencies are linked)
 RUN yarn install --frozen-lockfile
 
-# Build backend first
-# Install dev dependencies and use npx to run nest CLI
-RUN cd apps/backend && yarn install --frozen-lockfile && npx nest build
+# Build backend using yarn workspace command (proper way for yarn workspaces)
+# This ensures nest CLI from @nestjs/cli (devDependency) is available via workspace hoisting
+RUN yarn workspace @khaalis-harvest/backend build
 
-# Build frontend
+# Build frontend using yarn workspace command
 # Create minimal prerender-manifest.json if build fails on error pages
-RUN cd apps/web && \
-    (NEXT_TELEMETRY_DISABLED=1 yarn build 2>&1 || true) && \
-    if [ -d .next ] && [ -f .next/BUILD_ID ] && [ ! -f .next/prerender-manifest.json ]; then \
+RUN (NEXT_TELEMETRY_DISABLED=1 yarn workspace @khaalis-harvest/web build 2>&1 || true) && \
+    if [ -d apps/web/.next ] && [ -f apps/web/.next/BUILD_ID ] && [ ! -f apps/web/.next/prerender-manifest.json ]; then \
       echo "✅ Core build succeeded, creating minimal prerender-manifest.json..." && \
-      echo '{"version":3,"routes":{},"dynamicRoutes":{},"notFoundRoutes":[],"preview":{"previewModeId":"","previewModeSigningKey":"","previewModeEncryptionKey":""}}' > .next/prerender-manifest.json && \
+      echo '{"version":3,"routes":{},"dynamicRoutes":{},"notFoundRoutes":[],"preview":{"previewModeId":"","previewModeSigningKey":"","previewModeEncryptionKey":""}}' > apps/web/.next/prerender-manifest.json && \
       echo "✅ Fixed prerender-manifest.json"; \
     fi && \
-    if [ ! -d .next ] || [ ! -f .next/BUILD_ID ]; then \
+    if [ ! -d apps/web/.next ] || [ ! -f apps/web/.next/BUILD_ID ]; then \
       echo "❌ Build failed completely"; \
       exit 1; \
     fi
