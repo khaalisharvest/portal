@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
@@ -63,6 +63,8 @@ export default function CheckoutPage() {
     email: ''
   });
 
+  // Track if order was successfully placed to prevent showing "basket is empty" error
+  const orderPlacedSuccessfully = useRef(false);
 
   useEffect(() => {
     if (cartState.isLoading) {
@@ -70,10 +72,16 @@ export default function CheckoutPage() {
     }
 
     if (cartState.items.length === 0) {
-      toast.error('Your basket is empty');
-      router.push('/cart');
+      // Only show error if order wasn't successfully placed
+      if (!orderPlacedSuccessfully.current) {
+        toast.error('Your basket is empty');
+        router.push('/cart');
+      }
       return;
     }
+
+    // Reset the flag when cart has items
+    orderPlacedSuccessfully.current = false;
 
     // If user is logged in, fetch addresses and set checkout mode
     if (user) {
@@ -333,6 +341,8 @@ export default function CheckoutPage() {
 
         if (response.ok) {
           const order = await response.json();
+          // Mark order as successfully placed before clearing cart
+          orderPlacedSuccessfully.current = true;
           clearCart();
           toast.success('Order placed successfully!');
           router.push(`/orders/${order.data?.id || order.id}`);
@@ -366,6 +376,8 @@ export default function CheckoutPage() {
 
         if (response.ok) {
           const order = await response.json();
+          // Mark order as successfully placed before clearing cart
+          orderPlacedSuccessfully.current = true;
           clearCart();
           toast.success('Order placed successfully!');
           router.push(`/orders/${order.data?.id || order.id}`);

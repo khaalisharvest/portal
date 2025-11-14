@@ -101,8 +101,9 @@ export default function MobileCategoryDropdown({
     if (selectedProductType !== typeId) {
       onProductTypeChange(typeId);
     }
-    // Don't close the dropdown so user can see their selection
-  }, [selectedProductType, onProductTypeChange]);
+    // Close the dropdown immediately so user can see the filtered products
+    onClose();
+  }, [selectedProductType, onProductTypeChange, onClose]);
 
   // Memoize product types by category for better performance
   const productTypesByCategory = useMemo(() => {
