@@ -300,7 +300,7 @@ export class OrdersService {
   }
 
   // Admin methods
-  async getAllOrders(page: number = 1, limit: number = 10, status?: OrderStatus, paymentStatus?: PaymentStatus): Promise<{ orders: Order[], total: number, totalPages: number }> {
+  async getAllOrders(page: number = 1, limit: number = 10, status?: OrderStatus, paymentStatus?: PaymentStatus, search?: string): Promise<{ orders: Order[], total: number, totalPages: number }> {
     const queryBuilder = this.orderRepository
       .createQueryBuilder('order')
       .leftJoinAndSelect('order.address', 'address')
@@ -314,6 +314,27 @@ export class OrdersService {
 
     if (paymentStatus) {
       queryBuilder.andWhere('order.paymentStatus = :paymentStatus', { paymentStatus });
+    }
+
+    // Search by order number (optimized for ORD-YYYYMMDD-XXXX format)
+    if (search && search.trim()) {
+      const searchTerm = search.trim();
+      
+      // Smart search strategy:
+      // 1. If search starts with "ORD" or contains "-", use prefix search (can use index)
+      // 2. If search is all digits (likely searching by date or suffix), use substring search
+      // This handles: "ORD-20251114-9147", "ORD-20251114", "20251114", "9147"
+      if (searchTerm.toUpperCase().startsWith('ORD') || searchTerm.includes('-')) {
+        // Prefix search - can use index efficiently
+        queryBuilder.andWhere('order.orderNumber ILIKE :search', { search: `${searchTerm}%` });
+      } else if (/^\d+$/.test(searchTerm)) {
+        // All digits - likely searching by date (20251114) or suffix (9147)
+        // Use substring search for flexibility
+        queryBuilder.andWhere('order.orderNumber ILIKE :search', { search: `%${searchTerm}%` });
+      } else {
+        // Mixed characters - use substring search
+        queryBuilder.andWhere('order.orderNumber ILIKE :search', { search: `%${searchTerm}%` });
+      }
     }
 
     const [orders, total] = await queryBuilder

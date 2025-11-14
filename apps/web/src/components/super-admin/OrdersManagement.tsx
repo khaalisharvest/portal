@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
 import Icon from '@/components/ui/Icon';
@@ -75,6 +75,7 @@ export default function OrdersManagement() {
   const [selectedStatus, setSelectedStatus] = useState<string>('');
   const [selectedPaymentStatus, setSelectedPaymentStatus] = useState<string>('');
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [showOrderDetails, setShowOrderDetails] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
@@ -101,11 +102,17 @@ export default function OrdersManagement() {
     { value: 'refunded', label: 'Refunded', color: 'blue' },
   ];
 
+  // Debounced search effect - delays API calls until user stops typing
   useEffect(() => {
-    fetchOrders();
-  }, [currentPage, selectedStatus, selectedPaymentStatus]);
+    const debounceTimer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+      setCurrentPage(1); // Reset to page 1 when search changes
+    }, 500); // 500ms debounce delay
 
-  const fetchOrders = async () => {
+    return () => clearTimeout(debounceTimer);
+  }, [searchTerm]);
+
+  const fetchOrders = useCallback(async () => {
     try {
       setLoading(true);
       const params = new URLSearchParams();
@@ -116,6 +123,9 @@ export default function OrdersManagement() {
       }
       if (selectedPaymentStatus) {
         params.append('paymentStatus', selectedPaymentStatus);
+      }
+      if (debouncedSearchTerm && debouncedSearchTerm.trim()) {
+        params.append('search', debouncedSearchTerm.trim());
       }
 
       const response = await fetch(`/api/v1/admin/orders?${params}`, {
@@ -138,7 +148,12 @@ export default function OrdersManagement() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentPage, selectedStatus, selectedPaymentStatus, debouncedSearchTerm]);
+
+  // Fetch orders when page, status, payment status, or debounced search term changes
+  useEffect(() => {
+    fetchOrders();
+  }, [fetchOrders]);
 
   const updateOrderStatus = async (orderId: string, status: string, additionalData: any = {}) => {
     try {
@@ -328,6 +343,37 @@ export default function OrdersManagement() {
       {/* Filters */}
       <div className="bg-white rounded-lg shadow-sm p-6">
         <div className="space-y-4">
+          {/* Search Input */}
+          <div className="flex flex-col space-y-2">
+            <label className="text-sm font-medium text-gray-700">Search Order Number</label>
+            <div className="relative w-full max-w-md">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <Icon name="search" className="h-5 w-5 text-gray-400" />
+              </div>
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Search by order number (e.g., ORD-20251114-9147, 9147, 20251114)"
+                className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-orange-500 focus:border-orange-500 sm:text-sm"
+              />
+              {searchTerm && (
+                <button
+                  onClick={() => setSearchTerm('')}
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                  aria-label="Clear search"
+                >
+                  <Icon name="x" className="h-5 w-5 text-gray-400 hover:text-gray-600" />
+                </button>
+              )}
+            </div>
+            {searchTerm && (
+              <p className="text-xs text-gray-500 mt-1">
+                Searching for orders containing "{searchTerm}"
+              </p>
+            )}
+          </div>
+
           {/* Filter Dropdowns */}
           <div className="flex flex-wrap gap-6">
             {/* Order Status Filter */}

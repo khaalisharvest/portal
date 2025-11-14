@@ -157,13 +157,15 @@ export class AdminOrdersController {
   @ApiQuery({ name: 'limit', required: false, type: Number })
   @ApiQuery({ name: 'status', required: false, enum: OrderStatus })
   @ApiQuery({ name: 'paymentStatus', required: false, enum: PaymentStatus })
+  @ApiQuery({ name: 'search', required: false, type: String, description: 'Search by order number' })
   getAllOrders(
     @Query('page') page?: number,
     @Query('limit') limit?: number,
     @Query('status') status?: OrderStatus,
-    @Query('paymentStatus') paymentStatus?: PaymentStatus
+    @Query('paymentStatus') paymentStatus?: PaymentStatus,
+    @Query('search') search?: string
   ) {
-    return this.ordersService.getAllOrders(page, limit, status, paymentStatus);
+    return this.ordersService.getAllOrders(page, limit, status, paymentStatus, search);
   }
 
   @Patch(':id/status')
