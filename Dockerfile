@@ -83,11 +83,11 @@ COPY packages/shared ./packages/shared
 
 # ============================================================================
 # Step 4: Build Backend (NestJS)
-# Strategy: Install dependencies in backend, then use yarn exec to run nest
-# Why: @nestjs/cli needs to be available. Installing in backend ensures it's there.
-#      yarn exec finds executables from node_modules/.bin in the workspace.
+# Strategy: Use node to run nest.js directly from root node_modules
+# Why: @nestjs/cli is hoisted to root node_modules. Using node with full path
+#      is the most reliable way to run it. We cd to backend for tsconfig context.
 # ============================================================================
-RUN cd apps/backend && yarn install --frozen-lockfile && yarn exec nest build
+RUN cd apps/backend && node ../../node_modules/@nestjs/cli/bin/nest.js build
 
 # ============================================================================
 # Step 5: Build Frontend (Next.js)
