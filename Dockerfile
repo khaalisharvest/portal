@@ -71,8 +71,9 @@ COPY packages/shared/package.json ./packages/shared/
 # Step 2: Install all dependencies (including devDependencies for build)
 # Yarn workspaces hoist common dependencies to root node_modules
 # We need devDependencies (like @nestjs/cli) for building
+# Note: --production=false ensures devDependencies are installed
 # ============================================================================
-RUN yarn install --frozen-lockfile
+RUN yarn install --frozen-lockfile --production=false
 
 # ============================================================================
 # Step 3: Copy source code
@@ -83,11 +84,12 @@ COPY packages/shared ./packages/shared
 
 # ============================================================================
 # Step 4: Build Backend (NestJS)
-# Strategy: Use node to run nest.js directly from root node_modules
-# Why: @nestjs/cli is hoisted to root node_modules. Using node with full path
-#      is the most reliable way to run it. We cd to backend for tsconfig context.
+# Strategy: Simple cd and yarn build - the proven working approach
+# Why: This is exactly what worked 2 weeks ago. When we cd into the directory,
+#      yarn can find the nest CLI from hoisted node_modules via PATH.
+#      The root-level yarn install with --production=false ensures devDeps are installed.
 # ============================================================================
-RUN cd apps/backend && node ../../node_modules/@nestjs/cli/bin/nest.js build
+RUN cd apps/backend && yarn build
 
 # ============================================================================
 # Step 5: Build Frontend (Next.js)
