@@ -1,9 +1,13 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { usePathname } from 'next/navigation';
 import { ADMIN_WHATSAPP } from '@/config/env';
+import { useFilter } from '@/contexts/FilterContext';
 
 export default function WhatsAppButton() {
+  const pathname = usePathname();
+  const { isCategoryDropdownOpen } = useFilter();
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
@@ -12,6 +16,14 @@ export default function WhatsAppButton() {
   }, []);
 
   if (!ADMIN_WHATSAPP) {
+    return null;
+  }
+
+  // Only show on home page and when mobile category dropdown is not open
+  const isHomePage = pathname === '/';
+  const shouldShow = isHomePage && !isCategoryDropdownOpen;
+
+  if (!shouldShow) {
     return null;
   }
 

@@ -16,10 +16,9 @@ export default function Header() {
   const router = useRouter();
   const { user, logout, isLoading } = useAuth();
   const { state: cartState } = useCart();
-  const { selectedCategory, selectedProductType, setSelectedCategory, setSelectedProductType, clearFilters } = useFilter();
+  const { selectedCategory, selectedProductType, setSelectedCategory, setSelectedProductType, clearFilters, isCategoryDropdownOpen, setIsCategoryDropdownOpen } = useFilter();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isDesktopUserMenuOpen, setIsDesktopUserMenuOpen] = useState(false);
-  const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   
   // Get categories and product types using the hooks

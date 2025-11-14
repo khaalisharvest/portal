@@ -8,6 +8,8 @@ interface FilterContextType {
   setSelectedCategory: (category: string) => void;
   setSelectedProductType: (type: string) => void;
   clearFilters: () => void;
+  isCategoryDropdownOpen: boolean;
+  setIsCategoryDropdownOpen: (isOpen: boolean) => void;
 }
 
 const FilterContext = createContext<FilterContextType | undefined>(undefined);
@@ -15,6 +17,7 @@ const FilterContext = createContext<FilterContextType | undefined>(undefined);
 export function FilterProvider({ children }: { children: ReactNode }) {
   const [selectedCategory, setSelectedCategory] = useState('');
   const [selectedProductType, setSelectedProductType] = useState('');
+  const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] = useState(false);
 
   const clearFilters = () => {
     setSelectedCategory('');
@@ -27,7 +30,9 @@ export function FilterProvider({ children }: { children: ReactNode }) {
       selectedProductType,
       setSelectedCategory,
       setSelectedProductType,
-      clearFilters
+      clearFilters,
+      isCategoryDropdownOpen,
+      setIsCategoryDropdownOpen
     }}>
       {children}
     </FilterContext.Provider>
