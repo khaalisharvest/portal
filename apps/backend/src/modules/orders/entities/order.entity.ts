@@ -42,12 +42,12 @@ export class Order {
   @Column({ unique: true })
   orderNumber: string;
 
-  @Column()
-  userId: string;
+  @Column({ nullable: true })
+  userId: string | null;
 
-  @ManyToOne(() => User, { onDelete: 'CASCADE' })
+  @ManyToOne(() => User, { onDelete: 'CASCADE', nullable: true })
   @JoinColumn({ name: 'userId' })
-  user: User;
+  user: User | null;
 
   @Column()
   addressId: string;

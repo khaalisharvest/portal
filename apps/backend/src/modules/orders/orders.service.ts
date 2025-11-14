@@ -439,13 +439,11 @@ export class OrdersService {
       // Generate order number
       const orderNumber = await this.generateOrderNumber();
 
-      // Use a fixed guest user ID (this should exist in the users table)
-      const guestUserId = '00000000-0000-0000-0000-000000000000';
-
+      // Guest addresses don't have a userId (null)
       // Create guest address
-      console.log('Creating guest address with userId:', guestUserId);
+      console.log('Creating guest address without userId');
       const guestAddress = queryRunner.manager.create(Address, {
-        userId: guestUserId,
+        userId: null, // Guest addresses don't have a userId
         fullName: createGuestOrderDto.address.fullName,
         phone: createGuestOrderDto.address.phone,
         addressLine1: createGuestOrderDto.address.addressLine1,
@@ -509,7 +507,7 @@ export class OrdersService {
       
       const order = queryRunner.manager.create(Order, {
         orderNumber,
-        userId: guestUserId,
+        userId: null, // Guest orders don't have a userId
         addressId: savedAddress.id,
         subtotal,
         deliveryFee: deliveryCalculation.deliveryFee,
@@ -579,9 +577,8 @@ export class OrdersService {
         }
         finalUserId = userId;
       } else {
-        // Guest user: create new address
-        const guestUserId = '00000000-0000-0000-0000-000000000000';
-        finalUserId = guestUserId;
+        // Guest user: create new address with null userId
+        finalUserId = null;
 
         // Check if address data exists for guest users
         if (!orderData.address) {
@@ -589,7 +586,7 @@ export class OrdersService {
         }
 
         address = queryRunner.manager.create(Address, {
-          userId: guestUserId,
+          userId: null, // Guest addresses don't have a userId
           fullName: orderData.address.fullName,
           phone: orderData.address.phone,
           addressLine1: orderData.address.addressLine1,
