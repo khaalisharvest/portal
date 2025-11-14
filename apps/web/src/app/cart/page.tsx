@@ -241,10 +241,10 @@ export default function CartPage() {
                   </h1>
                   <button
                     onClick={handleClearCart}
-                    className="text-red-600 hover:text-red-800 text-xs sm:text-sm font-medium flex items-center space-x-1 self-start sm:self-auto"
+                    className="text-red-600 hover:text-red-800 text-xs sm:text-sm font-medium inline-flex items-center gap-1.5 ml-auto sm:ml-0 transition-colors"
                   >
-                    <Icon name="delete" className="w-3 h-3 sm:w-4 sm:h-4" />
-                    <span>Clear Basket</span>
+                    <Icon name="delete" className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" />
+                    <span className="whitespace-nowrap">Clear Basket</span>
                   </button>
                 </div>
               </div>
@@ -276,14 +276,23 @@ export default function CartPage() {
                       </div>
 
                       {/* Product Details */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-start justify-between">
+                      <div className="flex-1 min-w-0 relative">
+                        {/* Delete Button - Consistent position for all screen sizes */}
+                        <button
+                          onClick={() => handleRemoveItem(item.productId, item.selectedVariant, item.name)}
+                          className="absolute top-0 right-0 text-red-600 hover:text-red-800 p-1.5 hover:bg-red-50 rounded-lg transition-colors z-10"
+                          title="Remove item"
+                        >
+                          <Icon name="delete" className="w-4 h-4 sm:w-5 sm:h-5" />
+                        </button>
+
+                        <div className="flex items-start justify-between pr-8 sm:pr-10">
                           <div className="flex-1 min-w-0">
                             <Link 
                               href={`/products/${item.productId}`}
                               className="block hover:text-orange-600 transition-colors duration-200"
                             >
-                              <h3 className="text-sm sm:text-base lg:text-lg font-semibold text-gray-900 hover:text-orange-600 transition-colors duration-200">
+                              <h3 className="text-sm sm:text-base lg:text-lg font-semibold text-gray-900 hover:text-orange-600 transition-colors duration-200 pr-2">
                                 {item.name}
                               </h3>
                             </Link>
@@ -313,57 +322,47 @@ export default function CartPage() {
                               )}
                             </div>
                           </div>
-                          
-                          {/* Mobile Remove Button */}
-                          <button
-                            onClick={() => handleRemoveItem(item.productId, item.selectedVariant, item.name)}
-                            className="text-red-600 hover:text-red-800 p-1 hover:bg-red-50 rounded-lg transition-colors sm:hidden"
-                            title="Remove item"
-                          >
-                            <Icon name="delete" className="w-4 h-4" />
-                          </button>
                         </div>
 
                         {/* Quantity Controls and Total - Mobile */}
-                        <div className="flex items-center justify-between mt-3 sm:hidden">
-                          <div className="flex items-center border border-gray-300 rounded-lg">
-                            <button
-                              onClick={() => handleQuantityChange(item.productId, item.selectedVariant, item.quantity - 1)}
-                              disabled={isUpdating === item.productId}
-                              className="px-3 py-2 text-gray-600 hover:text-gray-800 hover:bg-gray-50 transition-colors disabled:opacity-50"
-                            >
-                              <Icon name="minus" className="w-4 h-4" />
-                            </button>
-                            <span className="px-4 py-2 text-gray-900 font-medium min-w-[3rem] text-center">
-                              {isUpdating === item.productId ? (
-                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-orange-500 mx-auto"></div>
-                              ) : (
-                                item.quantity
-                              )}
-                            </span>
-                            <button
-                              onClick={() => handleQuantityChange(item.productId, item.selectedVariant, item.quantity + 1)}
-                              disabled={isUpdating === item.productId || !item.isAvailable}
-                              className="px-3 py-2 text-gray-600 hover:text-gray-800 hover:bg-gray-50 transition-colors disabled:opacity-50"
-                            >
-                              <Icon name="plus" className="w-4 h-4" />
-                            </button>
-                          </div>
-                          <div className="text-right">
-                            <div className="text-base font-bold text-gray-900">
-                              ₨{(item.price * item.quantity).toFixed(2)}
+                        <div className="flex flex-col sm:hidden mt-4 gap-3">
+                          <div className="flex items-center justify-between gap-2 overflow-hidden">
+                            <div className="flex items-center border border-gray-300 rounded-lg flex-shrink-0">
+                              <button
+                                onClick={() => handleQuantityChange(item.productId, item.selectedVariant, item.quantity - 1)}
+                                disabled={isUpdating === item.productId}
+                                className="px-2 py-1.5 text-gray-600 hover:text-gray-800 hover:bg-gray-50 transition-colors disabled:opacity-50"
+                              >
+                                <Icon name="minus" className="w-3.5 h-3.5" />
+                              </button>
+                              <span className="px-2.5 py-1.5 text-gray-900 font-medium min-w-[2rem] text-center text-sm">
+                                {isUpdating === item.productId ? (
+                                  <div className="animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-orange-500 mx-auto"></div>
+                                ) : (
+                                  item.quantity
+                                )}
+                              </span>
+                              <button
+                                onClick={() => handleQuantityChange(item.productId, item.selectedVariant, item.quantity + 1)}
+                                disabled={isUpdating === item.productId || !item.isAvailable}
+                                className="px-2 py-1.5 text-gray-600 hover:text-gray-800 hover:bg-gray-50 transition-colors disabled:opacity-50"
+                              >
+                                <Icon name="plus" className="w-3.5 h-3.5" />
+                              </button>
                             </div>
-                            <div className="text-xs text-gray-500">
-                              {item.quantity} × ₨{item.price}
-                              {item.variantOriginalPrice && item.variantOriginalPrice > item.price && (
-                                <span className="ml-1 line-through">₨{item.variantOriginalPrice}</span>
-                              )}
+                            <div className="text-right flex-shrink-0 min-w-0">
+                              <div className="text-sm sm:text-base font-bold text-gray-900 truncate">
+                                ₨{(item.price * item.quantity).toFixed(2)}
+                              </div>
+                              <div className="text-xs text-gray-500 truncate">
+                                {item.quantity} × ₨{item.price}
+                              </div>
                             </div>
                           </div>
                         </div>
 
                         {/* Desktop Layout: Quantity Controls and Total */}
-                        <div className="hidden sm:flex items-center justify-between mt-3">
+                        <div className="hidden sm:flex items-center justify-between mt-4">
                           <div className="flex items-center space-x-3">
                             <div className="flex items-center border border-gray-300 rounded-lg">
                               <button
@@ -388,15 +387,6 @@ export default function CartPage() {
                                 <Icon name="plus" className="w-4 h-4" />
                               </button>
                             </div>
-
-                            {/* Desktop Remove Button */}
-                            <button
-                              onClick={() => handleRemoveItem(item.productId, item.selectedVariant, item.name)}
-                              className="text-red-600 hover:text-red-800 p-2 hover:bg-red-50 rounded-lg transition-colors"
-                              title="Remove item"
-                            >
-                              <Icon name="delete" className="w-4 h-4" />
-                            </button>
                           </div>
                           
                           <div className="text-right">
