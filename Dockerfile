@@ -83,11 +83,12 @@ COPY packages/shared ./packages/shared
 
 # ============================================================================
 # Step 4: Build Backend (NestJS)
-# Strategy: Use yarn workspace command from root
-# Why: @nestjs/cli is hoisted to root node_modules by yarn workspaces
-#      yarn workspace command properly resolves the nest CLI
+# Strategy: Install dependencies in backend directory first, then build
+# Why: @nestjs/cli is a devDependency. Installing in backend directory ensures
+#      nest CLI is available in apps/backend/node_modules/.bin (in PATH)
+#      when yarn build runs the "nest build" script
 # ============================================================================
-RUN yarn workspace @khaalis-harvest/backend build
+RUN cd apps/backend && yarn install --frozen-lockfile && yarn build
 
 # ============================================================================
 # Step 5: Build Frontend (Next.js)
