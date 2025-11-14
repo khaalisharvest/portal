@@ -98,10 +98,12 @@ export default function MobileCategoryDropdown({
   }, [onCategoryChange, onProductTypeChange]);
 
   const handleProductTypeClick = useCallback((typeId: string) => {
+    // Update product type if it changed
     if (selectedProductType !== typeId) {
       onProductTypeChange(typeId);
     }
-    // Close the dropdown immediately so user can see the filtered products
+    // Close the modal immediately so user can see the filtered products
+    // Call onClose unconditionally to ensure modal closes on mobile
     onClose();
   }, [selectedProductType, onProductTypeChange, onClose]);
 
@@ -222,7 +224,11 @@ export default function MobileCategoryDropdown({
                             return (
                               <button
                                 key={type.id}
-                                onClick={() => handleProductTypeClick(type.id)}
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  handleProductTypeClick(type.id);
+                                }}
                                 className={`w-full text-left py-2 text-sm transition-colors relative ${
                                   isTypeActive
                                     ? 'text-orange-600 pl-8'
