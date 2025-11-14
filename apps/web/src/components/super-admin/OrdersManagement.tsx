@@ -44,8 +44,8 @@ interface User {
 interface Order {
   id: string;
   orderNumber: string;
-  userId: string;
-  user: User;
+  userId: string | null;
+  user: User | null;
   address: Address;
   items: OrderItem[];
   subtotal: number;
@@ -412,8 +412,15 @@ export default function OrdersManagement() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div>
-                        <div className="text-sm font-medium text-gray-900">{order.user.name}</div>
-                        <div className="text-sm text-gray-500">{order.user.phone}</div>
+                        <div className="text-sm font-medium text-gray-900">
+                          {order.user ? order.user.name : order.address.fullName}
+                        </div>
+                        <div className="text-sm text-gray-500">
+                          {order.user ? order.user.phone : order.address.phone}
+                        </div>
+                        {!order.user && (
+                          <div className="text-xs text-blue-600 mt-1">Guest Order</div>
+                        )}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -632,10 +639,20 @@ export default function OrdersManagement() {
                 <div>
                   <h4 className="text-sm font-medium text-gray-900 mb-2">Customer Information</h4>
                   <div className="bg-gray-50 rounded-lg p-4">
-                    <p className="font-medium text-gray-900">{selectedOrder.user.name}</p>
-                    <p className="text-sm text-gray-600">{selectedOrder.user.phone}</p>
-                    {selectedOrder.user.email && (
-                      <p className="text-sm text-gray-600">{selectedOrder.user.email}</p>
+                    {selectedOrder.user ? (
+                      <>
+                        <p className="font-medium text-gray-900">{selectedOrder.user.name}</p>
+                        <p className="text-sm text-gray-600">{selectedOrder.user.phone}</p>
+                        {selectedOrder.user.email && (
+                          <p className="text-sm text-gray-600">{selectedOrder.user.email}</p>
+                        )}
+                      </>
+                    ) : (
+                      <>
+                        <p className="font-medium text-gray-900">{selectedOrder.address.fullName}</p>
+                        <p className="text-sm text-gray-600">{selectedOrder.address.phone}</p>
+                        <p className="text-xs text-blue-600 mt-2 font-medium">Guest Order</p>
+                      </>
                     )}
                   </div>
                 </div>
