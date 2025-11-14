@@ -83,12 +83,12 @@ COPY packages/shared ./packages/shared
 
 # ============================================================================
 # Step 4: Build Backend (NestJS)
-# Strategy: Install dependencies in backend directory first, then build
-# Why: @nestjs/cli is a devDependency. Installing in backend directory ensures
-#      nest CLI is available in apps/backend/node_modules/.bin (in PATH)
-#      when yarn build runs the "nest build" script
+# Strategy: Change to backend directory and run yarn build
+# Why: This is the proven working approach from Oct 31. When we cd into the
+#      directory, yarn can find the nest CLI from hoisted node_modules.
+#      The root-level yarn install already installed all dependencies.
 # ============================================================================
-RUN cd apps/backend && yarn install --frozen-lockfile && yarn build
+RUN cd apps/backend && yarn build
 
 # ============================================================================
 # Step 5: Build Frontend (Next.js)
