@@ -133,7 +133,8 @@ services:
       - "80:80"    # HTTP (redirects to HTTPS)
       - "443:443"  # HTTPS
     volumes:
-      - ./nginx/nginx-https.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/nginx-https-ip.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
       - certbot-www:/var/www/certbot:ro
       - certbot-conf:/etc/letsencrypt:ro
     depends_on:
