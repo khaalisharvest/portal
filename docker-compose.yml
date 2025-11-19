@@ -124,9 +124,13 @@ services:
 # ============================================================================
 volumes:
   postgres_data:
-    # PostgreSQL data persists here
+    # Use existing portal_postgres_data volume to preserve data
+    external: true
+    name: portal_postgres_data
   redis_data:
-    # Redis data persists here
+    # Use existing portal_redis_data volume to preserve data
+    external: true
+    name: portal_redis_data
 
 # ============================================================================
 # Networks (container-to-container communication)
