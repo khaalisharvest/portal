@@ -2,7 +2,8 @@ import { MetadataRoute } from 'next';
 import { APP_URL } from '@/config/env';
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const baseUrl = APP_URL || 'https://khaalisharvest.duckdns.org';
+  // Use DuckDNS domain for sitemap
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || APP_URL || 'https://khaalisharvest.duckdns.org';
 
   return [
     {
