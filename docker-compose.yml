@@ -101,6 +101,8 @@ services:
       DB_HOST: postgres  # Docker service name (not localhost)
       DB_PORT: 5432       # Internal Docker port (not host port 5433)
       REDIS_HOST: redis  # Docker service name (not localhost)
+      # Internal backend URL for Next.js API routes (same container)
+      INTERNAL_BACKEND_URL: http://localhost:3000
       
       # Memory optimization (set NODE_OPTIONS_BACKEND/FRONTEND in .env for Azure)
       # Defaults: Higher memory for local dev, can be reduced for Azure
