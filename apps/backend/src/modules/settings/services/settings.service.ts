@@ -474,4 +474,57 @@ export class SettingsService {
     await this.setSetting('free_delivery_threshold', data.freeDeliveryThreshold);
     await this.setSetting('delivery_enabled', data.isDeliveryEnabled);
   }
+
+  /**
+   * Get notification bar settings
+   */
+  async getNotificationBarSettings(): Promise<{
+    isEnabled: boolean;
+    text: string;
+    backgroundColor: string;
+    textColor: string;
+    speed: number;
+  }> {
+    try {
+      const isEnabled = await this.getSetting('notification_bar_enabled', false);
+      const text = await this.getSetting('notification_bar_text', '');
+      const backgroundColor = await this.getSetting('notification_bar_bg_color', '#FF6B35');
+      const textColor = await this.getSetting('notification_bar_text_color', '#FFFFFF');
+      const speed = await this.getSetting('notification_bar_speed', 50);
+
+      return {
+        isEnabled: isEnabled === true || isEnabled === 'true',
+        text: text || '',
+        backgroundColor: backgroundColor || '#FF6B35',
+        textColor: textColor || '#FFFFFF',
+        speed: typeof speed === 'number' ? speed : (typeof speed === 'string' ? parseFloat(speed) : 50) || 50
+      };
+    } catch (error) {
+      // Return defaults if settings don't exist
+      return {
+        isEnabled: false,
+        text: '',
+        backgroundColor: '#FF6B35',
+        textColor: '#FFFFFF',
+        speed: 50
+      };
+    }
+  }
+
+  /**
+   * Update notification bar settings
+   */
+  async updateNotificationBarSettings(data: {
+    isEnabled: boolean;
+    text: string;
+    backgroundColor: string;
+    textColor: string;
+    speed: number;
+  }): Promise<void> {
+    await this.setSetting('notification_bar_enabled', data.isEnabled);
+    await this.setSetting('notification_bar_text', data.text);
+    await this.setSetting('notification_bar_bg_color', data.backgroundColor);
+    await this.setSetting('notification_bar_text_color', data.textColor);
+    await this.setSetting('notification_bar_speed', data.speed);
+  }
 }

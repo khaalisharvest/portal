@@ -5,6 +5,7 @@ import { Providers } from './providers';
 import ConditionalHeader from '@/components/layout/ConditionalHeader';
 import ConditionalFooter from '@/components/layout/ConditionalFooter';
 import WhatsAppButton from '@/components/ui/WhatsAppButton';
+import NotificationBar from '@/components/ui/NotificationBar';
 import { APP_URL } from '@/config/env';
 
 const inter = Inter({ subsets: ['latin'] });
@@ -68,6 +69,7 @@ export default function RootLayout({
       </head>
       <body className={`${inter.className} organic-gradient`}>
         <Providers>
+          <NotificationBar />
           <ConditionalHeader />
           <main className="min-h-screen">
             {children}

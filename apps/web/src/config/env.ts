@@ -40,7 +40,8 @@ export const env = {
   // Backend URL (for API routes)
   BACKEND_URL: process.env.BACKEND_URL!,
   
-  // Admin WhatsApp for payment confirmation
+  // Admin contact information
+  ADMIN_EMAIL: process.env.NEXT_PUBLIC_ADMIN_EMAIL,
   ADMIN_WHATSAPP: process.env.NEXT_PUBLIC_ADMIN_WHATSAPP,
   
   // Bank account details for payment
@@ -67,6 +68,7 @@ export const {
   API_URL,
   API_BASE_URL,
   BACKEND_URL,
+  ADMIN_EMAIL,
   ADMIN_WHATSAPP,
   BANK_NAME,
   BANK_ACCOUNT_NAME,

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import Image from 'next/image';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCart } from '@/contexts/CartContext';
@@ -14,6 +14,7 @@ import { useCategories, useProductTypes } from '@/hooks/useProducts';
 
 export default function Header() {
   const router = useRouter();
+  const pathname = usePathname();
   const { user, logout, isLoading } = useAuth();
   const { state: cartState } = useCart();
   const { selectedCategory, selectedProductType, setSelectedCategory, setSelectedProductType, clearFilters, isCategoryDropdownOpen, setIsCategoryDropdownOpen } = useFilter();
@@ -371,10 +372,19 @@ export default function Header() {
                   <span>Home</span>
                 </button>
                 <button
-                  onClick={(e) => {
+                  onClick={async (e) => {
                     e.stopPropagation();
                     setIsMobileMenuOpen(false);
-                    setIsCategoryDropdownOpen(true);
+                    
+                    // Navigate to /products if not already there
+                    if (pathname !== '/products') {
+                      await router.push('/products');
+                      // Open modal after navigation completes
+                      setIsCategoryDropdownOpen(true);
+                    } else {
+                      // Already on products page, just open the modal
+                      setIsCategoryDropdownOpen(true);
+                    }
                   }}
                   className="flex items-center space-x-3 px-4 py-3 text-base font-medium text-neutral-700 hover:text-primary-600 hover:bg-primary-50 rounded-xl transition-all duration-200 w-full text-left [touch-action:manipulation] cursor-pointer relative z-[101]"
                 >
