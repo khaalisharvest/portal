@@ -107,9 +107,11 @@ services:
       # Format: MB value (e.g., 1536 = 1.5GB)
       NODE_OPTIONS_BACKEND: ${NODE_OPTIONS_BACKEND:-1536}
       NODE_OPTIONS_FRONTEND: ${NODE_OPTIONS_FRONTEND:-2048}
-    ports:
-      - "3000:3000"  # Backend API
-      - "3001:3001"  # Frontend Web App
+    # Ports are now only exposed internally (via Nginx)
+    # External access is through Nginx on ports 80/443
+    expose:
+      - "3000"  # Backend API (internal)
+      - "3001"  # Frontend Web App (internal)
     depends_on:
       postgres:
         condition: service_healthy
@@ -119,6 +121,37 @@ services:
       - khaalis-network
     restart: unless-stopped
 
+  # ==========================================================================
+  # Nginx Reverse Proxy with HTTPS
+  # ==========================================================================
+  nginx:
+    image: nginx:alpine
+    container_name: khaalis-nginx
+    ports:
+      - "80:80"    # HTTP (redirects to HTTPS)
+      - "443:443"  # HTTPS
+    volumes:
+      - ./nginx/nginx-https.conf:/etc/nginx/nginx.conf:ro
+      - certbot-www:/var/www/certbot:ro
+      - certbot-conf:/etc/letsencrypt:ro
+    depends_on:
+      - app
+    networks:
+      - khaalis-network
+    restart: unless-stopped
+    command: "/bin/sh -c 'while :; do sleep 6h & wait $${!}; nginx -s reload; done & nginx -g \"daemon off;\"'"
+
+  # ==========================================================================
+  # Certbot for Let's Encrypt SSL Certificates
+  # ==========================================================================
+  certbot:
+    image: certbot/certbot
+    container_name: khaalis-certbot
+    volumes:
+      - certbot-www:/var/www/certbot
+      - certbot-conf:/etc/letsencrypt
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
+
 # ============================================================================
 # Volumes (persistent data storage)
 # ============================================================================
@@ -127,15 +160,17 @@ services:
 # ============================================================================
 volumes:
   postgres_data:
-    # Fixed volume name: khaalis-harvest_postgres_data
-    # This ensures data persists across container recreations
-    # If you need to use an existing volume, set external: true and name: <volume_name>
-    name: khaalis-harvest_postgres_data
+    # Using existing portal_postgres_data volume (contains all production data)
+    external: true
+    name: portal_postgres_data
   redis_data:
-    # Fixed volume name: khaalis-harvest_redis_data
-    # This ensures data persists across container recreations
-    # If you need to use an existing volume, set external: true and name: <volume_name>
-    name: khaalis-harvest_redis_data
+    # Using existing portal_redis_data volume
+    external: true
+    name: portal_redis_data
+  certbot-www:
+    # Certbot webroot for ACME challenges
+  certbot-conf:
+    # Let's Encrypt certificates storage
 
 # ============================================================================
 # Networks (container-to-container communication)
