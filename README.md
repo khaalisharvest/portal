@@ -26,10 +26,11 @@ yarn install
 
 ### 2. Environment Setup
 ```bash
-# Create .env files in each app folder
-# Backend: apps/backend/.env
-# Web: apps/web/.env.local
-# See ENVIRONMENT.md for details
+# Copy env.template to .env in project root
+cp env.template .env
+
+# Edit .env with your configuration
+# See env.template for all available variables
 ```
 
 ### 3. Database Setup
@@ -174,13 +175,19 @@ API_BASE_URL=http://localhost:3000/api/v1
 
 ## 🚀 Deployment
 
-### Docker
+### Azure Production Deployment
+For complete step-by-step Azure deployment instructions, see **[AZURE_DEPLOYMENT.md](./AZURE_DEPLOYMENT.md)**
+
+### Local Docker Deployment
 ```bash
 # Build and run with Docker Compose
-docker-compose up -d
+docker-compose up -d --build
 
-# Production build
-docker-compose -f docker-compose.prod.yml up -d
+# View logs
+docker-compose logs -f
+
+# Stop services
+docker-compose down
 ```
 
 ### Manual Deployment
