@@ -40,7 +40,7 @@ export const env = {
   // Backend URL (for API routes)
   // Use INTERNAL_BACKEND_URL if set (for Docker internal communication)
   // Otherwise use BACKEND_URL (for external/public URLs)
-  BACKEND_URL: process.env.INTERNAL_BACKEND_URL || process.env.BACKEND_URL || 'http://localhost:3000',
+  BACKEND_URL: process.env.INTERNAL_BACKEND_URL || process.env.BACKEND_URL!,
   
   // Admin contact information
   ADMIN_EMAIL: process.env.NEXT_PUBLIC_ADMIN_EMAIL,
