@@ -1,0 +1,15 @@
+# robots.txt for Khaalis Harvest
+# Allow all search engines to crawl the site
+
+User-agent: *
+Allow: /
+
+# Disallow admin and API routes
+Disallow: /admin/
+Disallow: /api/
+Disallow: /super-admin/
+Disallow: /auth/
+
+# Sitemap location
+Sitemap: https://khaalisharvest.duckdns.org/sitemap.xml
+
