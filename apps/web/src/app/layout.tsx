@@ -63,11 +63,6 @@ export default function RootLayout({
   return (
     <html lang="en" dir="ltr">
       <head>
-        {/* Google Search Console Verification - Replace with your actual verification code */}
-        {/* Example: <meta name="google-site-verification" content="YOUR_VERIFICATION_CODE_HERE" /> */}
-        {process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION && (
-          <meta name="google-site-verification" content={process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION} />
-        )}
         <link rel="icon" href="/images/favicon-512x512.png" />
         <link rel="shortcut icon" href="/images/favicon-512x512.png" />
         <link rel="apple-touch-icon" href="/images/favicon-512x512.png" />
