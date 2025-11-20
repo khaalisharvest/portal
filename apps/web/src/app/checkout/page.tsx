@@ -345,7 +345,7 @@ export default function CheckoutPage() {
           orderPlacedSuccessfully.current = true;
           clearCart();
           toast.success('Order placed successfully!');
-          router.push(`/orders/${order.data?.id || order.id}`);
+          router.push('/products');
         } else {
           const error = await response.json();
           throw new Error(error.message || 'Failed to place order');
@@ -380,7 +380,7 @@ export default function CheckoutPage() {
           orderPlacedSuccessfully.current = true;
           clearCart();
           toast.success('Order placed successfully!');
-          router.push(`/orders/${order.data?.id || order.id}`);
+          router.push('/products');
         } else {
           const error = await response.json();
           throw new Error(error.message || 'Failed to place order');
