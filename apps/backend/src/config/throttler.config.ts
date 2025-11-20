@@ -13,6 +13,7 @@ export class ThrottlerConfig implements ThrottlerOptionsFactory {
       host: this.configService.get('REDIS_HOST') || 'redis',
       port: parseInt(this.configService.get('REDIS_PORT') || '6379'),
       password: this.configService.get('REDIS_PASSWORD') || undefined,
+      family: 4, // Force IPv4 to avoid IPv6 connection issues
       retryStrategy: (times) => {
         const delay = Math.min(times * 50, 2000);
         return delay;
