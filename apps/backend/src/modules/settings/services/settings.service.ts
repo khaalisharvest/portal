@@ -1,4 +1,4 @@
-import { Injectable, Inject } from '@nestjs/common';
+import { Injectable, Inject, Optional } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
@@ -12,7 +12,7 @@ export class SettingsService {
   constructor(
     @InjectRepository(Setting)
     private settingsRepository: Repository<Setting>,
-    @Inject(CACHE_MANAGER) private cacheManager: Cache,
+    @Optional() @Inject(CACHE_MANAGER) private cacheManager?: Cache,
   ) {}
 
   /**
@@ -21,10 +21,12 @@ export class SettingsService {
   async getSetting(key: string, defaultValue?: any): Promise<any> {
     const cacheKey = `settings:${key}`;
     
-    // Check Redis cache first
-    const cached = await this.cacheManager.get<any>(cacheKey);
-    if (cached !== undefined && cached !== null) {
-      return cached;
+    // Check Redis cache first (if available)
+    if (this.cacheManager) {
+      const cached = await this.cacheManager.get<any>(cacheKey);
+      if (cached !== undefined && cached !== null) {
+        return cached;
+      }
     }
 
     // Fetch from database
@@ -42,8 +44,10 @@ export class SettingsService {
     // Parse value based on type
     const value = this.parseSettingValue(setting);
     
-    // Cache the value in Redis
-    await this.cacheManager.set(cacheKey, value, this.CACHE_DURATION);
+    // Cache the value in Redis (if available)
+    if (this.cacheManager) {
+      await this.cacheManager.set(cacheKey, value, this.CACHE_DURATION);
+    }
 
     return value;
   }
@@ -114,8 +118,10 @@ export class SettingsService {
       );
     }
 
-    // Clear Redis cache
-    await this.cacheManager.del(`settings:${key}`);
+    // Clear Redis cache (if available)
+    if (this.cacheManager) {
+      await this.cacheManager.del(`settings:${key}`);
+    }
   }
 
   /**
