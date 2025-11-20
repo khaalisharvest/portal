@@ -44,10 +44,11 @@ import { User } from './modules/users/entities/user.entity';
     TypeOrmModule.forFeature([User]),
 
     // Cache - Redis caching for frequently accessed data
-    CacheModule.registerAsync({
-      useClass: RedisConfig,
-      isGlobal: true,
-    }),
+    // Temporarily disabled due to IPv6 connection issue - will fix with cache-manager-redis-yet
+    // CacheModule.registerAsync({
+    //   useClass: RedisConfig,
+    //   isGlobal: true,
+    // }),
 
     // Rate Limiting - Redis-based throttling
     ThrottlerModule.forRootAsync({
