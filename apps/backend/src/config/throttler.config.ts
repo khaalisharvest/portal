@@ -54,6 +54,10 @@ export class ThrottlerConfig implements ThrottlerOptionsFactory, OnModuleDestroy
       this.logger.warn(`Redis throttler client reconnecting in ${delay}ms`);
     });
 
+    // Store references to avoid 'this' context issues in storage methods
+    const redisClient = this.redis;
+    const logger = this.logger;
+
     return {
       throttlers: [
         {
@@ -65,12 +69,12 @@ export class ThrottlerConfig implements ThrottlerOptionsFactory, OnModuleDestroy
       storage: {
         async increment(key: string, ttl: number, limit: number, blockDuration: number, throttlerName: string) {
           try {
-            const multi = this.redis.multi();
+            const multi = redisClient.multi();
             multi.incr(key);
             multi.pexpire(key, ttl);
             const results = await multi.exec();
             const totalHits = results?.[0]?.[1] as number || 0;
-            const timeToExpire = await this.redis.pttl(key);
+            const timeToExpire = await redisClient.pttl(key);
             const isBlocked = totalHits >= limit;
             
             return {
@@ -80,7 +84,7 @@ export class ThrottlerConfig implements ThrottlerOptionsFactory, OnModuleDestroy
               timeToBlockExpire: isBlocked ? blockDuration : 0,
             };
           } catch (error) {
-            this.logger.error(`Throttler increment failed for key ${key}: ${error.message}`);
+            logger.error(`Throttler increment failed for key ${key}: ${error.message}`);
             // Return non-blocking response on error to allow request through
             return {
               totalHits: 0,
