@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, Inject } from '@nestjs/common';
+import { Injectable, NotFoundException, Inject, Optional } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
@@ -18,17 +18,19 @@ export class ProductsService {
     private categoryRepository: Repository<Category>,
     @InjectRepository(ProductType)
     private productTypeRepository: Repository<ProductType>,
-    @Inject(CACHE_MANAGER) private cacheManager: Cache,
+    @Optional() @Inject(CACHE_MANAGER) private cacheManager?: Cache,
   ) {}
 
   async create(createProductDto: CreateProductDto): Promise<Product> {
     const product = this.productRepository.create(createProductDto);
     const savedProduct = await this.productRepository.save(product);
     
-    // Clear cache when new product is created
-    await this.cacheManager.del('products:categories');
-    await this.cacheManager.del('products:productTypes');
-    await this.cacheManager.del('products:featured');
+    // Clear cache when new product is created (if cache available)
+    if (this.cacheManager) {
+      await this.cacheManager.del('products:categories');
+      await this.cacheManager.del('products:productTypes');
+      await this.cacheManager.del('products:featured');
+    }
     
     return savedProduct;
   }
@@ -107,9 +109,11 @@ export class ProductsService {
 
   async getFeatured(): Promise<Product[]> {
     const cacheKey = 'products:featured';
-    const cached = await this.cacheManager.get<Product[]>(cacheKey);
-    if (cached) {
-      return cached;
+    if (this.cacheManager) {
+      const cached = await this.cacheManager.get<Product[]>(cacheKey);
+      if (cached) {
+        return cached;
+      }
     }
 
     const products = await this.productRepository.find({
@@ -118,15 +122,19 @@ export class ProductsService {
       take: 8,
     });
 
-    await this.cacheManager.set(cacheKey, products, 300000); // 5 minutes
+    if (this.cacheManager) {
+      await this.cacheManager.set(cacheKey, products, 300000); // 5 minutes
+    }
     return products;
   }
 
   async getCategories(): Promise<Category[]> {
     const cacheKey = 'products:categories';
-    const cached = await this.cacheManager.get<Category[]>(cacheKey);
-    if (cached) {
-      return cached;
+    if (this.cacheManager) {
+      const cached = await this.cacheManager.get<Category[]>(cacheKey);
+      if (cached) {
+        return cached;
+      }
     }
 
     // Only return categories that have products
@@ -140,15 +148,19 @@ export class ProductsService {
       .addOrderBy('category.createdAt', 'DESC')
       .getMany();
 
-    await this.cacheManager.set(cacheKey, categories, 300000); // 5 minutes
+    if (this.cacheManager) {
+      await this.cacheManager.set(cacheKey, categories, 300000); // 5 minutes
+    }
     return categories;
   }
 
   async getProductTypes(): Promise<ProductType[]> {
     const cacheKey = 'products:productTypes';
-    const cached = await this.cacheManager.get<ProductType[]>(cacheKey);
-    if (cached) {
-      return cached;
+    if (this.cacheManager) {
+      const cached = await this.cacheManager.get<ProductType[]>(cacheKey);
+      if (cached) {
+        return cached;
+      }
     }
 
     // Only return product types that have products
@@ -162,7 +174,9 @@ export class ProductsService {
       .addOrderBy('productType.createdAt', 'DESC')
       .getMany();
 
-    await this.cacheManager.set(cacheKey, productTypes, 300000); // 5 minutes
+    if (this.cacheManager) {
+      await this.cacheManager.set(cacheKey, productTypes, 300000); // 5 minutes
+    }
     return productTypes;
   }
 
