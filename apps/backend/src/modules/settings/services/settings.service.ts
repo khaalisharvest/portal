@@ -1,12 +1,14 @@
-import { Injectable, Inject, Optional } from '@nestjs/common';
+import { Injectable, Inject, Optional, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Cache } from 'cache-manager';
 import { Setting, SettingType, SettingCategory } from '../entities/setting.entity';
+import { CACHE_KEYS } from '../../../common/constants/cache-keys';
 
 @Injectable()
 export class SettingsService {
+  private readonly logger = new Logger(SettingsService.name);
   private readonly CACHE_DURATION = 300000; // 5 minutes in milliseconds
 
   constructor(
@@ -19,13 +21,17 @@ export class SettingsService {
    * Get setting value with Redis caching
    */
   async getSetting(key: string, defaultValue?: any): Promise<any> {
-    const cacheKey = `settings:${key}`;
+    const cacheKey = CACHE_KEYS.SETTINGS.BY_KEY(key);
     
     // Check Redis cache first (if available)
     if (this.cacheManager) {
-      const cached = await this.cacheManager.get<any>(cacheKey);
-      if (cached !== undefined && cached !== null) {
-        return cached;
+      try {
+        const cached = await this.cacheManager.get<any>(cacheKey);
+        if (cached !== undefined && cached !== null) {
+          return cached;
+        }
+      } catch (error) {
+        this.logger.warn(`Cache get failed for ${cacheKey}: ${error.message}`);
       }
     }
 
@@ -46,7 +52,11 @@ export class SettingsService {
     
     // Cache the value in Redis (if available)
     if (this.cacheManager) {
-      await this.cacheManager.set(cacheKey, value, this.CACHE_DURATION);
+      try {
+        await this.cacheManager.set(cacheKey, value, this.CACHE_DURATION);
+      } catch (error) {
+        this.logger.warn(`Cache set failed for ${cacheKey}: ${error.message}`);
+      }
     }
 
     return value;
@@ -120,7 +130,14 @@ export class SettingsService {
 
     // Clear Redis cache (if available)
     if (this.cacheManager) {
-      await this.cacheManager.del(`settings:${key}`);
+      try {
+        await this.cacheManager.del(CACHE_KEYS.SETTINGS.BY_KEY(key));
+        if (setting?.category) {
+          await this.cacheManager.del(CACHE_KEYS.SETTINGS.BY_CATEGORY(setting.category));
+        }
+      } catch (error) {
+        this.logger.warn(`Cache delete failed for ${key}: ${error.message}`);
+      }
     }
   }
 

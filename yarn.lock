@@ -1724,6 +1724,7 @@ __metadata:
     bull: ^4.12.0
     cache-manager: ^5.3.2
     cache-manager-redis-store: ^3.0.1
+    cache-manager-redis-yet: ^5.1.5
     class-transformer: ^0.5.1
     class-validator: ^0.14.0
     compression: ^1.7.4
@@ -2406,7 +2407,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@redis/bloom@npm:1.2.0":
+"@redis/bloom@npm:1.2.0, @redis/bloom@npm:^1.2.0":
   version: 1.2.0
   resolution: "@redis/bloom@npm:1.2.0"
   peerDependencies:
@@ -2415,7 +2416,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@redis/client@npm:1.6.1":
+"@redis/client@npm:1.6.1, @redis/client@npm:^1.6.0":
   version: 1.6.1
   resolution: "@redis/client@npm:1.6.1"
   dependencies:
@@ -2426,7 +2427,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@redis/graph@npm:1.1.1":
+"@redis/graph@npm:1.1.1, @redis/graph@npm:^1.1.1":
   version: 1.1.1
   resolution: "@redis/graph@npm:1.1.1"
   peerDependencies:
@@ -2435,7 +2436,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@redis/json@npm:1.0.7":
+"@redis/json@npm:1.0.7, @redis/json@npm:^1.0.7":
   version: 1.0.7
   resolution: "@redis/json@npm:1.0.7"
   peerDependencies:
@@ -2444,7 +2445,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@redis/search@npm:1.2.0":
+"@redis/search@npm:1.2.0, @redis/search@npm:^1.2.0":
   version: 1.2.0
   resolution: "@redis/search@npm:1.2.0"
   peerDependencies:
@@ -2453,7 +2454,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@redis/time-series@npm:1.1.0":
+"@redis/time-series@npm:1.1.0, @redis/time-series@npm:^1.1.0":
   version: 1.1.0
   resolution: "@redis/time-series@npm:1.1.0"
   peerDependencies:
@@ -4905,7 +4906,23 @@ __metadata:
   languageName: node
   linkType: hard
 
-"cache-manager@npm:^5.3.2":
+"cache-manager-redis-yet@npm:^5.1.5":
+  version: 5.1.5
+  resolution: "cache-manager-redis-yet@npm:5.1.5"
+  dependencies:
+    "@redis/bloom": ^1.2.0
+    "@redis/client": ^1.6.0
+    "@redis/graph": ^1.1.1
+    "@redis/json": ^1.0.7
+    "@redis/search": ^1.2.0
+    "@redis/time-series": ^1.1.0
+    cache-manager: ^5.7.6
+    redis: ^4.7.0
+  checksum: 878d32cd9ad8e1397cbc980468db18bde9564f123d84e69197c358dba7b7286b53df9afd4dfd2490882ba6de4a8a417ca40bb62c8360c122ef358067a29bb442
+  languageName: node
+  linkType: hard
+
+"cache-manager@npm:^5.3.2, cache-manager@npm:^5.7.6":
   version: 5.7.6
   resolution: "cache-manager@npm:5.7.6"
   dependencies:
@@ -10815,7 +10832,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"redis@npm:^4.3.1, redis@npm:^4.6.10":
+"redis@npm:^4.3.1, redis@npm:^4.6.10, redis@npm:^4.7.0":
   version: 4.7.1
   resolution: "redis@npm:4.7.1"
   dependencies:

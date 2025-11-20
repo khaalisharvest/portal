@@ -7,6 +7,7 @@ import { motion } from 'framer-motion';
 import { useCart } from '@/contexts/CartContext';
 import { useAuth } from '@/contexts/AuthContext';
 import Icon from '@/components/ui/Icon';
+import Dropdown from '@/components/ui/Dropdown';
 import toast from 'react-hot-toast';
 import {  DeliveryCalculation } from '@/services/settings';
 import { configService } from '@/services/config';
@@ -618,16 +619,17 @@ export default function CheckoutPage() {
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            City *
-                          </label>
-                          <input
-                            type="text"
-                            required
+                          <Dropdown
+                            label="City *"
+                            options={[
+                              { value: 'Lahore', label: 'Lahore' }
+                            ]}
                             value={newAddress.city}
-                            onChange={(e) => setNewAddress({ ...newAddress, city: e.target.value })}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-orange-500 focus:border-orange-500"
-                            placeholder="City"
+                            onChange={(value) => setNewAddress({ ...newAddress, city: Array.isArray(value) ? value[0] : value })}
+                            placeholder="Select city"
+                            size="md"
+                            variant="default"
+                            showCheckmark={false}
                           />
                         </div>
                         {/* State/Province - Hidden field with default value */}
@@ -824,15 +826,17 @@ export default function CheckoutPage() {
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            City *
-                          </label>
-                          <input
-                            type="text"
-                            required
+                          <Dropdown
+                            label="City *"
+                            options={[
+                              { value: 'Lahore', label: 'Lahore' }
+                            ]}
                             value={newAddress.city}
-                            onChange={(e) => setNewAddress({ ...newAddress, city: e.target.value })}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-orange-500 focus:border-orange-500"
+                            onChange={(value) => setNewAddress({ ...newAddress, city: Array.isArray(value) ? value[0] : value })}
+                            placeholder="Select city"
+                            size="md"
+                            variant="default"
+                            showCheckmark={false}
                           />
                         </div>
                         {/* State/Province - Hidden field with default value */}

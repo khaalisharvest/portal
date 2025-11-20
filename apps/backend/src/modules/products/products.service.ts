@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, Inject, Optional } from '@nestjs/common';
+import { Injectable, NotFoundException, Inject, Optional, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
@@ -8,9 +8,13 @@ import { Category } from './entities/category.entity';
 import { ProductType } from '../product-types/entities/product-type.entity';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
+import { CACHE_KEYS } from '../../common/constants/cache-keys';
 
 @Injectable()
 export class ProductsService {
+  private readonly logger = new Logger(ProductsService.name);
+  private readonly CACHE_TTL = 300000; // 5 minutes in milliseconds
+
   constructor(
     @InjectRepository(Product)
     private productRepository: Repository<Product>,
@@ -26,13 +30,29 @@ export class ProductsService {
     const savedProduct = await this.productRepository.save(product);
     
     // Clear cache when new product is created (if cache available)
-    if (this.cacheManager) {
-      await this.cacheManager.del('products:categories');
-      await this.cacheManager.del('products:productTypes');
-      await this.cacheManager.del('products:featured');
-    }
+    await this.clearProductRelatedCaches();
     
     return savedProduct;
+  }
+
+  /**
+   * Clear all product-related caches
+   * Uses batch operation for better performance
+   */
+  private async clearProductRelatedCaches(): Promise<void> {
+    if (!this.cacheManager) return;
+
+    try {
+      // Batch delete for better performance
+      await Promise.all([
+        this.cacheManager.del(CACHE_KEYS.PRODUCTS.CATEGORIES),
+        this.cacheManager.del(CACHE_KEYS.PRODUCTS.PRODUCT_TYPES),
+        this.cacheManager.del(CACHE_KEYS.PRODUCTS.FEATURED),
+      ]);
+    } catch (error) {
+      // Log error but don't fail the operation
+      this.logger.warn(`Failed to clear product caches: ${error.message}`);
+    }
   }
 
   async findAll(filters: {
@@ -108,32 +128,51 @@ export class ProductsService {
   }
 
   async getFeatured(): Promise<Product[]> {
-    const cacheKey = 'products:featured';
+    const cacheKey = CACHE_KEYS.PRODUCTS.FEATURED;
+    
+    // Try to get from cache
     if (this.cacheManager) {
-      const cached = await this.cacheManager.get<Product[]>(cacheKey);
-      if (cached) {
-        return cached;
+      try {
+        const cached = await this.cacheManager.get<Product[]>(cacheKey);
+        if (cached) {
+          return cached;
+        }
+      } catch (error) {
+        this.logger.warn(`Cache get failed for ${cacheKey}: ${error.message}`);
       }
     }
 
+    // Fetch from database
     const products = await this.productRepository.find({
       where: { featured: true },
       relations: ['category', 'productType'],
       take: 8,
     });
 
+    // Cache the result
     if (this.cacheManager) {
-      await this.cacheManager.set(cacheKey, products, 300000); // 5 minutes
+      try {
+        await this.cacheManager.set(cacheKey, products, this.CACHE_TTL);
+      } catch (error) {
+        this.logger.warn(`Cache set failed for ${cacheKey}: ${error.message}`);
+      }
     }
+    
     return products;
   }
 
   async getCategories(): Promise<Category[]> {
-    const cacheKey = 'products:categories';
+    const cacheKey = CACHE_KEYS.PRODUCTS.CATEGORIES;
+    
+    // Try to get from cache
     if (this.cacheManager) {
-      const cached = await this.cacheManager.get<Category[]>(cacheKey);
-      if (cached) {
-        return cached;
+      try {
+        const cached = await this.cacheManager.get<Category[]>(cacheKey);
+        if (cached) {
+          return cached;
+        }
+      } catch (error) {
+        this.logger.warn(`Cache get failed for ${cacheKey}: ${error.message}`);
       }
     }
 
@@ -148,18 +187,30 @@ export class ProductsService {
       .addOrderBy('category.createdAt', 'DESC')
       .getMany();
 
+    // Cache the result
     if (this.cacheManager) {
-      await this.cacheManager.set(cacheKey, categories, 300000); // 5 minutes
+      try {
+        await this.cacheManager.set(cacheKey, categories, this.CACHE_TTL);
+      } catch (error) {
+        this.logger.warn(`Cache set failed for ${cacheKey}: ${error.message}`);
+      }
     }
+    
     return categories;
   }
 
   async getProductTypes(): Promise<ProductType[]> {
-    const cacheKey = 'products:productTypes';
+    const cacheKey = CACHE_KEYS.PRODUCTS.PRODUCT_TYPES;
+    
+    // Try to get from cache
     if (this.cacheManager) {
-      const cached = await this.cacheManager.get<ProductType[]>(cacheKey);
-      if (cached) {
-        return cached;
+      try {
+        const cached = await this.cacheManager.get<ProductType[]>(cacheKey);
+        if (cached) {
+          return cached;
+        }
+      } catch (error) {
+        this.logger.warn(`Cache get failed for ${cacheKey}: ${error.message}`);
       }
     }
 
@@ -174,9 +225,15 @@ export class ProductsService {
       .addOrderBy('productType.createdAt', 'DESC')
       .getMany();
 
+    // Cache the result
     if (this.cacheManager) {
-      await this.cacheManager.set(cacheKey, productTypes, 300000); // 5 minutes
+      try {
+        await this.cacheManager.set(cacheKey, productTypes, this.CACHE_TTL);
+      } catch (error) {
+        this.logger.warn(`Cache set failed for ${cacheKey}: ${error.message}`);
+      }
     }
+    
     return productTypes;
   }
 
@@ -209,12 +266,8 @@ export class ProductsService {
     Object.assign(product, updateProductDto);
     const updatedProduct = await this.productRepository.save(product);
     
-    // Clear cache when product is updated (if cache available)
-    if (this.cacheManager) {
-      await this.cacheManager.del('products:categories');
-      await this.cacheManager.del('products:productTypes');
-      await this.cacheManager.del('products:featured');
-    }
+    // Clear cache when product is updated
+    await this.clearProductRelatedCaches();
     
     return updatedProduct;
   }
@@ -223,12 +276,8 @@ export class ProductsService {
     const product = await this.findOne(id);
     await this.productRepository.remove(product);
     
-    // Clear cache when product is deleted (if cache available)
-    if (this.cacheManager) {
-      await this.cacheManager.del('products:categories');
-      await this.cacheManager.del('products:productTypes');
-      await this.cacheManager.del('products:featured');
-    }
+    // Clear cache when product is deleted
+    await this.clearProductRelatedCaches();
   }
 
 }
