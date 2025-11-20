@@ -209,10 +209,12 @@ export class ProductsService {
     Object.assign(product, updateProductDto);
     const updatedProduct = await this.productRepository.save(product);
     
-    // Clear cache when product is updated
-    await this.cacheManager.del('products:categories');
-    await this.cacheManager.del('products:productTypes');
-    await this.cacheManager.del('products:featured');
+    // Clear cache when product is updated (if cache available)
+    if (this.cacheManager) {
+      await this.cacheManager.del('products:categories');
+      await this.cacheManager.del('products:productTypes');
+      await this.cacheManager.del('products:featured');
+    }
     
     return updatedProduct;
   }
@@ -221,10 +223,12 @@ export class ProductsService {
     const product = await this.findOne(id);
     await this.productRepository.remove(product);
     
-    // Clear cache when product is deleted
-    await this.cacheManager.del('products:categories');
-    await this.cacheManager.del('products:productTypes');
-    await this.cacheManager.del('products:featured');
+    // Clear cache when product is deleted (if cache available)
+    if (this.cacheManager) {
+      await this.cacheManager.del('products:categories');
+      await this.cacheManager.del('products:productTypes');
+      await this.cacheManager.del('products:featured');
+    }
   }
 
 }
