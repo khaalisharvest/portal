@@ -74,8 +74,9 @@ COPY packages/shared/package.json ./packages/shared/
 # Yarn workspaces hoist common dependencies to root node_modules
 # We need devDependencies (like @nestjs/cli) for building
 # Note: --production=false ensures devDependencies are installed
+# Temporarily removed --frozen-lockfile to allow lockfile update
 # ============================================================================
-RUN yarn install --frozen-lockfile --production=false
+RUN yarn install --production=false
 
 # ============================================================================
 # Step 3: Copy source code
