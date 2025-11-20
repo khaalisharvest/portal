@@ -1,29 +1,30 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Inject } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { Cache } from 'cache-manager';
 import { Setting, SettingType, SettingCategory } from '../entities/setting.entity';
 
 @Injectable()
 export class SettingsService {
-  private settingsCache: Map<string, any> = new Map();
-  private cacheExpiry: Map<string, number> = new Map();
-  private readonly CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+  private readonly CACHE_DURATION = 300000; // 5 minutes in milliseconds
 
   constructor(
     @InjectRepository(Setting)
-    private settingsRepository: Repository<Setting>
+    private settingsRepository: Repository<Setting>,
+    @Inject(CACHE_MANAGER) private cacheManager: Cache,
   ) {}
 
   /**
-   * Get setting value with caching
+   * Get setting value with Redis caching
    */
   async getSetting(key: string, defaultValue?: any): Promise<any> {
-    // Check cache first
-    if (this.settingsCache.has(key)) {
-      const expiry = this.cacheExpiry.get(key);
-      if (expiry && Date.now() < expiry) {
-        return this.settingsCache.get(key);
-      }
+    const cacheKey = `settings:${key}`;
+    
+    // Check Redis cache first
+    const cached = await this.cacheManager.get<any>(cacheKey);
+    if (cached !== undefined && cached !== null) {
+      return cached;
     }
 
     // Fetch from database
@@ -41,9 +42,8 @@ export class SettingsService {
     // Parse value based on type
     const value = this.parseSettingValue(setting);
     
-    // Cache the value
-    this.settingsCache.set(key, value);
-    this.cacheExpiry.set(key, Date.now() + this.CACHE_DURATION);
+    // Cache the value in Redis
+    await this.cacheManager.set(cacheKey, value, this.CACHE_DURATION);
 
     return value;
   }
@@ -114,9 +114,8 @@ export class SettingsService {
       );
     }
 
-    // Clear cache
-    this.settingsCache.delete(key);
-    this.cacheExpiry.delete(key);
+    // Clear Redis cache
+    await this.cacheManager.del(`settings:${key}`);
   }
 
   /**
@@ -203,11 +202,11 @@ export class SettingsService {
   }
 
   /**
-   * Clear settings cache
+   * Clear settings cache (Redis handles TTL automatically, but this can be used for manual clearing)
    */
-  clearCache(): void {
-    this.settingsCache.clear();
-    this.cacheExpiry.clear();
+  async clearCache(): Promise<void> {
+    // Redis cache expires automatically based on TTL
+    // If needed, we could implement pattern-based deletion here
   }
 
   /**

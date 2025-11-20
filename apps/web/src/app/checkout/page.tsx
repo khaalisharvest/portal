@@ -340,7 +340,6 @@ export default function CheckoutPage() {
         });
 
         if (response.ok) {
-          const order = await response.json();
           // Mark order as successfully placed before clearing cart
           orderPlacedSuccessfully.current = true;
           clearCart();
@@ -380,7 +379,7 @@ export default function CheckoutPage() {
           orderPlacedSuccessfully.current = true;
           clearCart();
           toast.success('Order placed successfully!');
-          router.push('/products');
+          router.push(`/orders/${order.data?.id || order.id}`);
         } else {
           const error = await response.json();
           throw new Error(error.message || 'Failed to place order');

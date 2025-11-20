@@ -1,6 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, Inject } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { Cache } from 'cache-manager';
 import { Product } from './entities/product.entity';
 import { Category } from './entities/category.entity';
 import { ProductType } from '../product-types/entities/product-type.entity';
@@ -16,11 +18,19 @@ export class ProductsService {
     private categoryRepository: Repository<Category>,
     @InjectRepository(ProductType)
     private productTypeRepository: Repository<ProductType>,
+    @Inject(CACHE_MANAGER) private cacheManager: Cache,
   ) {}
 
   async create(createProductDto: CreateProductDto): Promise<Product> {
     const product = this.productRepository.create(createProductDto);
-    return this.productRepository.save(product);
+    const savedProduct = await this.productRepository.save(product);
+    
+    // Clear cache when new product is created
+    await this.cacheManager.del('products:categories');
+    await this.cacheManager.del('products:productTypes');
+    await this.cacheManager.del('products:featured');
+    
+    return savedProduct;
   }
 
   async findAll(filters: {
@@ -96,16 +106,31 @@ export class ProductsService {
   }
 
   async getFeatured(): Promise<Product[]> {
-    return this.productRepository.find({
+    const cacheKey = 'products:featured';
+    const cached = await this.cacheManager.get<Product[]>(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
+    const products = await this.productRepository.find({
       where: { featured: true },
       relations: ['category', 'productType'],
       take: 8,
     });
+
+    await this.cacheManager.set(cacheKey, products, 300000); // 5 minutes
+    return products;
   }
 
   async getCategories(): Promise<Category[]> {
+    const cacheKey = 'products:categories';
+    const cached = await this.cacheManager.get<Category[]>(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
     // Only return categories that have products
-    return this.categoryRepository
+    const categories = await this.categoryRepository
       .createQueryBuilder('category')
       .leftJoinAndSelect('category.productTypes', 'productType')
       .innerJoin('products', 'p', 'p.categoryId = category.id AND p.isAvailable = true')
@@ -114,11 +139,20 @@ export class ProductsService {
       .orderBy('category.sortOrder', 'ASC')
       .addOrderBy('category.createdAt', 'DESC')
       .getMany();
+
+    await this.cacheManager.set(cacheKey, categories, 300000); // 5 minutes
+    return categories;
   }
 
   async getProductTypes(): Promise<ProductType[]> {
+    const cacheKey = 'products:productTypes';
+    const cached = await this.cacheManager.get<ProductType[]>(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
     // Only return product types that have products
-    return this.productTypeRepository
+    const productTypes = await this.productTypeRepository
       .createQueryBuilder('productType')
       .leftJoinAndSelect('productType.category', 'category')
       .innerJoin('products', 'p', 'p.productTypeId = productType.id AND p.isAvailable = true')
@@ -127,6 +161,9 @@ export class ProductsService {
       .orderBy('productType.sortOrder', 'ASC')
       .addOrderBy('productType.createdAt', 'DESC')
       .getMany();
+
+    await this.cacheManager.set(cacheKey, productTypes, 300000); // 5 minutes
+    return productTypes;
   }
 
   async getCategoriesWithTypes(): Promise<Category[]> {
@@ -156,12 +193,24 @@ export class ProductsService {
   async update(id: string, updateProductDto: UpdateProductDto): Promise<Product> {
     const product = await this.findOne(id);
     Object.assign(product, updateProductDto);
-    return this.productRepository.save(product);
+    const updatedProduct = await this.productRepository.save(product);
+    
+    // Clear cache when product is updated
+    await this.cacheManager.del('products:categories');
+    await this.cacheManager.del('products:productTypes');
+    await this.cacheManager.del('products:featured');
+    
+    return updatedProduct;
   }
 
   async remove(id: string): Promise<void> {
     const product = await this.findOne(id);
     await this.productRepository.remove(product);
+    
+    // Clear cache when product is deleted
+    await this.cacheManager.del('products:categories');
+    await this.cacheManager.del('products:productTypes');
+    await this.cacheManager.del('products:featured');
   }
 
 }

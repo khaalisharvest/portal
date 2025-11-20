@@ -1,13 +1,16 @@
 import { Module } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
 import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { CacheModule } from '@nestjs/cache-manager';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { BullModule } from '@nestjs/bull';
 import { ScheduleModule } from '@nestjs/schedule';
 
 // Configuration
 import { DatabaseConfig } from './config/database.config';
 import { RedisConfig } from './config/redis.config';
+import { ThrottlerConfig } from './config/throttler.config';
 
 // Common modules
 import { CommonModule } from './common/common.module';
@@ -40,11 +43,16 @@ import { User } from './modules/users/entities/user.entity';
     // User entity for seeding
     TypeOrmModule.forFeature([User]),
 
-    // Cache - Temporarily disabled for Docker
-    // CacheModule.registerAsync({
-    //   useClass: RedisConfig,
-    //   isGlobal: true,
-    // }),
+    // Cache - Redis caching for frequently accessed data
+    CacheModule.registerAsync({
+      useClass: RedisConfig,
+      isGlobal: true,
+    }),
+
+    // Rate Limiting - Redis-based throttling
+    ThrottlerModule.forRootAsync({
+      useClass: ThrottlerConfig,
+    }),
 
     // Queue - Temporarily disabled for Docker
     // BullModule.forRoot({
@@ -73,6 +81,12 @@ import { User } from './modules/users/entities/user.entity';
     SettingsModule,
     ContactsModule,
   ],
-  providers: [SeederService],
+  providers: [
+    SeederService,
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
+  ],
 })
 export class AppModule {}
