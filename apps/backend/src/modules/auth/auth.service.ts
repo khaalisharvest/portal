@@ -26,7 +26,8 @@ export class AuthService {
     
     const user = await this.usersService.create({
       ...userData,
-      phone: normalizedPhone, // Store in +923001234567 format
+      role: userData.role ?? 'customer',
+      phone: normalizedPhone,
       password: hashedPassword,
     });
 

@@ -5,6 +5,7 @@ import { Order, OrderStatus, PaymentStatus } from './entities/order.entity';
 import { OrderItem } from './entities/order-item.entity';
 import { Address } from './entities/address.entity';
 import { Product } from '../products/entities/product.entity';
+import { Inventory } from '../products/entities/inventory.entity';
 import { User } from '../users/entities/user.entity';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderDto } from './dto/update-order.dto';
@@ -251,11 +252,11 @@ export class OrdersService {
     // Release reserved inventory on cancellation
     const orderItems = await this.orderItemRepository.find({ where: { orderId: id } });
     for (const item of orderItems) {
-      const inventory = await this.dataSource.manager.findOne('Inventory', {
+      const inventory = await this.dataSource.manager.findOne(Inventory, {
         where: { productId: item.productId }
       });
       if (inventory && inventory.reservedQuantity > 0) {
-        await this.dataSource.manager.update('Inventory', inventory.id, {
+        await this.dataSource.manager.update(Inventory, inventory.id, {
           reservedQuantity: () => `GREATEST("reservedQuantity" - ${item.quantity}, 0)`
         });
       }
@@ -704,19 +705,19 @@ export class OrdersService {
         if (!product) continue;
 
         // Load inventory if it exists
-        const inventory = await queryRunner.manager.findOne('Inventory', {
+        const inventory = await queryRunner.manager.findOne(Inventory, {
           where: { productId: item.productId }
         });
 
         if (inventory) {
-          const available = inventory.quantity - (inventory.reservedQuantity || 0);
+          const available = inventory.quantity - inventory.reservedQuantity;
           if (available < item.quantity) {
             throw new BadRequestException(
               `Insufficient stock for "${product.name}". Available: ${available}, Requested: ${item.quantity}`
             );
           }
           // Reserve the stock
-          await queryRunner.manager.update('Inventory', inventory.id, {
+          await queryRunner.manager.update(Inventory, inventory.id, {
             reservedQuantity: () => `"reservedQuantity" + ${item.quantity}`
           });
         }

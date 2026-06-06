@@ -26,17 +26,9 @@ const nextConfig = {
     ],
     formats: ['image/webp', 'image/avif'],
   },
-  // Environment variables - NO FALLBACKS
-  // Docker provides all env vars during build via ARG/ENV in Dockerfile
-  // Next.js automatically exposes NEXT_PUBLIC_* vars to client-side at build time
-  // Only explicitly set non-NEXT_PUBLIC vars and computed values
-  env: {
-    // Computed values - read directly from .env (provided by Docker during build)
-    API_BASE_URL: process.env.NEXT_PUBLIC_API_BASE_URL || process.env.NEXT_PUBLIC_API_URL,
-    // Server-side only vars - read directly from .env (provided by Docker during build)
-    BACKEND_URL: process.env.BACKEND_URL,
-    JWT_SECRET: process.env.JWT_SECRET,
-  },
+  // NEXT_PUBLIC_* vars are automatically embedded in the client bundle at build time
+  // Server-side vars (BACKEND_URL, JWT_SECRET) are read directly via process.env in API routes
+  // No env config needed here — all vars are either NEXT_PUBLIC_* or pure server-side
   async headers() {
     return [
       {
