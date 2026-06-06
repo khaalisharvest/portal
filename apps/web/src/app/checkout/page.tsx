@@ -12,7 +12,6 @@ import toast from 'react-hot-toast';
 import {  DeliveryCalculation } from '@/services/settings';
 import { configService } from '@/services/config';
 import { validatePakistaniPhone, getPhonePlaceholder } from '@/utils/phoneValidation';
-import {  ADMIN_WHATSAPP, BANK_NAME, BANK_ACCOUNT_NAME, BANK_ACCOUNT_NUMBER, BANK_IBAN } from '@/config/env';
 
 interface Address {
   id: string;
@@ -45,6 +44,7 @@ export default function CheckoutPage() {
   const [isCalculatingDelivery, setIsCalculatingDelivery] = useState(false);
   const [guestPhoneError, setGuestPhoneError] = useState('');
   const [addressPhoneError, setAddressPhoneError] = useState('');
+  const [publicSettings, setPublicSettings] = useState<Record<string, any>>({});
   const [newAddress, setNewAddress] = useState({
     fullName: '',
     phone: '',
@@ -100,6 +100,13 @@ export default function CheckoutPage() {
       calculateDeliveryFee();
     }
   }, [cartState.totalPrice]);
+
+  useEffect(() => {
+    fetch('/api/v1/public/settings')
+      .then((r) => r.json())
+      .then((data) => setPublicSettings(data))
+      .catch(() => {}); // non-critical — UI degrades gracefully
+  }, []);
 
   const calculateDeliveryFee = async () => {
     if (cartState.totalPrice <= 0) return;
@@ -941,10 +948,10 @@ export default function CheckoutPage() {
                       <div className="bg-white p-3 sm:p-4 rounded-lg border border-green-100">
                         <h4 className="text-xs sm:text-sm font-medium text-gray-900 mb-2 sm:mb-3">Account Information</h4>
                         <div className="space-y-1 sm:space-y-2 text-xs sm:text-sm text-gray-700">
-                          {BANK_NAME && <p><span className="font-medium">Bank:</span> {BANK_NAME}</p>}
-                          {BANK_ACCOUNT_NAME && <p><span className="font-medium">Account:</span> {BANK_ACCOUNT_NAME}</p>}
-                          {BANK_ACCOUNT_NUMBER && <p><span className="font-medium">Account Number:</span> {BANK_ACCOUNT_NUMBER}</p>}
-                          {BANK_IBAN && <p className="break-all"><span className="font-medium">IBAN:</span> {BANK_IBAN}</p>}
+                          {publicSettings.bank_name && <p><span className="font-medium">Bank:</span> {publicSettings.bank_name}</p>}
+                          {publicSettings.bank_account_name && <p><span className="font-medium">Account:</span> {publicSettings.bank_account_name}</p>}
+                          {publicSettings.bank_account_number && <p><span className="font-medium">Account Number:</span> {publicSettings.bank_account_number}</p>}
+                          {publicSettings.bank_iban && <p className="break-all"><span className="font-medium">IBAN:</span> {publicSettings.bank_iban}</p>}
                         </div>
                       </div>
 
@@ -958,8 +965,8 @@ export default function CheckoutPage() {
                       <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
                         <p className="text-xs sm:text-sm text-blue-800">
                           <strong>Simple Process:</strong> Transfer the exact amount above to our account.
-                          {ADMIN_WHATSAPP && (
-                            <> Send payment screenshot to <strong>{ADMIN_WHATSAPP}</strong> on WhatsApp to confirm your order.</>
+                          {publicSettings.admin_whatsapp && (
+                            <> Send payment screenshot to <strong>{publicSettings.admin_whatsapp}</strong> on WhatsApp to confirm your order.</>
                           )}
                         </p>
                       </div>

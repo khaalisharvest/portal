@@ -6,7 +6,7 @@ import DashboardOverview from '@/components/admin/DashboardOverview';
 
 export default function AdminDashboard() {
   return (
-    <ProtectedRoute requiredRoles={['super_admin', 'admin']}>
+    <ProtectedRoute requiredRoles={['super_admin', 'staff']}>
       <AdminLayout>
         <DashboardOverview />
       </AdminLayout>

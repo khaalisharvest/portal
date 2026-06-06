@@ -5,6 +5,7 @@ import { Order } from '../../orders/entities/order.entity';
 import { Address } from '../../orders/entities/address.entity';
 import { Review } from '../../products/entities/review.entity';
 import { Wishlist } from '../../products/entities/wishlist.entity';
+import { ROLES } from '../../../common/constants/roles';
 
 @Entity('users')
 @Index(['role', 'isActive']) // Composite index for user filtering
@@ -12,7 +13,7 @@ import { Wishlist } from '../../products/entities/wishlist.entity';
 @Index(['email']) // Index for email lookups
 @Index(['lastLoginAt']) // Index for login tracking
 @Check(`"loginAttempts" >= 0 AND "loginAttempts" <= 10`) // Login attempts constraint
-@Check(`"role" IN ('customer', 'admin', 'super_admin')`) // Role constraint
+@Check(`"role" IN ('customer', 'staff', 'super_admin')`) // Role constraint
 export class User {
   @ApiProperty()
   @PrimaryGeneratedColumn('uuid')
@@ -45,10 +46,10 @@ export class User {
   resetTokenExpiry?: Date;
 
   @ApiProperty()
-  @Column({ 
-    type: 'enum', 
-    enum: ['customer', 'admin', 'super_admin'],
-    default: 'customer' 
+  @Column({
+    type: 'enum',
+    enum: ['customer', 'staff', 'super_admin'],
+    default: 'customer'
   })
   role: string;
 

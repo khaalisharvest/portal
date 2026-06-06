@@ -28,6 +28,8 @@ import { SettingsModule } from './modules/settings/settings.module';
 import { ContactsModule } from './modules/contacts/contacts.module';
 import { HealthModule } from './health/health.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
+import { StaffModule } from './modules/staff/staff.module';
+import { ActivityModule } from './modules/activity/activity.module';
 import { SeederService } from './seeders/seeder.service';
 import { User } from './modules/users/entities/user.entity';
 
@@ -91,6 +93,8 @@ import { User } from './modules/users/entities/user.entity';
     SettingsModule,
     ContactsModule,
     NotificationsModule,
+    ActivityModule,
+    StaffModule,
   ],
   providers: [
     SeederService,

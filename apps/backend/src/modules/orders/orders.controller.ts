@@ -140,7 +140,7 @@ export class OrdersController {
 @ApiTags('Admin - Orders')
 @Controller('admin/orders')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles('admin', 'super_admin')
+@Roles('super_admin', 'staff')
 @ApiBearerAuth()
 export class AdminOrdersController {
   constructor(private readonly ordersService: OrdersService) {}
@@ -174,7 +174,7 @@ export class AdminOrdersController {
   @ApiOperation({ summary: 'Update order status (Admin)' })
   @ApiResponse({ status: 200, description: 'Order status updated successfully' })
   @ApiResponse({ status: 404, description: 'Order not found' })
-  updateOrderStatus(@Param('id') id: string, @Body() updateOrderDto: UpdateOrderDto) {
-    return this.ordersService.updateOrderStatus(id, updateOrderDto);
+  updateOrderStatus(@Request() req, @Param('id') id: string, @Body() updateOrderDto: UpdateOrderDto) {
+    return this.ordersService.updateOrderStatus(id, updateOrderDto, { id: req.user.id, name: req.user.name });
   }
 }

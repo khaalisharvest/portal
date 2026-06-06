@@ -192,6 +192,10 @@ export class UsersService {
   }
 
   async updateUserRole(id: string, role: string): Promise<User> {
+    const validRoles = ['customer', 'staff', 'super_admin'];
+    if (!validRoles.includes(role)) {
+      throw new Error(`Invalid role. Must be one of: ${validRoles.join(', ')}`);
+    }
     const user = await this.findById(id);
     user.role = role;
     return this.usersRepository.save(user);

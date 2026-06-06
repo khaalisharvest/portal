@@ -9,6 +9,7 @@ import { ProductType } from '../product-types/entities/product-type.entity';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { CACHE_KEYS } from '../../common/constants/cache-keys';
+import { ActivityService } from '../activity/activity.service';
 
 @Injectable()
 export class ProductsService {
@@ -23,15 +24,29 @@ export class ProductsService {
     @InjectRepository(ProductType)
     private productTypeRepository: Repository<ProductType>,
     @Optional() @Inject(CACHE_MANAGER) private cacheManager?: Cache,
+    @Optional() private activityService?: ActivityService,
   ) {}
 
-  async create(createProductDto: CreateProductDto): Promise<Product> {
+  async create(createProductDto: CreateProductDto, performedBy?: { id: string; name: string }): Promise<Product> {
     const product = this.productRepository.create(createProductDto);
     const savedProduct = await this.productRepository.save(product);
-    
+
     // Clear cache when new product is created (if cache available)
     await this.clearProductRelatedCaches();
-    
+
+    if (performedBy && this.activityService) {
+      setImmediate(() => {
+        this.activityService.log({
+          staffId: performedBy.id,
+          staffName: performedBy.name,
+          action: 'product_created',
+          entityType: 'product',
+          entityId: savedProduct.id,
+          entityLabel: savedProduct.name,
+        }).catch(() => {});
+      });
+    }
+
     return savedProduct;
   }
 
@@ -261,23 +276,51 @@ export class ProductsService {
     return product;
   }
 
-  async update(id: string, updateProductDto: UpdateProductDto): Promise<Product> {
+  async update(id: string, updateProductDto: UpdateProductDto, performedBy?: { id: string; name: string }): Promise<Product> {
     const product = await this.findOne(id);
     Object.assign(product, updateProductDto);
     const updatedProduct = await this.productRepository.save(product);
-    
+
     // Clear cache when product is updated
     await this.clearProductRelatedCaches();
-    
+
+    if (performedBy && this.activityService) {
+      setImmediate(() => {
+        this.activityService.log({
+          staffId: performedBy.id,
+          staffName: performedBy.name,
+          action: 'product_updated',
+          entityType: 'product',
+          entityId: updatedProduct.id,
+          entityLabel: updatedProduct.name,
+        }).catch(() => {});
+      });
+    }
+
     return updatedProduct;
   }
 
-  async remove(id: string): Promise<void> {
+  async remove(id: string, performedBy?: { id: string; name: string }): Promise<void> {
     const product = await this.findOne(id);
+    const productName = product.name;
+    const productId = product.id;
     await this.productRepository.remove(product);
-    
+
     // Clear cache when product is deleted
     await this.clearProductRelatedCaches();
+
+    if (performedBy && this.activityService) {
+      setImmediate(() => {
+        this.activityService.log({
+          staffId: performedBy.id,
+          staffName: performedBy.name,
+          action: 'product_deleted',
+          entityType: 'product',
+          entityId: productId,
+          entityLabel: productName,
+        }).catch(() => {});
+      });
+    }
   }
 
 }

@@ -19,14 +19,14 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
 
   const getUserDisplayName = () => {
     if (user?.role === 'super_admin') return 'Super Admin';
-    if (user?.role === 'admin') return 'Admin';
+    if (user?.role === 'staff') return 'Staff';
     if (user?.role === 'customer') return 'Customer';
     return 'User';
   };
 
   const getRoleColor = () => {
     if (user?.role === 'super_admin') return 'bg-error-50 text-error-600';
-    if (user?.role === 'admin') return 'bg-primary-100 text-primary-800';
+    if (user?.role === 'staff') return 'bg-primary-100 text-primary-800';
     if (user?.role === 'customer') return 'bg-success-50 text-success-600';
     return 'bg-neutral-100 text-neutral-800';
   };

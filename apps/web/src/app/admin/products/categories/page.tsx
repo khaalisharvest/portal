@@ -6,7 +6,7 @@ import CategoriesManagement from '@/components/super-admin/CategoriesManagement'
 
 export default function AdminCategoriesPage() {
   return (
-    <ProtectedRoute requiredRoles={['super_admin', 'admin']}>
+    <ProtectedRoute requiredRoles={['super_admin', 'staff']}>
       <AdminLayout>
         <CategoriesManagement />
       </AdminLayout>

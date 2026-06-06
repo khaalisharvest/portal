@@ -6,7 +6,7 @@ import ProductTypesManagement from '@/components/super-admin/ProductTypesManagem
 
 export default function AdminProductTypesPage() {
   return (
-    <ProtectedRoute requiredRoles={['super_admin', 'admin']}>
+    <ProtectedRoute requiredRoles={['super_admin', 'staff']}>
       <AdminLayout>
         <ProductTypesManagement />
       </AdminLayout>

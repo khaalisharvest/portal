@@ -13,7 +13,7 @@ export class UsersController {
 
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('admin', 'super_admin')
+  @Roles('super_admin')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Create a new user (Admin)' })
   @ApiResponse({ status: 201, description: 'User created successfully' })
@@ -23,7 +23,7 @@ export class UsersController {
 
   @Get()
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('admin', 'super_admin')
+  @Roles('super_admin')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get all users (Admin)' })
   @ApiResponse({ status: 200, description: 'Users retrieved successfully' })
@@ -37,7 +37,7 @@ export class UsersController {
 
   @Get(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('admin', 'super_admin')
+  @Roles('super_admin')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get user by ID (Admin)' })
   @ApiResponse({ status: 200, description: 'User retrieved successfully' })
@@ -47,7 +47,7 @@ export class UsersController {
 
   @Patch(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('admin', 'super_admin')
+  @Roles('super_admin')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Update user (Admin)' })
   @ApiResponse({ status: 200, description: 'User updated successfully' })
@@ -57,7 +57,7 @@ export class UsersController {
 
   @Delete(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('admin', 'super_admin')
+  @Roles('super_admin')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Delete user (Admin)' })
   @ApiResponse({ status: 200, description: 'User deleted successfully' })
@@ -70,7 +70,7 @@ export class UsersController {
 @ApiTags('Admin - Users')
 @Controller('admin/users')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles('admin', 'super_admin')
+@Roles('super_admin')
 @ApiBearerAuth()
 export class AdminUsersController {
   constructor(private readonly usersService: UsersService) {}

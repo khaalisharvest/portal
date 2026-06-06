@@ -13,7 +13,7 @@ export class ProductTypesController {
 
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('admin', 'super_admin')
+  @Roles('super_admin', 'staff')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Create a new product type' })
   @ApiResponse({ status: 201, description: 'Product type created successfully' })
@@ -39,7 +39,7 @@ export class ProductTypesController {
 
   @Put(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('admin', 'super_admin')
+  @Roles('super_admin', 'staff')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Update product type' })
   @ApiResponse({ status: 200, description: 'Product type updated successfully' })
@@ -49,7 +49,7 @@ export class ProductTypesController {
 
   @Delete(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('admin', 'super_admin')
+  @Roles('super_admin', 'staff')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Delete product type' })
   @ApiResponse({ status: 200, description: 'Product type deleted successfully' })

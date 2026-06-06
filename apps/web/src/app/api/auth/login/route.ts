@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { BACKEND_URL } from '@/config/env';
+import { BACKEND_URL } from '@/config/env.server';
 import jwt from 'jsonwebtoken';
 
 // Get JWT_SECRET from environment - validated at runtime
@@ -59,11 +59,19 @@ export async function POST(request: NextRequest) {
         { expiresIn: '7d' }
       );
 
-      return NextResponse.json({
+      const res = NextResponse.json({
         user,
         token,
-        backendToken: accessToken, // Store backend token for profile requests
+        backendToken: accessToken,
       });
+      res.cookies.set('auth_token', token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 60 * 60 * 24 * 7,
+        path: '/',
+      });
+      return res;
     } else {
       const errorData = await response.json();
       return NextResponse.json(

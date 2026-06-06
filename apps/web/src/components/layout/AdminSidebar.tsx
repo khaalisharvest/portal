@@ -18,42 +18,41 @@ interface SidebarItem {
 }
 
 const getSidebarItems = (userRole: string): SidebarItem[] => {
-  // Admin sidebar - only for super_admin and admin roles
   return [
     {
       id: 'dashboard',
       label: 'Dashboard',
       icon: 'chart',
       href: '/admin/dashboard',
-      roles: ['super_admin', 'admin']
+      roles: ['super_admin', 'staff']
     },
     {
       id: 'products',
       label: 'Products',
       icon: 'leaf',
       href: '/admin/products',
-      roles: ['super_admin', 'admin'],
+      roles: ['super_admin', 'staff'],
       children: [
         {
           id: 'categories',
           label: 'Categories',
           icon: 'folder',
           href: '/admin/products/categories',
-          roles: ['super_admin', 'admin']
+          roles: ['super_admin', 'staff']
         },
         {
           id: 'product-types',
           label: 'Product Types',
           icon: 'tag',
           href: '/admin/products/types',
-          roles: ['super_admin', 'admin']
+          roles: ['super_admin', 'staff']
         },
         {
           id: 'inventory',
           label: 'Inventory',
           icon: 'chart',
           href: '/admin/products/inventory',
-          roles: ['super_admin', 'admin']
+          roles: ['super_admin', 'staff']
         }
       ]
     },
@@ -62,28 +61,35 @@ const getSidebarItems = (userRole: string): SidebarItem[] => {
       label: 'Orders',
       icon: 'shopping-cart',
       href: '/admin/orders',
-      roles: ['super_admin', 'admin']
+      roles: ['super_admin', 'staff']
+    },
+    {
+      id: 'staff',
+      label: 'Staff',
+      icon: 'user',
+      href: '/admin/staff',
+      roles: ['super_admin']
     },
     {
       id: 'customers',
       label: 'Customers',
       icon: 'user',
       href: '/admin/customers',
-      roles: ['super_admin', 'admin']
+      roles: ['super_admin']
     },
     {
       id: 'contacts',
       label: 'Contact Messages',
       icon: 'envelope',
       href: '/admin/contacts',
-      roles: ['super_admin', 'admin']
+      roles: ['super_admin']
     },
     {
       id: 'settings',
       label: 'Settings',
       icon: 'cog',
       href: '/admin/settings',
-      roles: ['super_admin', 'admin']
+      roles: ['super_admin']
     }
   ];
 };
@@ -100,7 +106,7 @@ export default function AdminSidebar({ isCollapsed, onToggle }: AdminSidebarProp
   const router = useRouter();
   const [expandedItems, setExpandedItems] = useState<string[]>([]);
 
-  const sidebarItems = React.useMemo(() => getSidebarItems(user?.role || 'admin'), [user?.role]);
+  const sidebarItems = React.useMemo(() => getSidebarItems(user?.role || 'super_admin'), [user?.role]);
 
   // Auto-expand parent items when child is active
   React.useEffect(() => {
@@ -155,7 +161,7 @@ export default function AdminSidebar({ isCollapsed, onToggle }: AdminSidebarProp
   };
 
   const hasPermission = (roles: string[]) => {
-    return roles.includes(user?.role || 'admin');
+    return roles.includes(user?.role || 'super_admin');
   };
 
   const handleLogout = async () => {

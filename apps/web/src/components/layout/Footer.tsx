@@ -116,7 +116,15 @@ export default function Footer() {
               © 2024 Khaalis Harvest. All rights reserved.
             </p>
             <p className="text-gray-400 text-sm mt-2 md:mt-0">
-              Made with ❤️ in Pakistan
+              Powered by{' '}
+              <a
+                href="https://www.dualtechlabs.com/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-green-400 hover:text-green-300 transition-colors"
+              >
+                DualTech Labs
+              </a>
             </p>
           </div>
         </div>

@@ -14,7 +14,7 @@ import { env } from '../../../config/env';
 @ApiTags('Upload')
 @Controller('upload')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles('admin', 'super_admin')
+@Roles('super_admin', 'staff')
 @ApiBearerAuth()
 export class UploadController {
   @Post('image')

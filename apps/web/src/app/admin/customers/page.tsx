@@ -209,7 +209,7 @@ export default function AdminCustomersPage() {
   const getRoleColor = (role: string) => {
     switch (role) {
       case 'super_admin': return 'bg-red-100 text-red-800';
-      case 'admin': return 'bg-blue-100 text-blue-800';
+      case 'staff': return 'bg-blue-100 text-blue-800';
       case 'customer': return 'bg-green-100 text-green-800';
       default: return 'bg-gray-100 text-gray-800';
     }
@@ -217,7 +217,7 @@ export default function AdminCustomersPage() {
 
   if (loading) {
     return (
-      <ProtectedRoute requiredRoles={['super_admin', 'admin']}>
+      <ProtectedRoute requiredRoles={['super_admin']}>
         <AdminLayout>
           <div className="flex items-center justify-center h-64">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div>
@@ -228,7 +228,7 @@ export default function AdminCustomersPage() {
   }
 
   return (
-    <ProtectedRoute requiredRoles={['super_admin', 'admin']}>
+    <ProtectedRoute requiredRoles={['super_admin']}>
       <AdminLayout>
         <div className="space-y-6">
           <div>
@@ -261,7 +261,7 @@ export default function AdminCustomersPage() {
                 >
                   <option value="">All Roles</option>
                   <option value="customer">Customer</option>
-                  <option value="admin">Admin</option>
+                  <option value="staff">Staff</option>
                   <option value="super_admin">Super Admin</option>
                 </select>
               </div>

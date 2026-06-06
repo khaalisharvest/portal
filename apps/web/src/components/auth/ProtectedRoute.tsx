@@ -27,7 +27,7 @@ export function ProtectedRoute({
 
       if (requiredRoles.length > 0 && !requiredRoles.includes(user.role)) {
         // Redirect to appropriate page based on user role
-        if (user.role === 'super_admin' || user.role === 'admin') {
+        if (user.role === 'super_admin' || user.role === 'staff') {
           router.push('/admin/dashboard');
         } else {
           router.push('/orders');
@@ -67,7 +67,7 @@ export function SuperAdminRoute({ children }: { children: ReactNode }) {
 
 export function AdminRoute({ children }: { children: ReactNode }) {
   return (
-    <ProtectedRoute requiredRoles={['admin', 'super_admin']}>
+    <ProtectedRoute requiredRoles={['super_admin', 'staff']}>
       {children}
     </ProtectedRoute>
   );

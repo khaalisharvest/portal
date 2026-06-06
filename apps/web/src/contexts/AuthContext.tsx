@@ -8,7 +8,7 @@ interface User {
   name: string;
   phone: string;
   email?: string;
-  role: 'customer' | 'admin' | 'super_admin';
+  role: 'customer' | 'staff' | 'super_admin';
   isActive: boolean;
   createdAt: string;
 }
@@ -150,7 +150,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(data.user);
 
         // Redirect based on role
-        if (data.user.role === 'super_admin' || data.user.role === 'admin') {
+        if (data.user.role === 'super_admin' || data.user.role === 'staff') {
           router.push('/admin/dashboard');
         } else {
           router.push('/orders');
@@ -197,6 +197,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem('auth_token');
     localStorage.removeItem('backend_token');
     localStorage.removeItem('user');
+    fetch('/api/auth/logout', { method: 'POST' }).catch(() => {});
     setUser(null);
     router.push('/');
   };

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { BACKEND_URL } from '@/config/env';
+import { BACKEND_URL } from '@/config/env.server';
 import jwt from 'jsonwebtoken';
 
 // Get JWT_SECRET from environment - validated at runtime

@@ -272,7 +272,7 @@ export default function AdminContactsPage() {
   };
 
   return (
-    <ProtectedRoute requiredRoles={['super_admin', 'admin']}>
+    <ProtectedRoute requiredRoles={['super_admin']}>
       <AdminLayout>
         <div className="space-y-6">
           {/* Header */}

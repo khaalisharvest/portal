@@ -33,7 +33,7 @@ export class InventoryController {
 
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('admin', 'super_admin')
+  @Roles('super_admin', 'staff')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Create or update inventory for a product (admin)' })
   async upsert(@Param('productId') productId: string, @Body() dto: SetInventoryDto) {

@@ -13,7 +13,7 @@ export class CategoriesController {
 
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('admin', 'super_admin')
+  @Roles('super_admin', 'staff')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Create a new category' })
   @ApiResponse({ status: 201, description: 'Category created successfully' })
@@ -37,7 +37,7 @@ export class CategoriesController {
 
   @Patch(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('admin', 'super_admin')
+  @Roles('super_admin', 'staff')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Update category' })
   @ApiResponse({ status: 200, description: 'Category updated successfully' })
@@ -47,7 +47,7 @@ export class CategoriesController {
 
   @Delete(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('admin', 'super_admin')
+  @Roles('super_admin', 'staff')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Delete category' })
   @ApiResponse({ status: 200, description: 'Category deleted successfully' })

@@ -8,6 +8,7 @@ import { Address } from './entities/address.entity';
 import { Product } from '../products/entities/product.entity';
 import { User } from '../users/entities/user.entity';
 import { SettingsModule } from '../settings/settings.module';
+import { ActivityModule } from '../activity/activity.module';
 
 @Module({
   imports: [
@@ -18,7 +19,8 @@ import { SettingsModule } from '../settings/settings.module';
       Product,
       User
     ]),
-    SettingsModule
+    SettingsModule,
+    ActivityModule,
   ],
   controllers: [OrdersController, AdminOrdersController],
   providers: [OrdersService],

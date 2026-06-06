@@ -21,11 +21,13 @@ import { Inventory } from './entities/inventory.entity';
 import { ProductType } from '../product-types/entities/product-type.entity';
 import { SettingsModule } from '../settings/settings.module';
 import { ProductComponent } from './entities/product-component.entity';
+import { ActivityModule } from '../activity/activity.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Product, Category, Supplier, ProductType, ProductComponent, Review, Wishlist, Inventory]),
     SettingsModule,
+    ActivityModule,
   ],
   controllers: [CategoriesController, SuppliersController, ProductsController, ReviewsController, WishlistController, UploadController, InventoryController],
   providers: [CategoriesService, SuppliersService, ProductsService, ReviewsService, WishlistService],

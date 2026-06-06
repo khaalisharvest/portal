@@ -31,7 +31,7 @@ export class AuthService {
       password: hashedPassword,
     });
 
-    const tokens = await this.generateTokens(user.id);
+    const tokens = await this.generateTokens(user.id, user.role);
     return { user, ...tokens };
   }
 
@@ -60,7 +60,7 @@ export class AuthService {
     user.lastLoginAt = new Date();
     await this.usersService.updateLastLogin(user.id);
 
-    const tokens = await this.generateTokens(user.id);
+    const tokens = await this.generateTokens(user.id, user.role);
     const { password, ...userWithoutPassword } = user;
     return { user: userWithoutPassword, ...tokens };
   }
@@ -101,7 +101,7 @@ export class AuthService {
       if (!user) {
         throw new UnauthorizedException();
       }
-      return this.generateTokens(user.id);
+      return this.generateTokens(user.id, user.role);
     } catch {
       throw new UnauthorizedException('Invalid refresh token');
     }
@@ -154,8 +154,8 @@ export class AuthService {
     return { message: 'Password reset successfully. You can now log in.' };
   }
 
-  private async generateTokens(userId: string) {
-    const payload = { sub: userId };
+  private async generateTokens(userId: string, role: string) {
+    const payload = { sub: userId, role };
     return {
       accessToken: this.jwtService.sign(payload),
       refreshToken: this.jwtService.sign(payload, { expiresIn: '30d' }),

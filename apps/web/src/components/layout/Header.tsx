@@ -206,7 +206,7 @@ export default function Header() {
                     {isDesktopUserMenuOpen && (
                       <div ref={dropdownRef} className="absolute right-0 mt-3 w-56 bg-white rounded-2xl shadow-2xl border border-primary-100 py-2 z-50 overflow-hidden backdrop-blur-sm">
                         <Link
-                          href={(user.role === 'super_admin' || user.role === 'admin') ? '/admin/dashboard' : '/orders'}
+                          href={(user.role === 'super_admin' || user.role === 'staff') ? '/admin/dashboard' : '/orders'}
                           className="flex items-center space-x-3 px-4 py-3 text-sm text-neutral-700 hover:bg-primary-50 hover:text-primary-700 transition-all duration-200 group"
                           onClick={() => setIsDesktopUserMenuOpen(false)}
                         >
@@ -215,10 +215,10 @@ export default function Header() {
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                             </svg>
                           </div>
-                          <span className="font-medium">{(user.role === 'super_admin' || user.role === 'admin') ? 'Dashboard' : 'My Orders'}</span>
+                          <span className="font-medium">{(user.role === 'super_admin' || user.role === 'staff') ? 'Dashboard' : 'My Orders'}</span>
                         </Link>
 
-                        {!(user.role === 'super_admin' || user.role === 'admin') && (
+                        {!(user.role === 'super_admin' || user.role === 'staff') && (
                           <>
                             <Link
                               href="/account"
@@ -493,7 +493,7 @@ export default function Header() {
                         e.stopPropagation();
                         e.preventDefault();
                         setIsMobileMenuOpen(false);
-                        const path = (user.role === 'super_admin' || user.role === 'admin') ? '/admin/dashboard' : '/orders';
+                        const path = (user.role === 'super_admin' || user.role === 'staff') ? '/admin/dashboard' : '/orders';
                         setTimeout(() => {
                           router.push(path);
                         }, 100);
@@ -503,9 +503,9 @@ export default function Header() {
                       <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                       </svg>
-                      <span>{(user.role === 'super_admin' || user.role === 'admin') ? 'Dashboard' : 'My Orders'}</span>
+                      <span>{(user.role === 'super_admin' || user.role === 'staff') ? 'Dashboard' : 'My Orders'}</span>
                     </button>
-                    {!(user.role === 'super_admin' || user.role === 'admin') && (
+                    {!(user.role === 'super_admin' || user.role === 'staff') && (
                       <>
                         <button
                           onClick={(e) => {

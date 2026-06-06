@@ -13,7 +13,7 @@ export class SuppliersController {
 
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('admin', 'super_admin')
+  @Roles('super_admin', 'staff')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Create a new supplier (admin only)' })
   @ApiResponse({ status: 201, description: 'Supplier created successfully' })
@@ -37,7 +37,7 @@ export class SuppliersController {
 
   @Patch(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('admin', 'super_admin')
+  @Roles('super_admin', 'staff')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Update supplier (admin only)' })
   @ApiResponse({ status: 200, description: 'Supplier updated successfully' })
@@ -47,7 +47,7 @@ export class SuppliersController {
 
   @Delete(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('admin', 'super_admin')
+  @Roles('super_admin', 'staff')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Delete supplier (admin only)' })
   @ApiResponse({ status: 200, description: 'Supplier deleted successfully' })

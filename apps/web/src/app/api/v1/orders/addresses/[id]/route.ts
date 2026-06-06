@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { BACKEND_URL } from '@/config/env';
+import { BACKEND_URL } from '@/config/env.server';
 
 export async function PATCH(request: NextRequest, { params }: { params: { id: string } }) {
   const authHeader = request.headers.get('Authorization');

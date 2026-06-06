@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException, ForbiddenException, Logger } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, ForbiddenException, Logger, Optional } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource, In } from 'typeorm';
 import { Order, OrderStatus, PaymentStatus } from './entities/order.entity';
@@ -16,6 +16,7 @@ import { EmailService } from '../notifications/email.service';
 import { orderConfirmationTemplate, adminNewOrderTemplate } from '../notifications/templates/order-confirmation.template';
 import { orderStatusTemplate } from '../notifications/templates/order-status.template';
 import { env } from '../../config/env';
+import { ActivityService } from '../activity/activity.service';
 
 @Injectable()
 export class OrdersService {
@@ -35,6 +36,7 @@ export class OrdersService {
     private dataSource: DataSource,
     private settingsService: SettingsService,
     private emailService: EmailService,
+    @Optional() private activityService?: ActivityService,
   ) {}
 
   async calculateDeliveryFee(subtotal: number): Promise<{ deliveryFee: number; isFree: boolean; reason: string }> {
@@ -441,7 +443,7 @@ export class OrdersService {
     };
   }
 
-  async updateOrderStatus(id: string, updateOrderDto: UpdateOrderDto): Promise<Order> {
+  async updateOrderStatus(id: string, updateOrderDto: UpdateOrderDto, performedBy?: { id: string; name: string }): Promise<Order> {
     const order = await this.orderRepository.findOne({
       where: { id },
       relations: ['address', 'items', 'user']
@@ -452,6 +454,7 @@ export class OrdersService {
     }
 
     const newStatus = updateOrderDto.status;
+    const previousStatus = order.status;
     Object.assign(order, updateOrderDto);
     await this.orderRepository.save(order);
 
@@ -477,6 +480,20 @@ export class OrdersService {
         } catch (err) {
           this.logger.error(`Status email failed: ${err.message}`);
         }
+      });
+    }
+
+    if (performedBy && this.activityService) {
+      setImmediate(() => {
+        this.activityService.log({
+          staffId: performedBy.id,
+          staffName: performedBy.name,
+          action: 'order_status_updated',
+          entityType: 'order',
+          entityId: id,
+          entityLabel: order.orderNumber,
+          details: { from: previousStatus, to: newStatus },
+        }).catch(() => {});
       });
     }
 
@@ -772,6 +789,20 @@ export class OrdersService {
         orderItems.push(orderItem);
       }
 
+      // Validate minimum order amount
+      const minOrderAmount = await this.settingsService.getSetting('min_order_amount', 500);
+      if (subtotal < Number(minOrderAmount)) {
+        throw new BadRequestException(`Minimum order amount is ₨${minOrderAmount}. Your order total is ₨${subtotal}`);
+      }
+
+      // Validate COD availability
+      if (orderData.paymentMethod === 'cash_on_delivery') {
+        const codEnabled = await this.settingsService.getSetting('cod_enabled', true);
+        if (codEnabled === false) {
+          throw new BadRequestException('Cash on delivery is currently not available. Please use bank transfer.');
+        }
+      }
+
       // Create order
       const deliveryCalculation = await this.calculateDeliveryFee(subtotal);
       
@@ -800,6 +831,7 @@ export class OrdersService {
       await queryRunner.commitTransaction();
 
       // Capture all notification data BEFORE setImmediate (avoid closure stale reference issues)
+      const adminEmail = await this.settingsService.getSetting('admin_email', env.ADMIN_EMAIL);
       const notificationData = {
         orderNumber: savedOrder.orderNumber,
         customerName: userId ? savedOrder.user?.name : orderData.address?.fullName || 'Customer',
@@ -841,7 +873,7 @@ export class OrdersService {
         }
 
         this.emailService.send(
-          env.ADMIN_EMAIL,
+          adminEmail,
           `New Order — ${notificationData.orderNumber}`,
           adminNewOrderTemplate({
             orderNumber: notificationData.orderNumber,

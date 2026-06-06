@@ -30,7 +30,7 @@ interface Product {
 
 export default function InventoryPage() {
   return (
-    <ProtectedRoute requiredRoles={['super_admin', 'admin']}>
+    <ProtectedRoute requiredRoles={['super_admin', 'staff']}>
       <AdminLayout>
         <InventoryContent />
       </AdminLayout>

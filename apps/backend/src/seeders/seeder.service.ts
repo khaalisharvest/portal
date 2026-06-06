@@ -15,26 +15,10 @@ export class SeederService {
 
   async seed() {
     console.log('Starting database seeding...');
-
     try {
-      // Check if super admin already exists
-      const existingSuperAdmin = await this.userRepository.findOne({
-        where: { role: 'super_admin' }
-      });
-
-      if (!existingSuperAdmin) {
-        // Create super admin
-        await this.seedSuperAdmin();
-      } else {
-        console.log('Super admin already exists, skipping...');
-      }
-
-      // Seed default delivery and application settings
+      await this.seedSuperAdmin();
       await this.settingsService.initializeDefaultSettings();
-      console.log('Default settings seeded successfully.');
-
       console.log('Database seeding completed successfully!');
-      console.log('Khaalis Harvest platform is ready for admin management!');
     } catch (error) {
       console.error('Database seeding failed:', error);
       throw error;
@@ -42,28 +26,28 @@ export class SeederService {
   }
 
   private async seedSuperAdmin() {
-    console.log('👑 Creating super admin...');
-    
-    const hashedPassword = await bcrypt.hash('superadmin123', 10);
-    
-    const superAdmin = this.userRepository.create({
-      name: 'Super Admin',
-      phone: '+923204749700',
-      email: 'admin@khaalisharvest.pk',
-      password: hashedPassword,
-      role: 'super_admin',
-      isActive: true,
-      verification: {
-        isVerified: true,
-        verifiedAt: new Date(),
-        verificationMethod: 'admin_created'
-      }
-    });
+    const existing = await this.userRepository.findOne({ where: { role: 'super_admin' } });
+    if (existing) {
+      console.log('Super admin already exists, skipping...');
+      return;
+    }
 
-    await this.userRepository.save(superAdmin);
-    
-    console.log('  ✅ Super admin created successfully!');
-    console.log('  📱 Phone: +923204749700');
-    console.log('  🔑 Password: superadmin123');
+    const hashedPassword = await bcrypt.hash(process.env.SUPER_ADMIN_PASSWORD, 10);
+    await this.userRepository.save(
+      this.userRepository.create({
+        name: 'Super Admin',
+        phone: process.env.SUPER_ADMIN_PHONE,
+        email: process.env.SUPER_ADMIN_EMAIL,
+        password: hashedPassword,
+        role: 'super_admin',
+        isActive: true,
+        verification: {
+          isVerified: true,
+          verifiedAt: new Date(),
+          verificationMethod: 'admin_created',
+        },
+      }),
+    );
+    console.log('Super admin created — email:', process.env.SUPER_ADMIN_EMAIL);
   }
 }

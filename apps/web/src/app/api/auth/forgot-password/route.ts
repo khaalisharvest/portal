@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { BACKEND_URL } from '@/config/env';
+import { BACKEND_URL } from '@/config/env.server';
 
 export async function POST(request: NextRequest) {
   const body = await request.json();
