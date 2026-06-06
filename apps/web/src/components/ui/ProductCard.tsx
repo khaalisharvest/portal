@@ -4,6 +4,8 @@ import { useState } from 'react';
 import Image from 'next/image';
 import { HeartIcon, StarIcon } from '@heroicons/react/24/outline';
 import { HeartIcon as HeartSolidIcon } from '@heroicons/react/24/solid';
+import { useAuth } from '@/contexts/AuthContext';
+import toast from 'react-hot-toast';
 
 interface Product {
   id: string;
@@ -32,12 +34,32 @@ interface ProductCardProps {
 }
 
 export default function ProductCard({ product }: ProductCardProps) {
+  const { user } = useAuth();
   const [isFavorited, setIsFavorited] = useState(false);
+  const [wishlistLoading, setWishlistLoading] = useState(false);
 
-  const handleFavorite = (e: React.MouseEvent) => {
+  const handleFavorite = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    setIsFavorited(!isFavorited);
+    if (!user) {
+      toast.error('Please login to save to wishlist');
+      return;
+    }
+    if (wishlistLoading) return;
+    setWishlistLoading(true);
+    const token = localStorage.getItem('auth_token');
+    try {
+      await fetch(`/api/v1/wishlist/${product.id}`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setIsFavorited(prev => !prev);
+      toast.success(isFavorited ? 'Removed from wishlist' : 'Added to wishlist');
+    } catch {
+      toast.error('Failed to update wishlist');
+    } finally {
+      setWishlistLoading(false);
+    }
   };
 
   return (
@@ -51,19 +73,24 @@ export default function ProductCard({ product }: ProductCardProps) {
             height={300}
             className="w-full h-32 sm:h-36 md:h-40 object-cover"
             sizes="(max-width: 640px) 50vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
+            onError={(e) => { (e.target as HTMLImageElement).src = '/images/placeholder.svg'; }}
           />
         </div>
         
-        <button
-          onClick={handleFavorite}
-          className="absolute top-2 right-2 p-2 bg-white rounded-full shadow-md hover:shadow-lg transition-shadow duration-200"
-        >
-          {isFavorited ? (
-            <HeartSolidIcon className="h-5 w-5 text-red-500" />
-          ) : (
-            <HeartIcon className="h-5 w-5 text-gray-400" />
-          )}
-        </button>
+        {user && (
+          <button
+            onClick={handleFavorite}
+            disabled={wishlistLoading}
+            className="absolute top-2 right-2 p-2 bg-white rounded-full shadow-md hover:shadow-lg transition-shadow duration-200 disabled:opacity-50"
+            title={isFavorited ? 'Remove from wishlist' : 'Add to wishlist'}
+          >
+            {isFavorited ? (
+              <HeartSolidIcon className="h-5 w-5 text-red-500" />
+            ) : (
+              <HeartIcon className="h-5 w-5 text-gray-400" />
+            )}
+          </button>
+        )}
 
         {product.isFresh && (
           <span className="absolute top-2 left-2 bg-green-100 text-green-800 text-xs font-medium px-2 py-1 rounded-full">

@@ -7,8 +7,6 @@ import Image from 'next/image';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCart } from '@/contexts/CartContext';
 import { useFilter } from '@/contexts/FilterContext';
-import { useSelector } from 'react-redux';
-import { RootState } from '@/store';
 import MobileCategoryDropdown from '@/components/ui/MobileCategoryDropdown';
 import { useCategories, useProductTypes } from '@/hooks/useProducts';
 
@@ -152,6 +150,19 @@ export default function Header() {
               </div>
             ) : (
               <div className="flex items-center space-x-4">
+                {/* Wishlist Icon — logged-in users only */}
+                {user && (
+                  <Link
+                    href="/wishlist"
+                    className="relative p-1.5 lg:p-2 hover:bg-red-50 rounded-lg transition-all duration-200 group"
+                    title="My Wishlist"
+                  >
+                    <svg className="h-5 w-5 lg:h-6 lg:w-6 text-gray-700 group-hover:text-red-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                    </svg>
+                  </Link>
+                )}
+
                 {/* Responsive Cart Icon */}
                 <Link
                   href="/cart"
@@ -206,7 +217,36 @@ export default function Header() {
                           </div>
                           <span className="font-medium">{(user.role === 'super_admin' || user.role === 'admin') ? 'Dashboard' : 'My Orders'}</span>
                         </Link>
-                        
+
+                        {!(user.role === 'super_admin' || user.role === 'admin') && (
+                          <>
+                            <Link
+                              href="/account"
+                              className="flex items-center space-x-3 px-4 py-3 text-sm text-neutral-700 hover:bg-primary-50 hover:text-primary-700 transition-all duration-200 group"
+                              onClick={() => setIsDesktopUserMenuOpen(false)}
+                            >
+                              <div className="p-2 bg-primary-100 rounded-lg group-hover:bg-primary-200 transition-colors">
+                                <svg className="h-4 w-4 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                </svg>
+                              </div>
+                              <span className="font-medium">My Account</span>
+                            </Link>
+                            <Link
+                              href="/wishlist"
+                              className="flex items-center space-x-3 px-4 py-3 text-sm text-neutral-700 hover:bg-red-50 hover:text-red-600 transition-all duration-200 group"
+                              onClick={() => setIsDesktopUserMenuOpen(false)}
+                            >
+                              <div className="p-2 bg-red-100 rounded-lg group-hover:bg-red-200 transition-colors">
+                                <svg className="h-4 w-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                                </svg>
+                              </div>
+                              <span className="font-medium">Wishlist</span>
+                            </Link>
+                          </>
+                        )}
+
                         <div className="border-t border-primary-100">
                           <button
                             onClick={() => {
@@ -465,6 +505,38 @@ export default function Header() {
                       </svg>
                       <span>{(user.role === 'super_admin' || user.role === 'admin') ? 'Dashboard' : 'My Orders'}</span>
                     </button>
+                    {!(user.role === 'super_admin' || user.role === 'admin') && (
+                      <>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            e.preventDefault();
+                            setIsMobileMenuOpen(false);
+                            setTimeout(() => router.push('/account'), 100);
+                          }}
+                          className="flex items-center space-x-3 px-4 py-3 text-base font-medium text-neutral-700 hover:text-primary-600 hover:bg-primary-50 rounded-xl transition-all duration-200 [touch-action:manipulation] cursor-pointer relative z-[101] w-full text-left"
+                        >
+                          <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                          </svg>
+                          <span>My Account</span>
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            e.preventDefault();
+                            setIsMobileMenuOpen(false);
+                            setTimeout(() => router.push('/wishlist'), 100);
+                          }}
+                          className="flex items-center space-x-3 px-4 py-3 text-base font-medium text-neutral-700 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all duration-200 [touch-action:manipulation] cursor-pointer relative z-[101] w-full text-left"
+                        >
+                          <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                          </svg>
+                          <span>Wishlist</span>
+                        </button>
+                      </>
+                    )}
                     <button
                       onClick={(e) => {
                         e.stopPropagation();

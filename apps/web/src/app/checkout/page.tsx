@@ -341,11 +341,16 @@ export default function CheckoutPage() {
         });
 
         if (response.ok) {
-          // Mark order as successfully placed before clearing cart
+          const responseData = await response.json();
+          const order = responseData.data || responseData;
+          const orderNumber = order.orderNumber || order.order_number || 'N/A';
+          const totalAmount = order.totalAmount || order.total_amount || 0;
+          // Mark order as successfully placed AFTER validating response, then clear cart
           orderPlacedSuccessfully.current = true;
           clearCart();
           toast.success('Order placed successfully!');
-          router.push('/products');
+          const confirmUrl = `/orders/confirmation?orderNumber=${encodeURIComponent(orderNumber)}&total=${totalAmount}&paymentMethod=${encodeURIComponent(orderData.paymentMethod || 'cash_on_delivery')}&guest=true`;
+          router.push(confirmUrl);
         } else {
           const error = await response.json();
           throw new Error(error.message || 'Failed to place order');
@@ -375,12 +380,16 @@ export default function CheckoutPage() {
         });
 
         if (response.ok) {
-          const order = await response.json();
-          // Mark order as successfully placed before clearing cart
+          const responseData = await response.json();
+          const order = responseData.data || responseData;
+          const orderNumber = order.orderNumber || order.order_number || 'N/A';
+          const totalAmount = order.totalAmount || order.total_amount || 0;
+          // Mark order as successfully placed AFTER validating response, then clear cart
           orderPlacedSuccessfully.current = true;
           clearCart();
           toast.success('Order placed successfully!');
-          router.push(`/orders/${order.data?.id || order.id}`);
+          const confirmUrl = `/orders/confirmation?orderNumber=${encodeURIComponent(orderNumber)}&total=${totalAmount}&paymentMethod=${encodeURIComponent(orderData.paymentMethod || 'cash_on_delivery')}&guest=false`;
+          router.push(confirmUrl);
         } else {
           const error = await response.json();
           throw new Error(error.message || 'Failed to place order');

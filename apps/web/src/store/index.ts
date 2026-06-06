@@ -24,18 +24,16 @@ const storage = typeof window !== 'undefined'
 // Import your reducers here
 import authReducer from './slices/authSlice';
 import productReducer from './slices/productSlice';
-import cartReducer from './slices/cartSlice';
 
 const rootReducer = combineReducers({
   auth: authReducer,
   product: productReducer,
-  cart: cartReducer,
 });
 
 const persistConfig = {
   key: 'root',
   storage,
-  whitelist: ['auth', 'cart'], // Only persist these reducers
+  whitelist: ['auth'], // Only persist auth; cart is managed by CartContext
 };
 
 const persistedReducer = persistReducer(persistConfig, rootReducer);
