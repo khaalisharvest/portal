@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from '../modules/users/entities/user.entity';
+import { SettingsService } from '../modules/settings/services/settings.service';
 import * as bcrypt from 'bcryptjs';
 
 @Injectable()
@@ -9,11 +10,12 @@ export class SeederService {
   constructor(
     @InjectRepository(User)
     private userRepository: Repository<User>,
+    private settingsService: SettingsService,
   ) {}
 
   async seed() {
-    console.log('🌱 Starting database seeding...');
-    
+    console.log('Starting database seeding...');
+
     try {
       // Check if super admin already exists
       const existingSuperAdmin = await this.userRepository.findOne({
@@ -24,14 +26,17 @@ export class SeederService {
         // Create super admin
         await this.seedSuperAdmin();
       } else {
-        console.log('✅ Super admin already exists, skipping...');
+        console.log('Super admin already exists, skipping...');
       }
 
-      
-      console.log('✅ Database seeding completed successfully!');
-      console.log('🌱 Khaalis Harvest platform is ready for admin management!');
+      // Seed default delivery and application settings
+      await this.settingsService.initializeDefaultSettings();
+      console.log('Default settings seeded successfully.');
+
+      console.log('Database seeding completed successfully!');
+      console.log('Khaalis Harvest platform is ready for admin management!');
     } catch (error) {
-      console.error('❌ Database seeding failed:', error);
+      console.error('Database seeding failed:', error);
       throw error;
     }
   }

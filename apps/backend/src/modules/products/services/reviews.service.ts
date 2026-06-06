@@ -21,7 +21,9 @@ export class ReviewsService {
     const existing = await this.reviewRepository.findOne({ where: { productId, userId } });
     if (existing) throw new ConflictException('You have already reviewed this product');
 
-    const review = this.reviewRepository.create({ ...dto, productId, userId });
+    // isVerified is always false on creation — admin can mark verified after
+    // checking purchase history. Avoids circular dependency with OrdersModule.
+    const review = this.reviewRepository.create({ ...dto, productId, userId, isVerified: false });
     const saved = await this.reviewRepository.save(review);
     await this.updateProductRating(productId);
     return saved;

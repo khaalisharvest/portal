@@ -104,33 +104,37 @@ export class OrdersService {
         const product = products.find(p => p.id === itemDto.productId);
         if (!product) continue;
 
-        // Determine the price to use - variant price if selected, otherwise product price
-        let unitPrice = product.price;
+        // Always use server-side price — never trust client-provided price
+        let resolvedUnitPrice = product.price;
+        let resolvedVariantPrice: number | undefined;
+        let resolvedVariantOriginalPrice: number | undefined;
         let itemName = product.name;
-        
+
         if (itemDto.selectedVariant && product.hasVariants && product.variants) {
           const selectedVariant = product.variants.find(v => v.name === itemDto.selectedVariant);
           if (selectedVariant) {
-            unitPrice = itemDto.variantPrice || selectedVariant.price;
+            resolvedUnitPrice = selectedVariant.price;
+            resolvedVariantPrice = selectedVariant.price;
+            resolvedVariantOriginalPrice = selectedVariant.originalPrice;
             itemName = `${product.name} - ${selectedVariant.name}`;
           }
         }
 
-        const totalPrice = unitPrice * itemDto.quantity;
+        const totalPrice = resolvedUnitPrice * itemDto.quantity;
         subtotal += totalPrice;
 
         const orderItem = queryRunner.manager.create(OrderItem, {
           productId: product.id,
           itemName,
           itemImage: product.images?.[0] || '',
-          unitPrice,
+          unitPrice: resolvedUnitPrice,
           quantity: itemDto.quantity,
           totalPrice,
           unit: product.unit,
           specifications: product.specifications,
           selectedVariant: itemDto.selectedVariant,
-          variantPrice: itemDto.variantPrice,
-          variantOriginalPrice: itemDto.variantOriginalPrice
+          variantPrice: resolvedVariantPrice,
+          variantOriginalPrice: resolvedVariantOriginalPrice,
         });
 
         orderItems.push(orderItem);
@@ -243,6 +247,20 @@ export class OrdersService {
     order.cancellationReason = reason;
 
     await this.orderRepository.save(order);
+
+    // Release reserved inventory on cancellation
+    const orderItems = await this.orderItemRepository.find({ where: { orderId: id } });
+    for (const item of orderItems) {
+      const inventory = await this.dataSource.manager.findOne('Inventory', {
+        where: { productId: item.productId }
+      });
+      if (inventory && inventory.reservedQuantity > 0) {
+        await this.dataSource.manager.update('Inventory', inventory.id, {
+          reservedQuantity: () => `GREATEST("reservedQuantity" - ${item.quantity}, 0)`
+        });
+      }
+    }
+
     return this.findOne(id, userId);
   }
 
@@ -523,33 +541,37 @@ export class OrdersService {
         const product = products.find(p => p.id === itemDto.productId);
         if (!product) continue;
 
-        // Determine the price to use - variant price if selected, otherwise product price
-        let unitPrice = product.price;
+        // Always use server-side price — never trust client-provided price
+        let resolvedUnitPrice = product.price;
+        let resolvedVariantPrice: number | undefined;
+        let resolvedVariantOriginalPrice: number | undefined;
         let itemName = product.name;
-        
+
         if (itemDto.selectedVariant && product.hasVariants && product.variants) {
           const selectedVariant = product.variants.find(v => v.name === itemDto.selectedVariant);
           if (selectedVariant) {
-            unitPrice = itemDto.variantPrice || selectedVariant.price;
+            resolvedUnitPrice = selectedVariant.price;
+            resolvedVariantPrice = selectedVariant.price;
+            resolvedVariantOriginalPrice = selectedVariant.originalPrice;
             itemName = `${product.name} - ${selectedVariant.name}`;
           }
         }
 
-        const totalPrice = unitPrice * itemDto.quantity;
+        const totalPrice = resolvedUnitPrice * itemDto.quantity;
         subtotal += totalPrice;
 
         const orderItem = queryRunner.manager.create(OrderItem, {
           productId: product.id,
           itemName,
           itemImage: product.images?.[0] || '',
-          unitPrice,
+          unitPrice: resolvedUnitPrice,
           quantity: itemDto.quantity,
           totalPrice,
           unit: product.unit,
           specifications: product.specifications,
           selectedVariant: itemDto.selectedVariant,
-          variantPrice: itemDto.variantPrice,
-          variantOriginalPrice: itemDto.variantOriginalPrice
+          variantPrice: resolvedVariantPrice,
+          variantOriginalPrice: resolvedVariantOriginalPrice,
         });
 
         orderItems.push(orderItem);
@@ -676,6 +698,30 @@ export class OrdersService {
         }
       }
 
+      // Check inventory for each item (within transaction)
+      for (const item of orderData.items) {
+        const product = products.find(p => p.id === item.productId);
+        if (!product) continue;
+
+        // Load inventory if it exists
+        const inventory = await queryRunner.manager.findOne('Inventory', {
+          where: { productId: item.productId }
+        });
+
+        if (inventory) {
+          const available = inventory.quantity - (inventory.reservedQuantity || 0);
+          if (available < item.quantity) {
+            throw new BadRequestException(
+              `Insufficient stock for "${product.name}". Available: ${available}, Requested: ${item.quantity}`
+            );
+          }
+          // Reserve the stock
+          await queryRunner.manager.update('Inventory', inventory.id, {
+            reservedQuantity: () => `"reservedQuantity" + ${item.quantity}`
+          });
+        }
+      }
+
       // Generate order number
       const orderNumber = await this.generateOrderNumber();
 
@@ -687,33 +733,39 @@ export class OrdersService {
         const product = products.find(p => p.id === itemDto.productId);
         if (!product) continue;
 
-        // Determine the price to use - variant price if selected, otherwise product price
-        let unitPrice = product.price;
+        // Always use server-side price — never trust client-provided price
+        const unitPrice = product.price;
+        let resolvedUnitPrice = unitPrice;
+        let resolvedVariantPrice: number | undefined;
+        let resolvedVariantOriginalPrice: number | undefined;
         let itemName = product.name;
-        
+
         if (itemDto.selectedVariant && product.hasVariants && product.variants) {
           const selectedVariant = product.variants.find(v => v.name === itemDto.selectedVariant);
           if (selectedVariant) {
-            unitPrice = itemDto.variantPrice || selectedVariant.price;
+            // Use server-side variant price; ignore client-provided variantPrice
+            resolvedUnitPrice = selectedVariant.price;
+            resolvedVariantPrice = selectedVariant.price;
+            resolvedVariantOriginalPrice = selectedVariant.originalPrice;
             itemName = `${product.name} - ${selectedVariant.name}`;
           }
         }
 
-        const totalPrice = unitPrice * itemDto.quantity;
+        const totalPrice = resolvedUnitPrice * itemDto.quantity;
         subtotal += totalPrice;
 
         const orderItem = queryRunner.manager.create(OrderItem, {
           productId: product.id,
           itemName,
           itemImage: product.images?.[0] || '',
-          unitPrice,
+          unitPrice: resolvedUnitPrice,
           quantity: itemDto.quantity,
           totalPrice,
           unit: product.unit,
           specifications: product.specifications,
           selectedVariant: itemDto.selectedVariant,
-          variantPrice: itemDto.variantPrice,
-          variantOriginalPrice: itemDto.variantOriginalPrice
+          variantPrice: resolvedVariantPrice,
+          variantOriginalPrice: resolvedVariantOriginalPrice,
         });
 
         orderItems.push(orderItem);
@@ -746,45 +798,60 @@ export class OrdersService {
 
       await queryRunner.commitTransaction();
 
-      // Fire-and-forget notifications — don't block the order response
-      const finalOrderForNotifications = savedOrder;
-      setImmediate(() => {
-        const addrParts = [address?.addressLine1, address?.city, address?.state, address?.country]
-          .filter(Boolean).join(', ');
-        const customerEmail = userId ? finalOrderForNotifications.user?.email : orderData.address?.email;
-        const customerName = finalOrderForNotifications.user?.name || orderData.address?.fullName || 'Customer';
+      // Capture all notification data BEFORE setImmediate (avoid closure stale reference issues)
+      const notificationData = {
+        orderNumber: savedOrder.orderNumber,
+        customerName: userId ? savedOrder.user?.name : orderData.address?.fullName || 'Customer',
+        customerEmail: userId ? savedOrder.user?.email : (orderData.address as any)?.email,
+        customerPhone: address?.phone || 'N/A',
+        totalAmount: savedOrder.totalAmount,
+        paymentMethod: savedOrder.paymentMethod,
+        city: address?.city || 'Unknown',
+        itemCount: orderItems.length,
+        subtotal: savedOrder.subtotal,
+        deliveryFee: savedOrder.deliveryFee,
+        addressLine: [address?.addressLine1, address?.city, address?.state].filter(Boolean).join(', '),
+        items: orderItems.map(i => ({
+          itemName: i.itemName,
+          quantity: i.quantity,
+          unitPrice: i.unitPrice,
+          unit: i.unit || 'unit',
+        })),
+      };
 
-        if (customerEmail) {
+      // Fire-and-forget notifications — don't block the order response
+      setImmediate(() => {
+        if (notificationData.customerEmail) {
           const html = orderConfirmationTemplate({
-            orderNumber: finalOrderForNotifications.orderNumber,
-            customerName,
-            items: (finalOrderForNotifications.items || []).map(i => ({
-              itemName: i.itemName, quantity: i.quantity, unitPrice: i.unitPrice, unit: i.unit || 'unit',
-            })),
-            subtotal: finalOrderForNotifications.subtotal,
-            deliveryFee: finalOrderForNotifications.deliveryFee,
-            totalAmount: finalOrderForNotifications.totalAmount,
-            paymentMethod: finalOrderForNotifications.paymentMethod,
-            address: addrParts,
+            orderNumber: notificationData.orderNumber,
+            customerName: notificationData.customerName,
+            items: notificationData.items,
+            subtotal: notificationData.subtotal,
+            deliveryFee: notificationData.deliveryFee,
+            totalAmount: notificationData.totalAmount,
+            paymentMethod: notificationData.paymentMethod,
+            address: notificationData.addressLine,
           });
-          this.emailService.send(customerEmail, `Order Confirmed — ${finalOrderForNotifications.orderNumber}`, html)
-            .catch(err => this.logger.error(`Confirmation email failed: ${err.message}`));
+          this.emailService.send(
+            notificationData.customerEmail,
+            `Order Confirmed — ${notificationData.orderNumber}`,
+            html,
+          ).catch(err => this.logger.error(`Confirmation email failed: ${err.message}`));
         }
 
-        // After the order is committed, send admin notification email
         this.emailService.send(
           env.ADMIN_EMAIL,
-          `🛒 New Order — ${finalOrderForNotifications.orderNumber}`,
+          `New Order — ${notificationData.orderNumber}`,
           adminNewOrderTemplate({
-            orderNumber: finalOrderForNotifications.orderNumber,
-            customerName,
-            customerPhone: address?.phone || 'N/A',
-            totalAmount: finalOrderForNotifications.totalAmount,
-            paymentMethod: finalOrderForNotifications.paymentMethod,
-            city: address?.city || 'Unknown',
-            itemCount: finalOrderForNotifications.items?.length || 0,
+            orderNumber: notificationData.orderNumber,
+            customerName: notificationData.customerName,
+            customerPhone: notificationData.customerPhone,
+            totalAmount: notificationData.totalAmount,
+            paymentMethod: notificationData.paymentMethod,
+            city: notificationData.city,
+            itemCount: notificationData.itemCount,
           }),
-        ).catch(err => this.logger.error(`Admin notification email failed: ${err.message}`));
+        ).catch(err => this.logger.error(`Admin notification failed: ${err.message}`));
       });
 
       return savedOrder;

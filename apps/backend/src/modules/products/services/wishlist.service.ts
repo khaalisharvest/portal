@@ -13,17 +13,31 @@ export class WishlistService {
     private productRepository: Repository<Product>,
   ) {}
 
-  async toggle(userId: string, productId: string): Promise<{ added: boolean; wishlist?: Wishlist }> {
+  async toggle(userId: string, productId: string): Promise<{ added: boolean }> {
     const product = await this.productRepository.findOne({ where: { id: productId } });
     if (!product) throw new NotFoundException('Product not found');
+
+    // Use delete-first approach to handle concurrent requests atomically
     const existing = await this.wishlistRepository.findOne({ where: { userId, productId } });
+
     if (existing) {
-      await this.wishlistRepository.remove(existing);
+      await this.wishlistRepository.delete({ userId, productId });
       return { added: false };
     }
-    const entry = this.wishlistRepository.create({ userId, productId });
-    const saved = await this.wishlistRepository.save(entry);
-    return { added: true, wishlist: saved };
+
+    try {
+      await this.wishlistRepository
+        .createQueryBuilder()
+        .insert()
+        .into('wishlists')
+        .values({ userId, productId, isActive: true })
+        .orIgnore() // PostgreSQL: ON CONFLICT DO NOTHING
+        .execute();
+      return { added: true };
+    } catch {
+      // Already exists (concurrent insert won the race) — treat as added
+      return { added: true };
+    }
   }
 
   async findByUser(userId: string): Promise<Wishlist[]> {

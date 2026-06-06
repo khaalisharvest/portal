@@ -4,6 +4,7 @@ import { SuppliersService } from '../services/suppliers.service';
 import { CreateSupplierDto } from '../dto/create-supplier.dto';
 import { UpdateSupplierDto } from '../dto/update-supplier.dto';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
+import { RolesGuard, Roles } from '../../../common/guards/roles.guard';
 
 @ApiTags('Suppliers')
 @Controller('suppliers')
@@ -11,9 +12,10 @@ export class SuppliersController {
   constructor(private readonly suppliersService: SuppliersService) {}
 
   @Post()
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin', 'super_admin')
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Create a new supplier' })
+  @ApiOperation({ summary: 'Create a new supplier (admin only)' })
   @ApiResponse({ status: 201, description: 'Supplier created successfully' })
   create(@Body() createSupplierDto: CreateSupplierDto) {
     return this.suppliersService.create(createSupplierDto);
@@ -34,18 +36,20 @@ export class SuppliersController {
   }
 
   @Patch(':id')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin', 'super_admin')
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Update supplier' })
+  @ApiOperation({ summary: 'Update supplier (admin only)' })
   @ApiResponse({ status: 200, description: 'Supplier updated successfully' })
   update(@Param('id') id: string, @Body() updateSupplierDto: UpdateSupplierDto) {
     return this.suppliersService.update(id, updateSupplierDto);
   }
 
   @Delete(':id')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin', 'super_admin')
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Delete supplier' })
+  @ApiOperation({ summary: 'Delete supplier (admin only)' })
   @ApiResponse({ status: 200, description: 'Supplier deleted successfully' })
   remove(@Param('id') id: string) {
     return this.suppliersService.remove(id);

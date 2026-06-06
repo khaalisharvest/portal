@@ -1,4 +1,4 @@
-import { IsString, IsEnum, IsOptional, IsArray, ValidateNested, IsUUID, IsNumber, IsDecimal } from 'class-validator';
+import { IsString, IsEnum, IsOptional, IsArray, ValidateNested, IsUUID, IsNumber, IsDecimal, Min, Max } from 'class-validator';
 import { Type } from 'class-transformer';
 import { PaymentMethod } from '../entities/order.entity';
 
@@ -8,6 +8,8 @@ export class CreateOrderItemDto {
   productId: string;
 
   @IsNumber()
+  @Min(1)
+  @Max(500)
   quantity: number;
 
   @IsString()

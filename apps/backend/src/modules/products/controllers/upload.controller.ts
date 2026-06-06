@@ -8,15 +8,17 @@ import { extname } from 'path';
 import { existsSync, mkdirSync } from 'fs';
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiConsumes } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
+import { RolesGuard, Roles } from '../../../common/guards/roles.guard';
 import { env } from '../../../config/env';
 
 @ApiTags('Upload')
 @Controller('upload')
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles('admin', 'super_admin')
+@ApiBearerAuth()
 export class UploadController {
   @Post('image')
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'Upload a product image, returns public URL' })
+  @ApiOperation({ summary: 'Upload a product image, returns public URL (admin only)' })
   @ApiConsumes('multipart/form-data')
   @UseInterceptors(
     FileInterceptor('file', {

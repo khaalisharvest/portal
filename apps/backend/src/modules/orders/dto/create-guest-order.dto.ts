@@ -1,4 +1,4 @@
-import { IsString, IsNotEmpty, IsArray, ValidateNested, IsNumber, Min, IsOptional, IsEnum } from 'class-validator';
+import { IsString, IsNotEmpty, IsArray, ValidateNested, IsNumber, Min, Max, IsOptional, IsEnum, IsEmail } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty } from '@nestjs/swagger';
 import { PaymentMethod } from '../entities/order.entity';
@@ -70,6 +70,11 @@ class GuestAddressDto {
   @IsString()
   @IsOptional()
   instructions?: string;
+
+  @ApiProperty({ example: 'john@example.com', description: 'Email address for order confirmation', required: false })
+  @IsEmail()
+  @IsOptional()
+  email?: string;
 }
 
 class CreateGuestOrderItemDto {
@@ -81,6 +86,7 @@ class CreateGuestOrderItemDto {
   @ApiProperty({ example: 2, description: 'Quantity of the product' })
   @IsNumber()
   @Min(1)
+  @Max(500)
   quantity: number;
 
   @ApiProperty({ example: 'Large', description: 'Selected variant name', required: false })

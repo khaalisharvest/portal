@@ -27,6 +27,6 @@ import { ProductComponent } from './entities/product-component.entity';
   ],
   controllers: [CategoriesController, SuppliersController, ProductsController, ReviewsController, WishlistController, UploadController],
   providers: [CategoriesService, SuppliersService, ProductsService, ReviewsService, WishlistService],
-  exports: [CategoriesService, SuppliersService, ProductsService, ReviewsService],
+  exports: [CategoriesService, SuppliersService, ProductsService, ReviewsService, WishlistService],
 })
 export class ProductsModule {}
