@@ -43,22 +43,26 @@ export async function POST(request: NextRequest) {
       });
 
       if (response.ok) {
-        const userData = await response.json();
-        
-        // Generate JWT token
+        const backendResponse = await response.json();
+        // Backend returns { success, data: { user, accessToken, refreshToken } } via ResponseInterceptor
+        const { user: registeredUser, accessToken, refreshToken } = backendResponse.data || backendResponse;
+
+        // Generate a frontend session token
         const token = jwt.sign(
-          { 
-            userId: userData.id, 
-            role: userData.role,
-            phone: userData.phone 
+          {
+            userId: registeredUser.id,
+            role: registeredUser.role,
+            phone: registeredUser.phone,
           },
           getJwtSecret(),
           { expiresIn: '7d' }
         );
 
         return NextResponse.json({
-          user: userData,
+          user: registeredUser,
           token,
+          accessToken,
+          refreshToken,
           message: 'Account created successfully'
         });
       } else {

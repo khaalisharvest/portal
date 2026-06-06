@@ -76,4 +76,21 @@ export class SettingsService {
       order: { key: 'ASC' }
     });
   }
+
+  async initializeDefaultSettings(): Promise<void> {
+    const defaults = [
+      { key: 'delivery_fee', value: '150', description: 'Delivery fee in PKR', category: 'delivery' },
+      { key: 'free_delivery_threshold', value: '2000', description: 'Minimum order amount for free delivery in PKR', category: 'delivery' },
+      { key: 'delivery_enabled', value: 'true', description: 'Enable/disable delivery service', category: 'delivery' },
+      { key: 'notification_bar_text', value: 'Free delivery on orders above PKR 2,000!', description: 'Notification bar message', category: 'app' },
+      { key: 'notification_bar_enabled', value: 'true', description: 'Show/hide notification bar', category: 'app' },
+    ];
+
+    for (const item of defaults) {
+      const existing = await this.getSetting(item.key);
+      if (!existing) {
+        await this.setSetting(item.key, item.value, item.description, item.category);
+      }
+    }
+  }
 }

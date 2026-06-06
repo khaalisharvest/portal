@@ -13,18 +13,19 @@ export class WishlistController {
   @Post(':productId')
   @ApiOperation({ summary: 'Toggle product in/out of wishlist' })
   toggle(@Param('productId') productId: string, @Request() req: any) {
-    return this.wishlistService.toggle(req.user.userId, productId);
+    return this.wishlistService.toggle(req.user.id, productId);
   }
 
   @Get()
   @ApiOperation({ summary: 'Get all wishlist items for logged-in user' })
   findAll(@Request() req: any) {
-    return this.wishlistService.findByUser(req.user.userId);
+    return this.wishlistService.findByUser(req.user.id);
   }
 
   @Get(':productId/check')
   @ApiOperation({ summary: 'Check if product is in wishlist' })
-  check(@Param('productId') productId: string, @Request() req: any) {
-    return this.wishlistService.isWishlisted(req.user.userId, productId);
+  async check(@Param('productId') productId: string, @Request() req: any) {
+    const isWishlisted = await this.wishlistService.isWishlisted(req.user.id, productId);
+    return { isWishlisted };
   }
 }

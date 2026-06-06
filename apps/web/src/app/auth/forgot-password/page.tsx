@@ -12,14 +12,19 @@ export default function ForgotPasswordPage() {
     e.preventDefault();
     setIsLoading(true);
     try {
-      await fetch('/api/auth/forgot-password', {
+      const res = await fetch('/api/auth/forgot-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ identifier }),
       });
+      if (res.status >= 500) {
+        toast.error('Server error. Please try again later.');
+        return;
+      }
+      // Show success for any non-500 response (including 404 — for security we don't reveal if user exists)
       setSubmitted(true);
     } catch {
-      toast.error('Something went wrong. Please try again.');
+      toast.error('Connection error. Please check your internet and try again.');
     } finally {
       setIsLoading(false);
     }

@@ -168,8 +168,10 @@ export default function ProductDetailsPage() {
     setReviewsLoading(true);
     try {
       const res = await fetch(`/api/v1/reviews?productId=${id}`);
-      const data = await res.json();
-      setReviews(Array.isArray(data) ? data : data.data || []);
+      const json = await res.json();
+      // Backend returns { success, data: { reviews, total, avgRating } } via ResponseInterceptor
+      const reviewData = json?.data ?? json;
+      setReviews(reviewData?.reviews ?? (Array.isArray(reviewData) ? reviewData : []));
     } catch {
       // silently fail
     } finally {
@@ -185,7 +187,9 @@ export default function ProductDetailsPage() {
       });
       if (res.ok) {
         const data = await res.json();
-        setIsWishlisted(data.isWishlisted ?? data.wishlisted ?? false);
+        // Backend returns { success, data: { isWishlisted } } via ResponseInterceptor
+        const payload = data?.data ?? data;
+        setIsWishlisted(payload?.isWishlisted ?? payload?.wishlisted ?? false);
       }
     } catch {
       // silently fail

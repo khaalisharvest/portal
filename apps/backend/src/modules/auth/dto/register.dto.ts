@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsNotEmpty, IsPhoneNumber, IsEmail, IsOptional, MinLength } from 'class-validator';
+import { IsString, IsNotEmpty, IsPhoneNumber, IsEmail, IsOptional, MinLength, IsEnum } from 'class-validator';
 
 export class RegisterDto {
   @ApiProperty({ example: 'John Doe' })
@@ -23,12 +23,12 @@ export class RegisterDto {
   @MinLength(6)
   password: string;
 
-  @ApiProperty({ 
-    example: 'customer', 
-    enum: ['customer', 'seller', 'farmer', 'vet', 'logistics', 'admin'],
-    description: 'User role: customer (buyer), seller (product seller), farmer, vet, logistics, admin'
+  @ApiProperty({
+    example: 'customer',
+    enum: ['customer'],
+    description: 'User role: only customer registration is allowed via this endpoint. Other roles are admin-managed.'
   })
-  @IsString()
-  @IsNotEmpty()
-  role: 'customer' | 'seller' | 'farmer' | 'vet' | 'logistics' | 'admin';
+  @IsEnum(['customer'])
+  @IsOptional()
+  role?: 'customer' = 'customer';
 }

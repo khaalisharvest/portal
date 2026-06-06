@@ -14,7 +14,7 @@ export class ReviewsController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Create a review for a product' })
   create(@Param('productId') productId: string, @Body() dto: CreateReviewDto, @Request() req: any) {
-    return this.reviewsService.create(productId, req.user.userId, dto);
+    return this.reviewsService.create(productId, req.user.id, dto);
   }
 
   @Get()
@@ -28,6 +28,6 @@ export class ReviewsController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Delete a review (own or admin)' })
   remove(@Param('reviewId') reviewId: string, @Request() req: any) {
-    return this.reviewsService.remove(reviewId, req.user.userId, req.user.role);
+    return this.reviewsService.remove(reviewId, req.user.id, req.user.role);
   }
 }

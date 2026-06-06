@@ -31,6 +31,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
               <FilterProvider>
                 {children}
               </FilterProvider>
+            </CartProvider>
             <Toaster
               position="top-right"
               toastOptions={{
@@ -58,7 +59,6 @@ export function Providers({ children }: { children: React.ReactNode }) {
             {process.env.NODE_ENV === 'development' && (
               <ReactQueryDevtools initialIsOpen={false} />
             )}
-            </CartProvider>
           </AuthProvider>
         </QueryClientProvider>
       </PersistGate>
