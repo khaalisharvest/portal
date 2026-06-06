@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, ForbiddenException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource, In } from 'typeorm';
 import { Order, OrderStatus, PaymentStatus } from './entities/order.entity';
@@ -11,9 +11,15 @@ import { UpdateOrderDto } from './dto/update-order.dto';
 import { CreateAddressDto } from './dto/create-address.dto';
 import { CreateGuestOrderDto } from './dto/create-guest-order.dto';
 import { SettingsService } from '../settings/services/settings.service';
+import { EmailService } from '../notifications/email.service';
+import { WhatsAppService } from '../notifications/whatsapp.service';
+import { orderConfirmationTemplate } from '../notifications/templates/order-confirmation.template';
+import { orderStatusTemplate } from '../notifications/templates/order-status.template';
 
 @Injectable()
 export class OrdersService {
+  private readonly logger = new Logger(OrdersService.name);
+
   constructor(
     @InjectRepository(Order)
     private orderRepository: Repository<Order>,
@@ -27,6 +33,8 @@ export class OrdersService {
     private userRepository: Repository<User>,
     private dataSource: DataSource,
     private settingsService: SettingsService,
+    private emailService: EmailService,
+    private whatsAppService: WhatsAppService,
   ) {}
 
   async calculateDeliveryFee(subtotal: number): Promise<{ deliveryFee: number; isFree: boolean; reason: string }> {
@@ -425,8 +433,34 @@ export class OrdersService {
       throw new NotFoundException('Order not found');
     }
 
+    const newStatus = updateOrderDto.status;
     Object.assign(order, updateOrderDto);
     await this.orderRepository.save(order);
+
+    // Fire-and-forget status notification email
+    if (newStatus && newStatus !== 'pending') {
+      const orderId = id;
+      const status = newStatus;
+      setImmediate(async () => {
+        try {
+          const updatedOrder = await this.orderRepository.findOne({
+            where: { id: orderId },
+            relations: ['user'],
+          });
+          if (updatedOrder?.user?.email) {
+            const html = orderStatusTemplate({
+              orderNumber: updatedOrder.orderNumber,
+              customerName: updatedOrder.user.name,
+              status,
+              totalAmount: updatedOrder.totalAmount,
+            });
+            await this.emailService.send(updatedOrder.user.email, `Order ${updatedOrder.orderNumber} — ${status}`, html);
+          }
+        } catch (err) {
+          this.logger.error(`Status email failed: ${err.message}`);
+        }
+      });
+    }
 
     return order;
   }
@@ -712,6 +746,43 @@ export class OrdersService {
       }
 
       await queryRunner.commitTransaction();
+
+      // Fire-and-forget notifications — don't block the order response
+      const finalOrderForNotifications = savedOrder;
+      setImmediate(() => {
+        const addrParts = [address?.addressLine1, address?.city, address?.state, address?.country]
+          .filter(Boolean).join(', ');
+        const customerEmail = userId ? finalOrderForNotifications.user?.email : orderData.address?.email;
+        const customerName = finalOrderForNotifications.user?.name || orderData.address?.fullName || 'Customer';
+
+        if (customerEmail) {
+          const html = orderConfirmationTemplate({
+            orderNumber: finalOrderForNotifications.orderNumber,
+            customerName,
+            items: (finalOrderForNotifications.items || []).map(i => ({
+              itemName: i.itemName, quantity: i.quantity, unitPrice: i.unitPrice, unit: i.unit || 'unit',
+            })),
+            subtotal: finalOrderForNotifications.subtotal,
+            deliveryFee: finalOrderForNotifications.deliveryFee,
+            totalAmount: finalOrderForNotifications.totalAmount,
+            paymentMethod: finalOrderForNotifications.paymentMethod,
+            address: addrParts,
+          });
+          this.emailService.send(customerEmail, `Order Confirmed — ${finalOrderForNotifications.orderNumber}`, html)
+            .catch(err => this.logger.error(`Confirmation email failed: ${err.message}`));
+        }
+
+        this.whatsAppService.notifyAdminNewOrder({
+          orderNumber: finalOrderForNotifications.orderNumber,
+          customerName,
+          customerPhone: address?.phone || 'N/A',
+          totalAmount: finalOrderForNotifications.totalAmount,
+          paymentMethod: finalOrderForNotifications.paymentMethod,
+          city: address?.city || 'Unknown',
+          itemCount: finalOrderForNotifications.items?.length || 0,
+        }).catch(err => this.logger.error(`WhatsApp notification failed: ${err.message}`));
+      });
+
       return savedOrder;
     } catch (error) {
       await queryRunner.rollbackTransaction();

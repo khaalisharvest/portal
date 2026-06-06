@@ -38,6 +38,12 @@ export class User {
   @Column()
   password: string;
 
+  @Column({ nullable: true, select: false })
+  resetToken?: string;
+
+  @Column({ nullable: true, type: 'timestamptz' })
+  resetTokenExpiry?: Date;
+
   @ApiProperty()
   @Column({ 
     type: 'enum', 

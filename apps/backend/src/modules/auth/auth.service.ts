@@ -5,12 +5,15 @@ import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { normalizePhoneForDatabase } from '../../utils/phoneValidation';
 import * as bcrypt from 'bcryptjs';
+import { randomBytes } from 'crypto';
+import { EmailService } from '../notifications/email.service';
 
 @Injectable()
 export class AuthService {
   constructor(
     private usersService: UsersService,
     private jwtService: JwtService,
+    private emailService: EmailService,
   ) {}
 
   async register(registerDto: RegisterDto) {
@@ -100,6 +103,53 @@ export class AuthService {
     } catch {
       throw new UnauthorizedException('Invalid refresh token');
     }
+  }
+
+  async forgotPassword(identifier: string): Promise<{ message: string }> {
+    const normalizedId = identifier.includes('@')
+      ? identifier
+      : normalizePhoneForDatabase(identifier);
+
+    const user = identifier.includes('@')
+      ? await this.usersService.findByEmail(normalizedId)
+      : await this.usersService.findByPhone(normalizedId);
+
+    if (!user) {
+      return { message: 'If an account exists, a reset link has been sent.' };
+    }
+
+    const token = randomBytes(32).toString('hex');
+    const expiry = new Date(Date.now() + 60 * 60 * 1000);
+    await this.usersService.setResetToken(user.id, token, expiry);
+
+    const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:3001'}/auth/reset-password?token=${token}`;
+    const html = `
+    <div style="font-family:Arial,sans-serif;max-width:500px;margin:0 auto;padding:24px">
+      <h2 style="color:#4B8B3B">🌿 Reset Your Password</h2>
+      <p>Click the button below to reset your Khaalis Harvest password. This link expires in 1 hour.</p>
+      <a href="${resetUrl}" style="display:inline-block;background:#4B8B3B;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;margin:16px 0">Reset Password</a>
+      <p style="color:#737373;font-size:12px">If you didn't request this, ignore this email.</p>
+      <p style="color:#737373;font-size:11px">Link: ${resetUrl}</p>
+    </div>`;
+
+    if (user.email) {
+      await this.emailService.send(user.email, 'Reset Your Khaalis Harvest Password', html);
+    } else {
+      // Log the link to console for phone-only users in development
+      console.log(`[PASSWORD RESET LINK] ${resetUrl}`);
+    }
+
+    return { message: 'If an account exists, a reset link has been sent.' };
+  }
+
+  async resetPassword(token: string, newPassword: string): Promise<{ message: string }> {
+    const user = await this.usersService.findByResetToken(token);
+    if (!user || !user.resetTokenExpiry || user.resetTokenExpiry < new Date()) {
+      throw new UnauthorizedException('Invalid or expired reset token');
+    }
+    const hashed = await bcrypt.hash(newPassword, 10);
+    await this.usersService.updatePassword(user.id, hashed);
+    return { message: 'Password reset successfully. You can now log in.' };
   }
 
   private async generateTokens(userId: string) {

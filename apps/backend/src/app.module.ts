@@ -6,6 +6,8 @@ import { CacheModule } from '@nestjs/cache-manager';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { BullModule } from '@nestjs/bull';
 import { ScheduleModule } from '@nestjs/schedule';
+import { ServeStaticModule } from '@nestjs/serve-static';
+import { join } from 'path';
 
 // Configuration
 import { DatabaseConfig } from './config/database.config';
@@ -24,11 +26,18 @@ import { OrdersModule } from './modules/orders/orders.module';
 import { SettingsModule } from './modules/settings/settings.module';
 import { ContactsModule } from './modules/contacts/contacts.module';
 import { HealthModule } from './health/health.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
 import { SeederService } from './seeders/seeder.service';
 import { User } from './modules/users/entities/user.entity';
 
 @Module({
   imports: [
+    // Static file serving for uploaded images
+    ServeStaticModule.forRoot({
+      rootPath: join(process.cwd(), process.env.UPLOAD_PATH || 'uploads'),
+      serveRoot: '/uploads',
+    }),
+
     // Configuration
     ConfigModule.forRoot({
       isGlobal: true,
@@ -80,6 +89,7 @@ import { User } from './modules/users/entities/user.entity';
     OrdersModule,
     SettingsModule,
     ContactsModule,
+    NotificationsModule,
   ],
   providers: [
     SeederService,

@@ -201,10 +201,24 @@ export class UsersService {
     await this.usersRepository.update(id, { lastLoginAt: new Date() });
   }
 
-  async updatePassword(id: string, hashedPassword: string): Promise<User> {
-    const user = await this.findById(id);
-    user.password = hashedPassword;
-    return this.usersRepository.save(user);
+  async updatePassword(id: string, hashedPassword: string): Promise<void> {
+    await this.usersRepository.update(id, { password: hashedPassword, resetToken: null, resetTokenExpiry: null } as any);
+  }
+
+  async findByEmail(email: string): Promise<User | undefined> {
+    return this.usersRepository.findOne({ where: { email } });
+  }
+
+  async findByResetToken(token: string): Promise<User | undefined> {
+    return this.usersRepository
+      .createQueryBuilder('user')
+      .addSelect('user.resetToken')
+      .where('user.resetToken = :token', { token })
+      .getOne();
+  }
+
+  async setResetToken(userId: string, token: string | null, expiry: Date | null): Promise<void> {
+    await this.usersRepository.update(userId, { resetToken: token, resetTokenExpiry: expiry } as any);
   }
 
   // Customer statistics methods

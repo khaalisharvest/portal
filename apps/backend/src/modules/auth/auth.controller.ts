@@ -4,6 +4,8 @@ import { Throttle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { LocalAuthGuard } from './guards/local-auth.guard';
 
@@ -34,6 +36,18 @@ export class AuthController {
   @ApiResponse({ status: 200, description: 'User profile retrieved' })
   async getProfile(@Request() req) {
     return this.authService.getProfile(req.user.id);
+  }
+
+  @Post('forgot-password')
+  @ApiOperation({ summary: 'Request password reset email' })
+  forgotPassword(@Body() dto: ForgotPasswordDto) {
+    return this.authService.forgotPassword(dto.identifier);
+  }
+
+  @Post('reset-password')
+  @ApiOperation({ summary: 'Reset password using token from email' })
+  resetPassword(@Body() dto: ResetPasswordDto) {
+    return this.authService.resetPassword(dto.token, dto.newPassword);
   }
 
 }
