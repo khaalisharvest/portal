@@ -13,14 +13,18 @@ const requiredEnvVars = {
   FRONTEND_URL: process.env.FRONTEND_URL,
   ADMIN_URL: process.env.ADMIN_URL,
   ALLOWED_ORIGINS: process.env.ALLOWED_ORIGINS,
-  // Notifications
+  BACKEND_URL: process.env.BACKEND_URL,
+  // Redis
+  REDIS_HOST: process.env.REDIS_HOST,
+  REDIS_PORT: process.env.REDIS_PORT,
+  REDIS_TTL: process.env.REDIS_TTL,
+  // Notifications — required
   SMTP_FROM: process.env.SMTP_FROM,
   ADMIN_EMAIL: process.env.ADMIN_EMAIL,
   ADMIN_WHATSAPP: process.env.ADMIN_WHATSAPP,
   // Uploads
   UPLOAD_PATH: process.env.UPLOAD_PATH,
   MAX_FILE_SIZE_MB: process.env.MAX_FILE_SIZE_MB,
-  BACKEND_URL: process.env.BACKEND_URL,
 };
 
 const missingVars = Object.entries(requiredEnvVars)
@@ -61,6 +65,11 @@ export const env = {
   SMTP_PORT: process.env.SMTP_PORT ? parseInt(process.env.SMTP_PORT, 10) : undefined,
   SMTP_USER: process.env.SMTP_USER,
   SMTP_PASS: process.env.SMTP_PASS,
+  // Redis
+  REDIS_HOST: process.env.REDIS_HOST!,
+  REDIS_PORT: parseInt(process.env.REDIS_PORT!, 10),
+  REDIS_TTL: parseInt(process.env.REDIS_TTL!, 10),
+  REDIS_PASSWORD: process.env.REDIS_PASSWORD,
   // Uploads
   UPLOAD_PATH: process.env.UPLOAD_PATH!,
   MAX_FILE_SIZE_MB: parseInt(process.env.MAX_FILE_SIZE_MB!, 10),
@@ -73,6 +82,7 @@ export const env = {
 export const {
   DATABASE_URL, JWT_SECRET, JWT_EXPIRES_IN, PORT, NODE_ENV,
   FRONTEND_URL, ADMIN_URL, BACKEND_URL, ALLOWED_ORIGINS,
+  REDIS_HOST, REDIS_PORT, REDIS_TTL, REDIS_PASSWORD,
   SMTP_FROM, ADMIN_EMAIL, ADMIN_WHATSAPP,
   SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS,
   UPLOAD_PATH, MAX_FILE_SIZE_MB,

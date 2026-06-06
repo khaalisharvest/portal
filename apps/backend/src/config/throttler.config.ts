@@ -2,6 +2,7 @@ import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ThrottlerModuleOptions, ThrottlerOptionsFactory } from '@nestjs/throttler';
 import Redis from 'ioredis';
+import { env } from './env';
 
 @Injectable()
 export class ThrottlerConfig implements ThrottlerOptionsFactory, OnModuleDestroy {
@@ -15,9 +16,9 @@ export class ThrottlerConfig implements ThrottlerOptionsFactory, OnModuleDestroy
 
     // Create Redis client for throttler storage
     this.redis = new Redis({
-      host: this.configService.get('REDIS_HOST') || 'redis',
-      port: parseInt(this.configService.get('REDIS_PORT') || '6379'),
-      password: this.configService.get('REDIS_PASSWORD') || undefined,
+      host: env.REDIS_HOST,
+      port: env.REDIS_PORT,
+      password: env.REDIS_PASSWORD,
       family: 4, // Force IPv4 to avoid IPv6 connection issues
       maxRetriesPerRequest: maxRetries,
       retryStrategy: (times) => {

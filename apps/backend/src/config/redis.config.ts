@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { CacheModuleOptions, CacheOptionsFactory } from '@nestjs/cache-manager';
 import { redisStore } from 'cache-manager-redis-yet';
+import { env } from './env';
 
 /**
  * Redis Cache Configuration for NestJS
@@ -20,9 +21,9 @@ export class RedisConfig implements CacheOptionsFactory {
   constructor(private configService: ConfigService) {}
 
   async createCacheOptions(): Promise<CacheModuleOptions> {
-    const redisHost = this.configService.get('REDIS_HOST') || 'redis';
-    const redisPort = parseInt(this.configService.get('REDIS_PORT') || '6379');
-    const redisPassword = this.configService.get('REDIS_PASSWORD');
+    const redisHost = env.REDIS_HOST;
+    const redisPort = env.REDIS_PORT;
+    const redisPassword = env.REDIS_PASSWORD;
 
     // Configuration for 'redis' package v4.x (used by cache-manager-redis-yet)
     // socket.family: 4 forces IPv4 to avoid IPv6 connection issues
@@ -75,7 +76,7 @@ export class RedisConfig implements CacheOptionsFactory {
 
       return {
         store: store as any,
-        ttl: parseInt(this.configService.get('REDIS_TTL') || '300') * 1000, // Convert seconds to milliseconds
+        ttl: env.REDIS_TTL * 1000,
       };
     } catch (error) {
       this.logger.error(`Failed to create Redis cache store: ${error.message}`, error.stack);
