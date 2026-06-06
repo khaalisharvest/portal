@@ -15,6 +15,7 @@ import { ContactsService } from './contacts.service';
 import { CreateContactDto } from './dto/create-contact.dto';
 import { UpdateContactDto } from './dto/update-contact.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard, Roles } from '../../common/guards/roles.guard';
 import { Contact } from './entities/contact.entity';
 
 @ApiTags('Contacts')
@@ -30,7 +31,8 @@ export class ContactsController {
   }
 
   @Get()
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin', 'super_admin')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get all contact messages (admin only)' })
   @ApiQuery({ name: 'status', required: false, enum: ['pending', 'read', 'replied', 'archived'] })
@@ -48,7 +50,8 @@ export class ContactsController {
   }
 
   @Get('stats')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin', 'super_admin')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get contact messages statistics (admin only)' })
   @ApiResponse({ status: 200, description: 'Contact messages statistics' })
@@ -57,7 +60,8 @@ export class ContactsController {
   }
 
   @Get(':id')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin', 'super_admin')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get a contact message by ID (admin only)' })
   @ApiResponse({ status: 200, description: 'Contact message details', type: Contact })
@@ -66,7 +70,8 @@ export class ContactsController {
   }
 
   @Patch(':id')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin', 'super_admin')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Update a contact message (admin only)' })
   @ApiResponse({ status: 200, description: 'Contact message updated', type: Contact })
@@ -75,7 +80,8 @@ export class ContactsController {
   }
 
   @Patch(':id/read')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin', 'super_admin')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Mark a contact message as read (admin only)' })
   @ApiResponse({ status: 200, description: 'Contact message marked as read', type: Contact })
@@ -84,7 +90,8 @@ export class ContactsController {
   }
 
   @Delete(':id')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin', 'super_admin')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Delete a contact message (admin only)' })
   @ApiResponse({ status: 200, description: 'Contact message deleted' })

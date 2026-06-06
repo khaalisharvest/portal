@@ -18,6 +18,7 @@ import { CreateAddressDto } from './dto/create-address.dto';
 import { CreateGuestOrderDto } from './dto/create-guest-order.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { OptionalJwtAuthGuard } from '../auth/guards/optional-jwt-auth.guard';
+import { RolesGuard, Roles } from '../../common/guards/roles.guard';
 import { OrderStatus, PaymentStatus } from './entities/order.entity';
 
 @ApiTags('Orders')
@@ -138,7 +139,8 @@ export class OrdersController {
 // Admin controller for order management
 @ApiTags('Admin - Orders')
 @Controller('admin/orders')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles('admin', 'super_admin')
 @ApiBearerAuth()
 export class AdminOrdersController {
   constructor(private readonly ordersService: OrdersService) {}

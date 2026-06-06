@@ -8,10 +8,10 @@
 # - Both apps run in single container for simplicity
 # ============================================================================
 
-FROM node:18-alpine
+FROM node:18-slim
 
-# Install build dependencies for Alpine (needed for native modules)
-RUN apk add --no-cache python3 make g++ wget
+# Install build dependencies (needed for native modules like sharp, bcrypt)
+RUN apt-get update && apt-get install -y python3 make g++ wget && rm -rf /var/lib/apt/lists/*
 
 # ============================================================================
 # Build Arguments - Environment variables needed during Docker build

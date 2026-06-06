@@ -6,7 +6,7 @@ import OrdersManagement from '@/components/super-admin/OrdersManagement';
 
 export default function AdminOrdersPage() {
   return (
-    <ProtectedRoute requiredRoles={['super_admin', 'admin', 'customer']}>
+    <ProtectedRoute requiredRoles={['super_admin', 'admin']}>
       <AdminLayout>
         <OrdersManagement />
       </AdminLayout>

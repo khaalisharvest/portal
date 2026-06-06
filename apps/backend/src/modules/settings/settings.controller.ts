@@ -3,6 +3,7 @@ import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagg
 import { IsNumber, IsBoolean, IsString, Min, MaxLength } from 'class-validator';
 import { Type } from 'class-transformer';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard, Roles } from '../../common/guards/roles.guard';
 import { SettingsService } from './services/settings.service';
 import { NoResponseWrapInterceptor } from '../../common/interceptors/no-response-wrap.interceptor';
 
@@ -58,7 +59,8 @@ export class SettingsController {
   }
 
   @Patch('delivery')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin', 'super_admin')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Update delivery settings (Admin)' })
   @ApiResponse({ status: 200, description: 'Delivery settings updated successfully' })
@@ -68,7 +70,8 @@ export class SettingsController {
   }
 
   @Get()
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin', 'super_admin')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get all settings (Admin)' })
   @ApiResponse({ status: 200, description: 'Settings retrieved successfully' })
@@ -84,7 +87,8 @@ export class SettingsController {
   }
 
   @Patch('notification-bar')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin', 'super_admin')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Update notification bar settings (Admin)' })
   @ApiResponse({ status: 200, description: 'Notification bar settings updated successfully' })

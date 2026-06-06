@@ -109,6 +109,8 @@ services:
       # Format: MB value (e.g., 1536 = 1.5GB)
       NODE_OPTIONS_BACKEND: ${NODE_OPTIONS_BACKEND:-1536}
       NODE_OPTIONS_FRONTEND: ${NODE_OPTIONS_FRONTEND:-2048}
+    volumes:
+      - uploads_data:/app/uploads
     # Ports are now only exposed internally (via Nginx)
     # External access is through Nginx on ports 80/443
     expose:
@@ -170,6 +172,8 @@ volumes:
     # Using existing portal_redis_data volume
     external: true
     name: portal_redis_data
+  uploads_data:
+    # Persistent storage for user-uploaded product images and files
   certbot-www:
     # Certbot webroot for ACME challenges
   certbot-conf:
