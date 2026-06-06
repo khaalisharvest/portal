@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import * as nodemailer from 'nodemailer';
+import { env } from '../../config/env';
 
 @Injectable()
 export class EmailService {
@@ -7,30 +8,27 @@ export class EmailService {
   private transporter: nodemailer.Transporter | null = null;
 
   constructor() {
-    if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
+    if (env.SMTP_HOST && env.SMTP_USER && env.SMTP_PASS) {
       this.transporter = nodemailer.createTransport({
-        host: process.env.SMTP_HOST,
-        port: parseInt(process.env.SMTP_PORT || '587'),
+        host: env.SMTP_HOST,
+        port: env.SMTP_PORT,
         secure: false,
-        auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
+        auth: { user: env.SMTP_USER, pass: env.SMTP_PASS },
       });
-      this.logger.log('Email service ready');
+      this.logger.log('Email service ready with SMTP');
     } else {
-      this.logger.warn('SMTP not configured — emails logged to console only');
+      this.logger.warn('SMTP credentials not configured — emails will be logged to console');
     }
   }
 
   async send(to: string, subject: string, html: string): Promise<void> {
     if (!to) return;
     if (!this.transporter) {
-      this.logger.debug(`[EMAIL] To: ${to} | Subject: ${subject}`);
+      this.logger.log(`[EMAIL] To: ${to} | Subject: ${subject}`);
       return;
     }
     try {
-      await this.transporter.sendMail({
-        from: `"Khaalis Harvest" <${process.env.SMTP_FROM || 'noreply@khaalisharvest.pk'}>`,
-        to, subject, html,
-      });
+      await this.transporter.sendMail({ from: `"Khaalis Harvest" <${env.SMTP_FROM}>`, to, subject, html });
       this.logger.log(`Email sent → ${to}`);
     } catch (err) {
       this.logger.error(`Email failed → ${to}: ${err.message}`);

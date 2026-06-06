@@ -4,7 +4,6 @@
  * NO HARDCODED VALUES - All values must come from environment variables
  */
 
-// Validate required environment variables
 const requiredEnvVars = {
   DATABASE_URL: process.env.DATABASE_URL,
   JWT_SECRET: process.env.JWT_SECRET,
@@ -14,9 +13,16 @@ const requiredEnvVars = {
   FRONTEND_URL: process.env.FRONTEND_URL,
   ADMIN_URL: process.env.ADMIN_URL,
   ALLOWED_ORIGINS: process.env.ALLOWED_ORIGINS,
+  // Notifications
+  SMTP_FROM: process.env.SMTP_FROM,
+  ADMIN_EMAIL: process.env.ADMIN_EMAIL,
+  ADMIN_WHATSAPP: process.env.ADMIN_WHATSAPP,
+  // Uploads
+  UPLOAD_PATH: process.env.UPLOAD_PATH,
+  MAX_FILE_SIZE_MB: process.env.MAX_FILE_SIZE_MB,
+  BACKEND_URL: process.env.BACKEND_URL,
 };
 
-// Check for missing required environment variables
 const missingVars = Object.entries(requiredEnvVars)
   .filter(([_, value]) => !value)
   .map(([key]) => key);
@@ -25,49 +31,50 @@ if (missingVars.length > 0) {
   const errorMessage = `❌ Missing required environment variables: ${missingVars.join(', ')}`;
   console.error(errorMessage);
   console.error('Please create a .env file with all required variables.');
-  
   if (process.env.NODE_ENV === 'development') {
-    console.error('See ENVIRONMENT_SETUP.md for configuration details.');
+    console.error('See env.template for configuration details.');
   } else {
     throw new Error(errorMessage);
   }
 }
 
-// Environment configuration - NO FALLBACK VALUES
 export const env = {
   // Database
   DATABASE_URL: process.env.DATABASE_URL!,
-  
   // JWT
   JWT_SECRET: process.env.JWT_SECRET!,
   JWT_EXPIRES_IN: process.env.JWT_EXPIRES_IN!,
-  
   // Server
   PORT: parseInt(process.env.PORT!, 10),
   NODE_ENV: process.env.NODE_ENV!,
-  
   // URLs
   FRONTEND_URL: process.env.FRONTEND_URL!,
   ADMIN_URL: process.env.ADMIN_URL!,
+  BACKEND_URL: process.env.BACKEND_URL!,
   ALLOWED_ORIGINS: process.env.ALLOWED_ORIGINS!.split(','),
-  
+  // Notifications — required fields
+  SMTP_FROM: process.env.SMTP_FROM!,
+  ADMIN_EMAIL: process.env.ADMIN_EMAIL!,
+  ADMIN_WHATSAPP: process.env.ADMIN_WHATSAPP!,
+  // Notifications — optional (SMTP credentials; absent = log to console only)
+  SMTP_HOST: process.env.SMTP_HOST,
+  SMTP_PORT: process.env.SMTP_PORT ? parseInt(process.env.SMTP_PORT, 10) : undefined,
+  SMTP_USER: process.env.SMTP_USER,
+  SMTP_PASS: process.env.SMTP_PASS,
+  // Uploads
+  UPLOAD_PATH: process.env.UPLOAD_PATH!,
+  MAX_FILE_SIZE_MB: parseInt(process.env.MAX_FILE_SIZE_MB!, 10),
   // Environment flags
   IS_PRODUCTION: process.env.NODE_ENV === 'production',
   IS_DEVELOPMENT: process.env.NODE_ENV === 'development',
   IS_TEST: process.env.NODE_ENV === 'test',
 } as const;
 
-// Export individual values for convenience
 export const {
-  DATABASE_URL,
-  JWT_SECRET,
-  JWT_EXPIRES_IN,
-  PORT,
-  NODE_ENV,
-  FRONTEND_URL,
-  ADMIN_URL,
-  ALLOWED_ORIGINS,
-  IS_PRODUCTION,
-  IS_DEVELOPMENT,
-  IS_TEST,
+  DATABASE_URL, JWT_SECRET, JWT_EXPIRES_IN, PORT, NODE_ENV,
+  FRONTEND_URL, ADMIN_URL, BACKEND_URL, ALLOWED_ORIGINS,
+  SMTP_FROM, ADMIN_EMAIL, ADMIN_WHATSAPP,
+  SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS,
+  UPLOAD_PATH, MAX_FILE_SIZE_MB,
+  IS_PRODUCTION, IS_DEVELOPMENT, IS_TEST,
 } = env;

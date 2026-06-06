@@ -7,6 +7,7 @@ import { normalizePhoneForDatabase } from '../../utils/phoneValidation';
 import * as bcrypt from 'bcryptjs';
 import { randomBytes } from 'crypto';
 import { EmailService } from '../notifications/email.service';
+import { env } from '../../config/env';
 
 @Injectable()
 export class AuthService {
@@ -122,7 +123,7 @@ export class AuthService {
     const expiry = new Date(Date.now() + 60 * 60 * 1000);
     await this.usersService.setResetToken(user.id, token, expiry);
 
-    const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:3001'}/auth/reset-password?token=${token}`;
+    const resetUrl = `${env.FRONTEND_URL}/auth/reset-password?token=${token}`;
     const html = `
     <div style="font-family:Arial,sans-serif;max-width:500px;margin:0 auto;padding:24px">
       <h2 style="color:#4B8B3B">🌿 Reset Your Password</h2>

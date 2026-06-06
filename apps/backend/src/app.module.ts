@@ -8,6 +8,7 @@ import { BullModule } from '@nestjs/bull';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
+import { env } from './config/env';
 
 // Configuration
 import { DatabaseConfig } from './config/database.config';
@@ -34,7 +35,7 @@ import { User } from './modules/users/entities/user.entity';
   imports: [
     // Static file serving for uploaded images
     ServeStaticModule.forRoot({
-      rootPath: join(process.cwd(), process.env.UPLOAD_PATH || 'uploads'),
+      rootPath: join(process.cwd(), env.UPLOAD_PATH),
       serveRoot: '/uploads',
     }),
 

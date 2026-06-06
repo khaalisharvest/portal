@@ -12,9 +12,9 @@ import { CreateAddressDto } from './dto/create-address.dto';
 import { CreateGuestOrderDto } from './dto/create-guest-order.dto';
 import { SettingsService } from '../settings/services/settings.service';
 import { EmailService } from '../notifications/email.service';
-import { WhatsAppService } from '../notifications/whatsapp.service';
-import { orderConfirmationTemplate } from '../notifications/templates/order-confirmation.template';
+import { orderConfirmationTemplate, adminNewOrderTemplate } from '../notifications/templates/order-confirmation.template';
 import { orderStatusTemplate } from '../notifications/templates/order-status.template';
+import { env } from '../../config/env';
 
 @Injectable()
 export class OrdersService {
@@ -34,7 +34,6 @@ export class OrdersService {
     private dataSource: DataSource,
     private settingsService: SettingsService,
     private emailService: EmailService,
-    private whatsAppService: WhatsAppService,
   ) {}
 
   async calculateDeliveryFee(subtotal: number): Promise<{ deliveryFee: number; isFree: boolean; reason: string }> {
@@ -772,15 +771,20 @@ export class OrdersService {
             .catch(err => this.logger.error(`Confirmation email failed: ${err.message}`));
         }
 
-        this.whatsAppService.notifyAdminNewOrder({
-          orderNumber: finalOrderForNotifications.orderNumber,
-          customerName,
-          customerPhone: address?.phone || 'N/A',
-          totalAmount: finalOrderForNotifications.totalAmount,
-          paymentMethod: finalOrderForNotifications.paymentMethod,
-          city: address?.city || 'Unknown',
-          itemCount: finalOrderForNotifications.items?.length || 0,
-        }).catch(err => this.logger.error(`WhatsApp notification failed: ${err.message}`));
+        // After the order is committed, send admin notification email
+        this.emailService.send(
+          env.ADMIN_EMAIL,
+          `🛒 New Order — ${finalOrderForNotifications.orderNumber}`,
+          adminNewOrderTemplate({
+            orderNumber: finalOrderForNotifications.orderNumber,
+            customerName,
+            customerPhone: address?.phone || 'N/A',
+            totalAmount: finalOrderForNotifications.totalAmount,
+            paymentMethod: finalOrderForNotifications.paymentMethod,
+            city: address?.city || 'Unknown',
+            itemCount: finalOrderForNotifications.items?.length || 0,
+          }),
+        ).catch(err => this.logger.error(`Admin notification email failed: ${err.message}`));
       });
 
       return savedOrder;

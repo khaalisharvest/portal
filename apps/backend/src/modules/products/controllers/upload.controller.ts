@@ -8,6 +8,7 @@ import { extname } from 'path';
 import { existsSync, mkdirSync } from 'fs';
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiConsumes } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
+import { env } from '../../../config/env';
 
 @ApiTags('Upload')
 @Controller('upload')
@@ -21,7 +22,7 @@ export class UploadController {
     FileInterceptor('file', {
       storage: diskStorage({
         destination: (req, file, cb) => {
-          const dir = process.env.UPLOAD_PATH || './uploads';
+          const dir = env.UPLOAD_PATH;
           if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
           cb(null, dir);
         },
@@ -36,12 +37,11 @@ export class UploadController {
         }
         cb(null, true);
       },
-      limits: { fileSize: parseInt(process.env.MAX_FILE_SIZE_MB || '5') * 1024 * 1024 },
+      limits: { fileSize: env.MAX_FILE_SIZE_MB * 1024 * 1024 },
     }),
   )
   uploadImage(@UploadedFile() file: Express.Multer.File) {
     if (!file) throw new BadRequestException('No file uploaded');
-    const baseUrl = process.env.BACKEND_URL || 'http://localhost:3000';
-    return { url: `${baseUrl}/uploads/${file.filename}`, filename: file.filename };
+    return { url: `${env.BACKEND_URL}/uploads/${file.filename}`, filename: file.filename };
   }
 }

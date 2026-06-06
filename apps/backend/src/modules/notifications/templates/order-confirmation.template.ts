@@ -1,3 +1,5 @@
+import { env } from '../../../config/env';
+
 export function orderConfirmationTemplate(order: {
   orderNumber: string;
   customerName: string;
@@ -17,7 +19,7 @@ export function orderConfirmationTemplate(order: {
     )
     .join('');
   const paymentLabel = order.paymentMethod === 'cash_on_delivery' ? 'Cash on Delivery' : 'Bank Transfer';
-  const adminWA = process.env.NEXT_PUBLIC_ADMIN_WHATSAPP || '+923204749700';
+
   return `<!DOCTYPE html><html><body style="font-family:Arial,sans-serif;background:#f9fafb;padding:20px">
   <div style="max-width:600px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden">
     <div style="background:#4B8B3B;padding:24px;text-align:center">
@@ -43,11 +45,41 @@ export function orderConfirmationTemplate(order: {
       <p><strong>Payment:</strong> ${paymentLabel}</p>
       <p><strong>Deliver to:</strong> ${order.address}</p>
       <div style="background:#f0f9f0;padding:16px;border-radius:8px;margin-top:16px">
-        <p style="margin:0;color:#3d7030">Questions? WhatsApp: ${adminWA}</p>
+        <p style="margin:0;color:#3d7030">Questions? WhatsApp: ${env.ADMIN_WHATSAPP}</p>
       </div>
     </div>
     <div style="background:#f9fafb;padding:16px;text-align:center;color:#737373;font-size:12px">
       Khaalis Harvest — Pure Organic Products • Fresh • Local • Delivered
+    </div>
+  </div></body></html>`;
+}
+
+export function adminNewOrderTemplate(order: {
+  orderNumber: string;
+  customerName: string;
+  customerPhone: string;
+  totalAmount: number;
+  paymentMethod: string;
+  city: string;
+  itemCount: number;
+}) {
+  const paymentLabel = order.paymentMethod === 'cash_on_delivery' ? 'Cash on Delivery' : 'Bank Transfer';
+  return `<!DOCTYPE html><html><body style="font-family:Arial,sans-serif;background:#f9fafb;padding:20px">
+  <div style="max-width:600px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden">
+    <div style="background:#4B8B3B;padding:24px;text-align:center">
+      <h1 style="color:#fff;margin:0">🛒 New Order Received</h1>
+    </div>
+    <div style="padding:24px">
+      <table style="width:100%;border-collapse:collapse">
+        <tr><td style="padding:8px;font-weight:bold">Order</td><td style="padding:8px">${order.orderNumber}</td></tr>
+        <tr style="background:#f9fafb"><td style="padding:8px;font-weight:bold">Customer</td><td style="padding:8px">${order.customerName}</td></tr>
+        <tr><td style="padding:8px;font-weight:bold">Phone</td><td style="padding:8px">${order.customerPhone}</td></tr>
+        <tr style="background:#f9fafb"><td style="padding:8px;font-weight:bold">City</td><td style="padding:8px">${order.city}</td></tr>
+        <tr><td style="padding:8px;font-weight:bold">Items</td><td style="padding:8px">${order.itemCount}</td></tr>
+        <tr style="background:#f0f9f0"><td style="padding:8px;font-weight:bold;color:#4B8B3B">Total</td><td style="padding:8px;font-weight:bold;color:#4B8B3B">PKR ${order.totalAmount.toFixed(0)}</td></tr>
+        <tr><td style="padding:8px;font-weight:bold">Payment</td><td style="padding:8px">${paymentLabel}</td></tr>
+      </table>
+      <p style="margin-top:16px;color:#737373;font-size:12px">Log in to admin panel to process this order.</p>
     </div>
   </div></body></html>`;
 }
