@@ -1,23 +1,29 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Inject } from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { Cache } from 'cache-manager';
 
 @Injectable()
 export class HealthService {
   constructor(
     @InjectDataSource()
     private dataSource: DataSource,
+    @Inject(CACHE_MANAGER) private cacheManager: Cache,
   ) {}
 
   async check() {
-    const dbStatus = await this.checkDatabase();
-    const isHealthy = dbStatus === 'up';
+    const [dbStatus, redisStatus] = await Promise.all([
+      this.checkDatabase(),
+      this.checkRedis(),
+    ]);
 
     return {
-      status: isHealthy ? 'ok' : 'error',
+      status: dbStatus === 'up' && redisStatus === 'up' ? 'ok' : 'degraded',
+      database: dbStatus,
+      redis: redisStatus,
       timestamp: new Date().toISOString(),
       uptime: process.uptime(),
-      database: dbStatus,
       memory: process.memoryUsage(),
       version: process.env.npm_package_version || '1.0.0',
     };
@@ -50,6 +56,15 @@ export class HealthService {
       await this.dataSource.query('SELECT 1');
       return 'up';
     } catch (error) {
+      return 'down';
+    }
+  }
+
+  private async checkRedis(): Promise<'up' | 'down'> {
+    try {
+      await this.cacheManager.get('__health_check__');
+      return 'up';
+    } catch {
       return 'down';
     }
   }

@@ -14,6 +14,7 @@ import ConfirmationDialog from '@/components/ui/ConfirmationDialog';
 import DynamicFormSection from '@/components/ui/DynamicFormSection';
 import { DynamicFieldConfig } from '@/components/ui/DynamicField';
 import { API_URL } from '@/config/env';
+import toast from 'react-hot-toast';
 
 interface Product {
   id: string;
@@ -535,6 +536,22 @@ export default function ProductsManagement() {
     
     setEditingProduct(null);
     setShowForm(false);
+  };
+
+  const handleImageUpload = async (file: File): Promise<string> => {
+    const token = localStorage.getItem('backend_token');
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const res = await fetch('/api/v1/products/upload-image', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body: formData,
+    });
+
+    if (!res.ok) throw new Error('Upload failed');
+    const data = await res.json();
+    return data.url;
   };
 
   // Convert data to dropdown options for form - show ALL categories/types
@@ -1225,74 +1242,70 @@ export default function ProductsManagement() {
                   </div>
                   
                   <div className="mt-4">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Product Images
-                    </label>
-                    <div className="space-y-2">
-                      <div className="flex space-x-2">
-                        <input
-                          type="url"
-                          value={formData.images}
-                          onChange={(e) => setFormData(prev => ({...prev, images: e.target.value}))}
-                          className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                          placeholder="https://example.com/image.jpg"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setFormData(prev => ({...prev, images: ''}))}
-                          className="px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-lg transition-colors"
-                          title="Clear images"
-                        >
-                          <Icon name="close" className="w-4 h-4" />
-                        </button>
-                      </div>
-                      
-                      {/* Image Previews */}
-                      {formData.images && (
-                        <div className="space-y-2">
-                          <p className="text-sm font-medium text-gray-700">Image Previews:</p>
-                          <div className="flex flex-wrap gap-2">
-                            {formData.images
-                              .split(/\n|,/)
-                              .map(s => s.trim())
-                              .filter(Boolean)
-                              .map((imageUrl, index) => (
-                                <div key={index} className="relative">
-                                  <img
-                                    src={imageUrl}
-                                    alt={`Preview ${index + 1}`}
-                                    className="w-20 h-20 object-cover rounded-lg border border-gray-200"
-                                    onError={(e) => {
-                                      e.currentTarget.style.display = 'none';
-                                    }}
-                                  />
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      const imageUrls = formData.images
-                                        .split(/\n|,/)
-                                        .map(s => s.trim())
-                                        .filter(Boolean);
-                                      imageUrls.splice(index, 1);
-                                      setFormData(prev => ({
-                                        ...prev,
-                                        images: imageUrls.join(', ')
-                                      }));
-                                    }}
-                                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs hover:bg-red-600 transition-colors"
-                                    title="Remove this image"
-                                  >
-                                    ×
-                                  </button>
-                                </div>
-                              ))}
+                    <label className="block text-sm font-medium text-neutral-700 mb-2">Product Images</label>
+                    <div className="flex flex-wrap gap-2 mb-2">
+                      {formData.images
+                        .split(/\n|,/)
+                        .map(s => s.trim())
+                        .filter(Boolean)
+                        .map((url, idx) => (
+                          <div key={idx} className="relative w-20 h-20">
+                            <img
+                              src={url}
+                              alt=""
+                              className="w-full h-full object-cover rounded-lg"
+                              onError={(e) => { (e.target as HTMLImageElement).src = '/images/placeholder.svg'; }}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const imageUrls = formData.images
+                                  .split(/\n|,/)
+                                  .map(s => s.trim())
+                                  .filter(Boolean);
+                                imageUrls.splice(idx, 1);
+                                setFormData(prev => ({ ...prev, images: imageUrls.join(', ') }));
+                              }}
+                              className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white rounded-full text-xs flex items-center justify-center hover:bg-red-600 transition-colors"
+                            >×</button>
                           </div>
-                        </div>
-                      )}
-                      
-                      <p className="text-xs text-gray-500">
-                        Enter image URLs separated by commas or new lines
-                      </p>
+                        ))}
+                    </div>
+                    <label className="flex items-center gap-2 cursor-pointer bg-neutral-50 border-2 border-dashed border-neutral-300 rounded-xl px-4 py-3 hover:border-primary-400 transition-colors">
+                      <svg className="w-5 h-5 text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                      <span className="text-sm text-neutral-500">Upload image (JPG, PNG, WebP — max 5MB)</span>
+                      <input
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        className="hidden"
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          try {
+                            const url = await handleImageUpload(file);
+                            const existing = formData.images ? formData.images.split(/\n|,/).map(s => s.trim()).filter(Boolean) : [];
+                            setFormData(prev => ({ ...prev, images: [...existing, url].join(', ') }));
+                            toast.success('Image uploaded');
+                          } catch {
+                            toast.error('Image upload failed. Max 5MB, JPG/PNG/WebP only.');
+                          }
+                          e.target.value = '';
+                        }}
+                      />
+                    </label>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Upload files directly, or enter image URLs separated by commas below
+                    </p>
+                    <div className="mt-2">
+                      <input
+                        type="text"
+                        value={formData.images}
+                        onChange={(e) => setFormData(prev => ({...prev, images: e.target.value}))}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-sm"
+                        placeholder="Or paste image URLs here (comma separated)"
+                      />
                     </div>
                   </div>
                 </div>

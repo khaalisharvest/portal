@@ -47,6 +47,13 @@ const getSidebarItems = (userRole: string): SidebarItem[] => {
           icon: 'tag',
           href: '/admin/products/types',
           roles: ['super_admin', 'admin']
+        },
+        {
+          id: 'inventory',
+          label: 'Inventory',
+          icon: 'chart',
+          href: '/admin/products/inventory',
+          roles: ['super_admin', 'admin']
         }
       ]
     },
