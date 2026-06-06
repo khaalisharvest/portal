@@ -4,6 +4,10 @@
  * NO HARDCODED VALUES - All values must come from environment variables
  */
 
+// Load .env before NestJS ConfigModule initializes — env.ts runs at module import time
+// dotenv resolves .env from the process working directory (apps/backend/ in dev, /app in Docker)
+import 'dotenv/config';
+
 const requiredEnvVars = {
   DATABASE_URL: process.env.DATABASE_URL,
   JWT_SECRET: process.env.JWT_SECRET,
