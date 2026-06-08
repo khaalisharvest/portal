@@ -4,559 +4,565 @@ import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import Image from 'next/image';
+import { AnimatePresence, motion } from 'framer-motion';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCart } from '@/contexts/CartContext';
 import { useFilter } from '@/contexts/FilterContext';
 import MobileCategoryDropdown from '@/components/ui/MobileCategoryDropdown';
 import { useCategories, useProductTypes } from '@/hooks/useProducts';
 
-export default function Header() {
-  const router = useRouter();
-  const pathname = usePathname();
-  const { user, logout, isLoading } = useAuth();
-  const { state: cartState } = useCart();
-  const { selectedCategory, selectedProductType, setSelectedCategory, setSelectedProductType, clearFilters, isCategoryDropdownOpen, setIsCategoryDropdownOpen } = useFilter();
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [isDesktopUserMenuOpen, setIsDesktopUserMenuOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
-  
-  // Get categories and product types using the hooks
-  const { categories: categoriesResponse } = useCategories();
-  const { productTypes } = useProductTypes();
-  
-  // Extract categories array from API response
-  const categories = Array.isArray(categoriesResponse) ? categoriesResponse : (categoriesResponse as any)?.data || [];
-  
+const NAV_LINKS = [
+  { href: '/',        label: 'Home'     },
+  { href: '/products',label: 'Products' },
+  { href: '/about',   label: 'About'    },
+  { href: '/contact', label: 'Contact'  },
+];
 
-  // Handle outside click to close desktop dropdown
+export default function Header() {
+  const router   = useRouter();
+  const pathname = usePathname();
+
+  const { user, logout, isLoading } = useAuth();
+  const { state: cartState }        = useCart();
+  const {
+    selectedCategory,
+    selectedProductType,
+    setSelectedCategory,
+    setSelectedProductType,
+    isCategoryDropdownOpen,
+    setIsCategoryDropdownOpen,
+  } = useFilter();
+
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+
+  const userMenuRef = useRef<HTMLDivElement>(null);
+
+  const { categories: categoriesRaw } = useCategories();
+  const { productTypes }              = useProductTypes();
+  const categories = Array.isArray(categoriesRaw)
+    ? categoriesRaw
+    : (categoriesRaw as any)?.data ?? [];
+
+  // Shadow on scroll
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsDesktopUserMenuOpen(false);
+    const onScroll = () => setScrolled(window.scrollY > 6);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
+  // Close user dropdown on outside click
+  useEffect(() => {
+    const onClickOutside = (e: MouseEvent) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) {
+        setUserMenuOpen(false);
       }
     };
+    if (userMenuOpen) document.addEventListener('mousedown', onClickOutside);
+    return () => document.removeEventListener('mousedown', onClickOutside);
+  }, [userMenuOpen]);
 
-    if (isDesktopUserMenuOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
+  // Prevent body scroll when mobile menu is open
+  useEffect(() => {
+    document.body.style.overflow = mobileOpen ? 'hidden' : '';
+    return () => { document.body.style.overflow = ''; };
+  }, [mobileOpen]);
 
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [isDesktopUserMenuOpen]);
+  const isActive = (href: string) =>
+    href === '/' ? pathname === '/' : pathname.startsWith(href);
+
+  const isAdmin = user?.role === 'super_admin' || user?.role === 'staff';
+
+  const closeMobile = () => setMobileOpen(false);
 
   return (
     <>
-    <header className="bg-white shadow-soft border-b-2 border-primary-100 sticky top-0 z-50">
-      <div className="container-custom">
-        <div className="flex justify-between items-center h-16 sm:h-20 lg:h-24">
-          {/* Mobile Menu Button - Left Side */}
-          <div className="md:hidden flex items-center">
-            <button
-              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="p-2 text-neutral-700 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-all duration-200"
-            >
-              <svg className={`h-6 w-6 transition-transform duration-200 ${isMobileMenuOpen ? 'rotate-90' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
-            </button>
-          </div>
+      {/* ─────────────────────────────── HEADER ─────────────────────────────── */}
+      <header
+        className={`bg-white sticky top-0 z-50 transition-all duration-300 ${
+          scrolled
+            ? 'shadow-[0_2px_20px_rgba(0,0,0,0.08)]'
+            : 'border-b border-neutral-100'
+        }`}
+      >
+        <div className="container-custom">
+          <div className="flex items-center justify-between h-16">
 
-          {/* Responsive Logo */}
-          <div className="flex-shrink-0">
-            <Link href="/" className="flex items-center group">
-              <div className="h-20 w-20 sm:h-24 sm:w-24 lg:h-28 lg:w-28 relative group-hover:scale-105 transition-all duration-300">
+            {/* ── LOGO ──────────────────────────────────────────────── */}
+            <Link
+              href="/"
+              className="flex items-center gap-0.5 flex-shrink-0 group"
+              onClick={closeMobile}
+            >
+              <div className="relative h-16 w-16 flex-shrink-0 overflow-hidden transition-transform duration-300 group-hover:scale-105">
                 <Image
                   src="/images/logo.png"
-                  alt="Khaalis Harvest Logo"
+                  alt="Khaalis Harvest"
                   fill
-                  className="object-contain"
                   priority
-                  sizes="(max-width: 640px) 80px, (max-width: 1024px) 96px, 112px"
+                  sizes="64px"
+                  className="object-contain scale-[1.3]"
                 />
               </div>
-              <div className="ml-0 sm:ml-0">
-                <h1 className="text-base sm:text-xl lg:text-2xl font-bold bg-gradient-to-r from-primary-600 to-accent-600 bg-clip-text text-transparent">
-                  Khaalis Harvest
-                </h1>
-                <p className="text-xs sm:text-xs lg:text-xs text-neutral-600 font-medium -mt-0.5 sm:-mt-1 hidden sm:block">
-                  Pure • Organic • Authentic
-                </p>
-              </div>
-            </Link>
-          </div>
-
-          {/* Responsive Desktop Navigation */}
-          <nav className="hidden md:flex items-center space-x-1 lg:space-x-2">
-            <Link 
-              href="/" 
-              className="group relative px-2 lg:px-4 py-2 text-gray-700 hover:text-orange-600 font-medium transition-all duration-200 rounded-lg hover:bg-orange-50"
-            >
-              <span className="flex items-center space-x-1 lg:space-x-2">
-                <svg className="h-4 w-4 lg:h-5 lg:w-5 group-hover:scale-110 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-                </svg>
-                <span className="text-sm lg:text-base">Home</span>
-              </span>
-              <div className="absolute bottom-0 left-0 w-full h-0.5 bg-gradient-to-r from-orange-500 to-green-500 scale-x-0 group-hover:scale-x-100 transition-transform duration-200"></div>
-            </Link>
-            
-            <Link 
-              href="/products" 
-              className="group relative px-2 lg:px-4 py-2 text-gray-700 hover:text-orange-600 font-medium transition-all duration-200 rounded-lg hover:bg-orange-50"
-            >
-              <span className="flex items-center space-x-1 lg:space-x-2">
-                <svg className="h-4 w-4 lg:h-5 lg:w-5 group-hover:scale-110 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                </svg>
-                <span className="text-sm lg:text-base">Products</span>
-              </span>
-              <div className="absolute bottom-0 left-0 w-full h-0.5 bg-gradient-to-r from-orange-500 to-green-500 scale-x-0 group-hover:scale-x-100 transition-transform duration-200"></div>
-            </Link>
-            
-            <Link 
-              href="/about" 
-              className="group relative px-2 lg:px-4 py-2 text-gray-700 hover:text-orange-600 font-medium transition-all duration-200 rounded-lg hover:bg-orange-50"
-            >
-              <span className="flex items-center space-x-1 lg:space-x-2">
-                <svg className="h-4 w-4 lg:h-5 lg:w-5 group-hover:scale-110 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <span className="text-sm lg:text-base">About</span>
-              </span>
-              <div className="absolute bottom-0 left-0 w-full h-0.5 bg-gradient-to-r from-orange-500 to-green-500 scale-x-0 group-hover:scale-x-100 transition-transform duration-200"></div>
-            </Link>
-            
-            <Link 
-              href="/contact" 
-              className="group relative px-2 lg:px-4 py-2 text-gray-700 hover:text-orange-600 font-medium transition-all duration-200 rounded-lg hover:bg-orange-50"
-            >
-              <span className="flex items-center space-x-1 lg:space-x-2">
-                <svg className="h-4 w-4 lg:h-5 lg:w-5 group-hover:scale-110 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                </svg>
-                <span className="text-sm lg:text-base">Contact</span>
-              </span>
-              <div className="absolute bottom-0 left-0 w-full h-0.5 bg-gradient-to-r from-orange-500 to-green-500 scale-x-0 group-hover:scale-x-100 transition-transform duration-200"></div>
-            </Link>
-          </nav>
-
-          {/* Responsive Desktop Auth Section */}
-          <div className="hidden md:flex items-center space-x-2 lg:space-x-4">
-            {isLoading ? (
-              <div className="flex items-center space-x-3 px-4 py-2 bg-neutral-100 rounded-xl">
-                <div className="animate-spin rounded-full h-5 w-5 border-2 border-primary-500 border-t-transparent"></div>
-                <span className="text-sm text-neutral-600 font-medium">Loading...</span>
-              </div>
-            ) : (
-              <div className="flex items-center space-x-4">
-                {/* Wishlist Icon — logged-in users only */}
-                {user && (
-                  <Link
-                    href="/wishlist"
-                    className="relative p-1.5 lg:p-2 hover:bg-red-50 rounded-lg transition-all duration-200 group"
-                    title="My Wishlist"
-                  >
-                    <svg className="h-5 w-5 lg:h-6 lg:w-6 text-gray-700 group-hover:text-red-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-                    </svg>
-                  </Link>
-                )}
-
-                {/* Responsive Cart Icon */}
-                <Link
-                  href="/cart"
-                  className="relative p-1.5 lg:p-2 hover:bg-gray-50 rounded-lg transition-all duration-200 group"
-                  title={`Basket (${cartState.totalItems} items)`}
-                >
-                  <div className="relative">
-                    <svg className="h-5 w-5 lg:h-7 lg:w-7 text-gray-700 group-hover:text-orange-600 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l-1 7a2 2 0 01-2 2H8a2 2 0 01-2-2L5 9z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 11h6" />
-                    </svg>
-                    <span className={`absolute -top-0.5 -right-0.5 lg:-top-1 lg:-right-1 h-3 w-3 lg:h-4 lg:w-4 text-white text-xs font-semibold rounded-full flex items-center justify-center ${
-                      cartState.totalItems > 0 
-                        ? 'bg-green-500' 
-                        : 'bg-red-500'
-                    }`}>
-                      {cartState.totalItems > 9 ? '9+' : cartState.totalItems}
-                    </span>
-                  </div>
-                </Link>
-
-                {/* Conditional User Section */}
-                {user ? (
-                  /* Professional User Menu for logged-in users */
-                  <div className="relative">
-                    <button
-                      onClick={() => setIsDesktopUserMenuOpen(!isDesktopUserMenuOpen)}
-                      className="flex items-center space-x-1 lg:space-x-2 p-1.5 lg:p-2 hover:bg-gray-50 rounded-lg transition-all duration-200 group"
-                      title={`${user.name || 'User'} - Click to open menu`}
-                    >
-                      <div className="h-6 w-6 lg:h-8 lg:w-8 bg-gradient-to-br from-orange-500 to-green-500 rounded-full flex items-center justify-center">
-                        <span className="text-white font-semibold text-xs lg:text-sm">
-                          {user.name ? user.name.charAt(0).toUpperCase() : 'U'}
-                        </span>
-                      </div>
-                      <svg className={`h-4 w-4 lg:h-5 lg:w-5 text-gray-600 group-hover:text-orange-600 transition-all duration-200 ${isDesktopUserMenuOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 9l-7 7-7-7" />
-                      </svg>
-                    </button>
-                    
-                    {isDesktopUserMenuOpen && (
-                      <div ref={dropdownRef} className="absolute right-0 mt-3 w-56 bg-white rounded-2xl shadow-2xl border border-primary-100 py-2 z-50 overflow-hidden backdrop-blur-sm">
-                        <Link
-                          href={(user.role === 'super_admin' || user.role === 'staff') ? '/admin/dashboard' : '/orders'}
-                          className="flex items-center space-x-3 px-4 py-3 text-sm text-neutral-700 hover:bg-primary-50 hover:text-primary-700 transition-all duration-200 group"
-                          onClick={() => setIsDesktopUserMenuOpen(false)}
-                        >
-                          <div className="p-2 bg-primary-100 rounded-lg group-hover:bg-primary-200 transition-colors">
-                            <svg className="h-4 w-4 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                            </svg>
-                          </div>
-                          <span className="font-medium">{(user.role === 'super_admin' || user.role === 'staff') ? 'Dashboard' : 'My Orders'}</span>
-                        </Link>
-
-                        {!(user.role === 'super_admin' || user.role === 'staff') && (
-                          <>
-                            <Link
-                              href="/account"
-                              className="flex items-center space-x-3 px-4 py-3 text-sm text-neutral-700 hover:bg-primary-50 hover:text-primary-700 transition-all duration-200 group"
-                              onClick={() => setIsDesktopUserMenuOpen(false)}
-                            >
-                              <div className="p-2 bg-primary-100 rounded-lg group-hover:bg-primary-200 transition-colors">
-                                <svg className="h-4 w-4 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                                </svg>
-                              </div>
-                              <span className="font-medium">My Account</span>
-                            </Link>
-                            <Link
-                              href="/wishlist"
-                              className="flex items-center space-x-3 px-4 py-3 text-sm text-neutral-700 hover:bg-red-50 hover:text-red-600 transition-all duration-200 group"
-                              onClick={() => setIsDesktopUserMenuOpen(false)}
-                            >
-                              <div className="p-2 bg-red-100 rounded-lg group-hover:bg-red-200 transition-colors">
-                                <svg className="h-4 w-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-                                </svg>
-                              </div>
-                              <span className="font-medium">Wishlist</span>
-                            </Link>
-                          </>
-                        )}
-
-                        <div className="border-t border-primary-100">
-                          <button
-                            onClick={() => {
-                              logout();
-                              setIsDesktopUserMenuOpen(false);
-                            }}
-                            className="flex items-center space-x-3 px-4 py-3 text-sm text-error-600 hover:bg-error-50 hover:text-error-700 transition-all duration-200 w-full text-left group"
-                          >
-                            <div className="p-2 bg-error-100 rounded-lg group-hover:bg-error-200 transition-colors">
-                              <svg className="h-4 w-4 text-error-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                              </svg>
-                            </div>
-                            <span className="font-medium">Sign out</span>
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  /* Professional Account Icon for non-logged-in users */
-                  <Link
-                    href="/auth/login"
-                    className="relative p-2 hover:bg-gray-50 rounded-lg transition-all duration-200 group"
-                    title="Sign In"
-                  >
-                    <svg className="h-7 w-7 text-gray-700 group-hover:text-orange-600 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                    </svg>
-                  </Link>
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* Responsive Mobile menu button */}
-          <div className="md:hidden flex items-center space-x-2">
-            {/* Mobile Cart Icon */}
-            <Link
-              href="/cart"
-              className="relative p-2 text-neutral-700 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-all duration-200"
-              title={`Basket (${cartState.totalItems} items)`}
-            >
-              <div className="relative">
-                <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l-1 7a2 2 0 01-2 2H8a2 2 0 01-2-2L5 9z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 11h6" />
-                </svg>
-                <span className={`absolute -top-1 -right-1 h-4 w-4 text-white text-xs font-semibold rounded-full flex items-center justify-center ${
-                  cartState.totalItems > 0 
-                    ? 'bg-green-500' 
-                    : 'bg-red-500'
-                }`}>
-                  {cartState.totalItems > 9 ? '9+' : cartState.totalItems}
+              <div className="flex flex-col leading-none">
+                <span className="text-[17px] font-bold tracking-tight">
+                  <span className="text-primary-600">Khaalis</span>
+                  <span className="text-neutral-800"> Harvest</span>
+                </span>
+                <span className="text-[9px] font-semibold tracking-[0.2em] text-neutral-400 uppercase mt-0.5">
+                  Pure Organic
                 </span>
               </div>
             </Link>
 
-            {/* Mobile User Profile Icon */}
-            {isLoading ? (
-              <div className="flex items-center space-x-2 px-2 py-1 bg-neutral-100 rounded-lg">
-                <div className="animate-spin rounded-full h-4 w-4 border-2 border-primary-500 border-t-transparent"></div>
-              </div>
-            ) : user ? (
-              <div className="relative">
-                <button
-                  onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                  className="flex items-center space-x-1 p-1.5 hover:bg-gray-50 rounded-lg transition-all duration-200 group"
-                  title={`${user.name || 'User'} - Click to open menu`}
-                >
-                  <div className="h-6 w-6 bg-gradient-to-br from-orange-500 to-green-500 rounded-full flex items-center justify-center">
-                    <span className="text-white font-semibold text-xs">
-                      {user.name ? user.name.charAt(0).toUpperCase() : 'U'}
-                    </span>
-                  </div>
-                  <svg className={`h-4 w-4 text-gray-600 group-hover:text-orange-600 transition-all duration-200 ${isMobileMenuOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </button>
-              </div>
-            ) : (
+            {/* ── DESKTOP NAV ───────────────────────────────────────── */}
+            <nav className="hidden md:flex items-center gap-0.5">
+              {NAV_LINKS.map(({ href, label }) => {
+                const active = isActive(href);
+                return (
+                  <Link
+                    key={href}
+                    href={href}
+                    className={`relative px-4 py-2 text-sm font-medium rounded-lg transition-colors duration-200 ${
+                      active
+                        ? 'text-primary-600'
+                        : 'text-neutral-500 hover:text-neutral-900 hover:bg-neutral-50'
+                    }`}
+                  >
+                    {label}
+                    {active && (
+                      <motion.span
+                        layoutId="nav-indicator"
+                        className="absolute bottom-0.5 left-4 right-4 h-0.5 bg-primary-500 rounded-full"
+                        transition={{ type: 'spring', stiffness: 400, damping: 35 }}
+                      />
+                    )}
+                  </Link>
+                );
+              })}
+            </nav>
+
+            {/* ── DESKTOP ACTIONS ───────────────────────────────────── */}
+            <div className="hidden md:flex items-center gap-0.5">
+              {isLoading ? (
+                /* Skeleton */
+                <div className="flex items-center gap-2 px-2">
+                  <div className="h-8 w-8 rounded-full bg-neutral-100 animate-pulse" />
+                </div>
+              ) : (
+                <>
+                  {/* Wishlist — logged-in customers only */}
+                  {user && !isAdmin && (
+                    <Link
+                      href="/wishlist"
+                      aria-label="My Wishlist"
+                      className={`p-2.5 rounded-lg transition-all duration-200 ${
+                        pathname === '/wishlist'
+                          ? 'text-rose-500 bg-rose-50'
+                          : 'text-neutral-400 hover:text-rose-500 hover:bg-rose-50'
+                      }`}
+                    >
+                      <svg className="h-5 w-5" fill={pathname === '/wishlist' ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75}
+                          d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                      </svg>
+                    </Link>
+                  )}
+
+                  {/* Cart */}
+                  <Link
+                    href="/cart"
+                    aria-label={`Cart — ${cartState.totalItems} item${cartState.totalItems !== 1 ? 's' : ''}`}
+                    className={`relative p-2.5 rounded-lg transition-all duration-200 ${
+                      pathname === '/cart'
+                        ? 'text-primary-600 bg-primary-50'
+                        : 'text-neutral-400 hover:text-primary-600 hover:bg-primary-50'
+                    }`}
+                  >
+                    <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75}
+                        d="M16 11V7a4 4 0 00-8 0v4M5 9h14l-1 7a2 2 0 01-2 2H8a2 2 0 01-2-2L5 9z" />
+                    </svg>
+                    <AnimatePresence>
+                      {cartState.totalItems > 0 && (
+                        <motion.span
+                          key="cart-badge"
+                          initial={{ scale: 0 }}
+                          animate={{ scale: 1 }}
+                          exit={{ scale: 0 }}
+                          transition={{ type: 'spring', stiffness: 500, damping: 25 }}
+                          className="absolute -top-0.5 -right-0.5 h-[18px] min-w-[18px] px-1 bg-primary-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center leading-none"
+                        >
+                          {cartState.totalItems > 9 ? '9+' : cartState.totalItems}
+                        </motion.span>
+                      )}
+                    </AnimatePresence>
+                  </Link>
+
+                  {/* Divider */}
+                  <div className="w-px h-5 bg-neutral-200 mx-1" />
+
+                  {/* User — logged in */}
+                  {user ? (
+                    <div className="relative" ref={userMenuRef}>
+                      <button
+                        onClick={() => setUserMenuOpen(v => !v)}
+                        aria-label="Account menu"
+                        aria-expanded={userMenuOpen}
+                        className="flex items-center gap-2 pl-1.5 pr-3 py-1.5 rounded-xl hover:bg-neutral-50 transition-all duration-200"
+                      >
+                        {/* Avatar */}
+                        <div className="h-7 w-7 bg-primary-500 rounded-full flex items-center justify-center flex-shrink-0 shadow-sm">
+                          <span className="text-white text-xs font-bold leading-none">
+                            {user.name?.charAt(0).toUpperCase() ?? 'U'}
+                          </span>
+                        </div>
+                        <span className="text-sm font-medium text-neutral-700 max-w-[80px] truncate">
+                          {user.name?.split(' ')[0] ?? 'Account'}
+                        </span>
+                        <svg
+                          className={`h-3.5 w-3.5 text-neutral-400 transition-transform duration-200 ${userMenuOpen ? 'rotate-180' : ''}`}
+                          fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                        >
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </button>
+
+                      {/* Dropdown */}
+                      <AnimatePresence>
+                        {userMenuOpen && (
+                          <motion.div
+                            initial={{ opacity: 0, y: 6, scale: 0.97 }}
+                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                            exit={{ opacity: 0, y: 4, scale: 0.97 }}
+                            transition={{ duration: 0.15, ease: 'easeOut' }}
+                            className="absolute right-0 top-full mt-2 w-56 bg-white rounded-2xl shadow-xl border border-neutral-100 overflow-hidden z-50"
+                          >
+                            {/* User info */}
+                            <div className="px-4 py-3 bg-gradient-to-r from-primary-50 to-neutral-50 border-b border-neutral-100">
+                              <p className="text-sm font-semibold text-neutral-900 truncate">{user.name}</p>
+                              <p className="text-xs text-neutral-500 truncate mt-0.5">
+                                {user.email || user.phone}
+                              </p>
+                            </div>
+
+                            {/* Menu items */}
+                            <div className="py-1.5">
+                              <DropdownItem
+                                href={isAdmin ? '/admin/dashboard' : '/orders'}
+                                onClick={() => setUserMenuOpen(false)}
+                                icon={isAdmin
+                                  ? <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z" />
+                                  : <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l-1 7a2 2 0 01-2 2H8a2 2 0 01-2-2L5 9z" />
+                                }
+                              >
+                                {isAdmin ? 'Dashboard' : 'My Orders'}
+                              </DropdownItem>
+
+                              {!isAdmin && (
+                                <>
+                                  <DropdownItem
+                                    href="/account"
+                                    onClick={() => setUserMenuOpen(false)}
+                                    icon={<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />}
+                                  >
+                                    My Account
+                                  </DropdownItem>
+                                  <DropdownItem
+                                    href="/wishlist"
+                                    onClick={() => setUserMenuOpen(false)}
+                                    icon={<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />}
+                                    hoverClass="hover:bg-rose-50 hover:text-rose-600"
+                                  >
+                                    Wishlist
+                                  </DropdownItem>
+                                </>
+                              )}
+                            </div>
+
+                            <div className="border-t border-neutral-100 py-1.5">
+                              <button
+                                onClick={() => { logout(); setUserMenuOpen(false); }}
+                                className="flex items-center gap-3 w-full px-4 py-2.5 text-sm font-medium text-error-600 hover:bg-error-50 transition-colors duration-150 text-left"
+                              >
+                                <svg className="h-4 w-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                                    d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                                </svg>
+                                Sign out
+                              </button>
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
+                  ) : (
+                    /* Sign In button — guest */
+                    <Link
+                      href="/auth/login"
+                      className="inline-flex items-center gap-1.5 px-4 py-2 ml-1 text-sm font-semibold text-primary-600 border-2 border-primary-200 hover:border-primary-500 hover:bg-primary-50 rounded-xl transition-all duration-200"
+                    >
+                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                          d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
+                      </svg>
+                      Sign In
+                    </Link>
+                  )}
+                </>
+              )}
+            </div>
+
+            {/* ── MOBILE ACTIONS ────────────────────────────────────── */}
+            <div className="flex md:hidden items-center gap-1">
+              {/* Cart */}
               <Link
-                href="/auth/login"
-                className="relative p-1.5 hover:bg-gray-50 rounded-lg transition-all duration-200 group"
-                title="Sign In"
+                href="/cart"
+                aria-label="Cart"
+                className="relative p-2 text-neutral-500 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-all duration-200"
               >
-                <svg className="h-6 w-6 text-gray-700 group-hover:text-orange-600 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75}
+                    d="M16 11V7a4 4 0 00-8 0v4M5 9h14l-1 7a2 2 0 01-2 2H8a2 2 0 01-2-2L5 9z" />
                 </svg>
+                <AnimatePresence>
+                  {cartState.totalItems > 0 && (
+                    <motion.span
+                      key="mobile-cart-badge"
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      exit={{ scale: 0 }}
+                      transition={{ type: 'spring', stiffness: 500, damping: 25 }}
+                      className="absolute -top-0.5 -right-0.5 h-[18px] min-w-[18px] px-1 bg-primary-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center leading-none"
+                    >
+                      {cartState.totalItems > 9 ? '9+' : cartState.totalItems}
+                    </motion.span>
+                  )}
+                </AnimatePresence>
               </Link>
-            )}
+
+              {/* Hamburger / Close */}
+              <button
+                onClick={() => setMobileOpen(v => !v)}
+                aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
+                aria-expanded={mobileOpen}
+                className="p-2 text-neutral-500 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-all duration-200"
+              >
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <AnimatePresence mode="wait" initial={false}>
+                    {mobileOpen ? (
+                      <motion.path
+                        key="close"
+                        initial={{ pathLength: 0 }}
+                        animate={{ pathLength: 1 }}
+                        exit={{ pathLength: 0 }}
+                        transition={{ duration: 0.2 }}
+                        strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                        d="M6 18L18 6M6 6l12 12"
+                      />
+                    ) : (
+                      <motion.path
+                        key="open"
+                        initial={{ pathLength: 0 }}
+                        animate={{ pathLength: 1 }}
+                        exit={{ pathLength: 0 }}
+                        transition={{ duration: 0.2 }}
+                        strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                        d="M4 6h16M4 12h16M4 18h16"
+                      />
+                    )}
+                  </AnimatePresence>
+                </svg>
+              </button>
+            </div>
+
           </div>
         </div>
 
-      </div>
-
-      {/* Mobile Category Dropdown */}
-      <MobileCategoryDropdown
-        categories={categories}
-        productTypes={productTypes}
-        selectedCategory={selectedCategory}
-        selectedProductType={selectedProductType}
-        onCategoryChange={(value) => {
-          const categoryValue = Array.isArray(value) ? value[0] || '' : value;
-          setSelectedCategory(categoryValue);
-        }}
-        onProductTypeChange={(value) => {
-          const typeValue = Array.isArray(value) ? value[0] || '' : value;
-          setSelectedProductType(typeValue);
-        }}
-        isOpen={isCategoryDropdownOpen}
-        onClose={() => setIsCategoryDropdownOpen(false)}
-      />
-    </header>
-
-    {/* Responsive Mobile menu - Outside header for proper positioning */}
-    {isMobileMenuOpen && (
-      <>
-        {/* Backdrop overlay - only covers area below menu */}
-        <div 
-          className="md:hidden fixed inset-0 z-[99] bg-black bg-opacity-20"
-          onClick={() => setIsMobileMenuOpen(false)}
-          style={{ top: '4rem' }}
+        {/* Mobile category filter dropdown */}
+        <MobileCategoryDropdown
+          categories={categories}
+          productTypes={productTypes}
+          selectedCategory={selectedCategory}
+          selectedProductType={selectedProductType}
+          onCategoryChange={value => setSelectedCategory(Array.isArray(value) ? value[0] ?? '' : value)}
+          onProductTypeChange={value => setSelectedProductType(Array.isArray(value) ? value[0] ?? '' : value)}
+          isOpen={isCategoryDropdownOpen}
+          onClose={() => setIsCategoryDropdownOpen(false)}
         />
-        {/* Mobile menu */}
-        <div 
-          className="md:hidden fixed inset-x-0 top-16 sm:top-20 lg:top-24 bottom-0 z-[100] bg-white overflow-y-auto"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <div className="px-4 pt-4 pb-6 space-y-2 border-t-2 border-primary-100 bg-gradient-to-b from-white to-primary-50 min-h-full">
-              {/* Close Button */}
-              <div className="flex justify-end mb-2">
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setIsMobileMenuOpen(false);
-                  }}
-                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors [touch-action:manipulation] cursor-pointer relative z-[101]"
-                  aria-label="Close menu"
-                >
-                  <svg className="h-5 w-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-              
-              {/* Navigation Links */}
-              <div className="space-y-1">
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    e.preventDefault();
-                    setIsMobileMenuOpen(false);
-                    setTimeout(() => {
-                      router.push('/');
-                    }, 100);
-                  }}
-                  className="flex items-center space-x-3 px-4 py-3 text-base font-medium text-neutral-700 hover:text-primary-600 hover:bg-primary-50 rounded-xl transition-all duration-200 [touch-action:manipulation] cursor-pointer relative z-[101] w-full text-left"
-                >
-                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-                  </svg>
-                  <span>Home</span>
-                </button>
-                <button
-                  onClick={async (e) => {
-                    e.stopPropagation();
-                    setIsMobileMenuOpen(false);
-                    
-                    // Navigate to /products if not already there
-                    if (pathname !== '/products') {
-                      await router.push('/products');
-                      // Open modal after navigation completes
-                      setIsCategoryDropdownOpen(true);
-                    } else {
-                      // Already on products page, just open the modal
-                      setIsCategoryDropdownOpen(true);
-                    }
-                  }}
-                  className="flex items-center space-x-3 px-4 py-3 text-base font-medium text-neutral-700 hover:text-primary-600 hover:bg-primary-50 rounded-xl transition-all duration-200 w-full text-left [touch-action:manipulation] cursor-pointer relative z-[101]"
-                >
-                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                  </svg>
-                  <span>Products</span>
-                  <svg className="h-4 w-4 ml-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </button>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    e.preventDefault();
-                    setIsMobileMenuOpen(false);
-                    setTimeout(() => {
-                      router.push('/about');
-                    }, 100);
-                  }}
-                  className="flex items-center space-x-3 px-4 py-3 text-base font-medium text-neutral-700 hover:text-primary-600 hover:bg-primary-50 rounded-xl transition-all duration-200 [touch-action:manipulation] cursor-pointer relative z-[101] w-full text-left"
-                >
-                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  <span>About</span>
-                </button>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    e.preventDefault();
-                    setIsMobileMenuOpen(false);
-                    setTimeout(() => {
-                      router.push('/contact');
-                    }, 100);
-                  }}
-                  className="flex items-center space-x-3 px-4 py-3 text-base font-medium text-neutral-700 hover:text-primary-600 hover:bg-primary-50 rounded-xl transition-all duration-200 [touch-action:manipulation] cursor-pointer relative z-[101] w-full text-left"
-                >
-                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                  </svg>
-                  <span>Contact</span>
-                </button>
-              </div>
-              
-              {/* User Profile Section - Only show if user is logged in */}
-              {user && (
-                <div className="pt-4 border-t-2 border-primary-200">
-                  <div className="space-y-1">
-                    {/* User Info */}
-                    <div className="flex items-center space-x-3 px-4 py-3 bg-gradient-to-r from-primary-50 to-accent-50 rounded-xl">
-                      <div className="h-8 w-8 bg-gradient-to-br from-orange-500 to-green-500 rounded-full flex items-center justify-center">
-                        <span className="text-white font-semibold text-sm">
-                          {user.name ? user.name.charAt(0).toUpperCase() : 'U'}
-                        </span>
-                      </div>
-                      <div>
-                        <p className="text-sm font-semibold text-gray-900">{user.name || 'User'}</p>
-                        <p className="text-xs text-gray-600">{user.email}</p>
-                      </div>
-                    </div>
-                    
-                    {/* User Actions */}
+      </header>
+
+      {/* ────────────────────────── MOBILE MENU ─────────────────────────────── */}
+
+      {/* Backdrop */}
+      <AnimatePresence>
+        {mobileOpen && (
+          <motion.div
+            key="mobile-backdrop"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="md:hidden fixed inset-0 top-16 z-40 bg-black/40 backdrop-blur-[2px]"
+            onClick={closeMobile}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Drawer panel */}
+      <AnimatePresence>
+        {mobileOpen && (
+          <motion.div
+            key="mobile-drawer"
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.2, ease: 'easeOut' }}
+            className="md:hidden fixed inset-x-0 top-16 z-50 max-h-[82vh] overflow-y-auto bg-white border-b border-neutral-100 shadow-2xl"
+          >
+            <div className="px-4 py-5 space-y-1">
+
+              {/* ── User info card — logged in ── */}
+              {user && !isLoading && (
+                <div className="flex items-center gap-3 px-3 py-3 mb-4 bg-gradient-to-r from-primary-50 to-neutral-50 rounded-xl border border-primary-100">
+                  <div className="h-10 w-10 bg-primary-500 rounded-full flex items-center justify-center flex-shrink-0 shadow-sm">
+                    <span className="text-white text-sm font-bold leading-none">
+                      {user.name?.charAt(0).toUpperCase() ?? 'U'}
+                    </span>
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-neutral-900 truncate">{user.name}</p>
+                    <p className="text-xs text-neutral-500 truncate">{user.email || user.phone}</p>
+                  </div>
+                </div>
+              )}
+
+              {/* ── Nav links ── */}
+              <p className="px-3 pb-1 text-[10px] font-bold tracking-widest text-neutral-400 uppercase">
+                Navigation
+              </p>
+              {NAV_LINKS.map(({ href, label }) => {
+                const active = isActive(href);
+                return (
+                  <button
+                    key={href}
+                    onClick={() => {
+                      closeMobile();
+                      router.push(href);
+                    }}
+                    className={`flex items-center gap-3 w-full px-3 py-3 text-sm font-medium rounded-xl transition-all duration-150 text-left ${
+                      active
+                        ? 'text-primary-600 bg-primary-50'
+                        : 'text-neutral-700 hover:text-primary-600 hover:bg-neutral-50'
+                    }`}
+                  >
+                    <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 transition-colors ${active ? 'bg-primary-500' : 'bg-neutral-300'}`} />
+                    {label}
+                    {active && (
+                      <span className="ml-auto text-[10px] font-semibold text-primary-500 bg-primary-100 px-2 py-0.5 rounded-full">
+                        Current
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+
+              {/* ── User actions — logged in ── */}
+              {!isLoading && user && (
+                <>
+                  <div className="pt-3 mt-2 border-t border-neutral-100">
+                    <p className="px-3 pb-1 text-[10px] font-bold tracking-widest text-neutral-400 uppercase">
+                      My Account
+                    </p>
                     <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        e.preventDefault();
-                        setIsMobileMenuOpen(false);
-                        const path = (user.role === 'super_admin' || user.role === 'staff') ? '/admin/dashboard' : '/orders';
-                        setTimeout(() => {
-                          router.push(path);
-                        }, 100);
-                      }}
-                      className="flex items-center space-x-3 px-4 py-3 text-base font-medium text-neutral-700 hover:text-primary-600 hover:bg-primary-50 rounded-xl transition-all duration-200 [touch-action:manipulation] cursor-pointer relative z-[101] w-full text-left"
+                      onClick={() => { closeMobile(); router.push(isAdmin ? '/admin/dashboard' : '/orders'); }}
+                      className="flex items-center gap-3 w-full px-3 py-3 text-sm font-medium text-neutral-700 hover:text-primary-600 hover:bg-neutral-50 rounded-xl transition-all duration-150 text-left"
                     >
-                      <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                      </svg>
-                      <span>{(user.role === 'super_admin' || user.role === 'staff') ? 'Dashboard' : 'My Orders'}</span>
+                      <span className="w-1.5 h-1.5 rounded-full bg-neutral-300 flex-shrink-0" />
+                      {isAdmin ? 'Dashboard' : 'My Orders'}
                     </button>
-                    {!(user.role === 'super_admin' || user.role === 'staff') && (
+                    {!isAdmin && (
                       <>
                         <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            e.preventDefault();
-                            setIsMobileMenuOpen(false);
-                            setTimeout(() => router.push('/account'), 100);
-                          }}
-                          className="flex items-center space-x-3 px-4 py-3 text-base font-medium text-neutral-700 hover:text-primary-600 hover:bg-primary-50 rounded-xl transition-all duration-200 [touch-action:manipulation] cursor-pointer relative z-[101] w-full text-left"
+                          onClick={() => { closeMobile(); router.push('/account'); }}
+                          className="flex items-center gap-3 w-full px-3 py-3 text-sm font-medium text-neutral-700 hover:text-primary-600 hover:bg-neutral-50 rounded-xl transition-all duration-150 text-left"
                         >
-                          <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                          </svg>
-                          <span>My Account</span>
+                          <span className="w-1.5 h-1.5 rounded-full bg-neutral-300 flex-shrink-0" />
+                          My Account
                         </button>
                         <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            e.preventDefault();
-                            setIsMobileMenuOpen(false);
-                            setTimeout(() => router.push('/wishlist'), 100);
-                          }}
-                          className="flex items-center space-x-3 px-4 py-3 text-base font-medium text-neutral-700 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all duration-200 [touch-action:manipulation] cursor-pointer relative z-[101] w-full text-left"
+                          onClick={() => { closeMobile(); router.push('/wishlist'); }}
+                          className="flex items-center gap-3 w-full px-3 py-3 text-sm font-medium text-neutral-700 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all duration-150 text-left"
                         >
-                          <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-                          </svg>
-                          <span>Wishlist</span>
+                          <span className="w-1.5 h-1.5 rounded-full bg-neutral-300 flex-shrink-0" />
+                          Wishlist
                         </button>
                       </>
                     )}
                     <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        logout();
-                        setIsMobileMenuOpen(false);
-                      }}
-                      className="flex items-center space-x-3 px-4 py-3 text-base font-medium text-error-600 hover:bg-error-50 rounded-xl transition-all duration-200 w-full text-left [touch-action:manipulation] cursor-pointer relative z-[101]"
+                      onClick={() => { logout(); closeMobile(); }}
+                      className="flex items-center gap-3 w-full px-3 py-3 mt-1 text-sm font-medium text-error-600 hover:bg-error-50 rounded-xl transition-all duration-150 text-left"
                     >
-                      <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                      </svg>
-                      <span>Sign out</span>
+                      <span className="w-1.5 h-1.5 rounded-full bg-error-400 flex-shrink-0" />
+                      Sign out
                     </button>
                   </div>
+                </>
+              )}
+
+              {/* ── Auth buttons — guest ── */}
+              {!isLoading && !user && (
+                <div className="pt-4 mt-2 border-t border-neutral-100 space-y-2">
+                  <Link
+                    href="/auth/login"
+                    onClick={closeMobile}
+                    className="flex items-center justify-center gap-2 w-full px-4 py-3 text-sm font-semibold text-white bg-primary-500 hover:bg-primary-600 rounded-xl transition-colors duration-200"
+                  >
+                    Sign In to Your Account
+                  </Link>
+                  <Link
+                    href="/auth/signup"
+                    onClick={closeMobile}
+                    className="flex items-center justify-center gap-2 w-full px-4 py-3 text-sm font-semibold text-primary-600 border-2 border-primary-200 hover:border-primary-400 hover:bg-primary-50 rounded-xl transition-all duration-200"
+                  >
+                    Create Account
+                  </Link>
                 </div>
               )}
-              </div>
+
             </div>
-          </>
+          </motion.div>
         )}
+      </AnimatePresence>
     </>
+  );
+}
+
+/* ─── Reusable dropdown menu item ─────────────────────────────────────────── */
+function DropdownItem({
+  href,
+  onClick,
+  icon,
+  hoverClass = 'hover:bg-primary-50 hover:text-primary-700',
+  children,
+}: {
+  href: string;
+  onClick: () => void;
+  icon: React.ReactNode;
+  hoverClass?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <Link
+      href={href}
+      onClick={onClick}
+      className={`flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-neutral-700 transition-colors duration-150 ${hoverClass}`}
+    >
+      <svg className="h-4 w-4 text-neutral-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        {icon}
+      </svg>
+      {children}
+    </Link>
   );
 }

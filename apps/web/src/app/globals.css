@@ -1,319 +1,285 @@
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Open+Sans:wght@300;400;500;600;700&display=swap');
+/* Fonts: Poppins via next/font (layout.tsx), Noto Nastaliq Urdu via <link> in layout.tsx <head> */
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/* ─────────────────────────── BASE ─────────────────────────────────────────── */
+
 @layer base {
-  html {
-    scroll-behavior: smooth;
-  }
-  
+  html { scroll-behavior: smooth; }
+
   body {
-    @apply bg-neutral-50 text-neutral-800 font-body;
+    @apply bg-neutral-50 text-neutral-800 font-sans antialiased;
     font-feature-settings: 'kern' 1, 'liga' 1, 'calt' 1;
   }
-  
-  * {
-    @apply border-neutral-200;
-  }
-  
-  h1, h2, h3, h4, h5, h6 {
-    @apply font-display font-semibold text-neutral-900;
-  }
-  
-  h1 {
-    @apply text-4xl lg:text-5xl;
-  }
-  
-  h2 {
-    @apply text-3xl lg:text-4xl;
-  }
-  
-  h3 {
-    @apply text-2xl lg:text-3xl;
-  }
-  
-  h4 {
-    @apply text-xl lg:text-2xl;
-  }
-  
-  h5 {
-    @apply text-lg lg:text-xl;
-  }
-  
-  h6 {
-    @apply text-base lg:text-lg;
-  }
+
+  * { @apply border-neutral-200; }
+
+  /* Locked type scale — components must not override these */
+  h1 { @apply text-4xl lg:text-5xl xl:text-6xl font-bold   leading-tight tracking-tight text-neutral-900; }
+  h2 { @apply text-3xl lg:text-4xl             font-bold   leading-tight text-neutral-900; }
+  h3 { @apply text-2xl lg:text-3xl             font-semibold              text-neutral-900; }
+  h4 { @apply text-xl  lg:text-2xl             font-semibold              text-neutral-900; }
+  h5 { @apply text-lg  lg:text-xl              font-medium                text-neutral-900; }
+  h6 { @apply text-base lg:text-lg             font-medium                text-neutral-900; }
+  p  { @apply leading-relaxed; }
 }
 
+/* ────────────────────────── COMPONENTS ────────────────────────────────────── */
+
 @layer components {
-  /* Khaalis Harvest Button Styles */
+
+  /* === BUTTONS ============================================================= */
+
+  /* Green — navigation actions, secondary CTAs, profile buttons */
   .btn-primary {
-    @apply bg-gradient-to-r from-primary-500 to-accent-500 hover:from-primary-600 hover:to-accent-600 text-white font-medium py-3 px-6 rounded-xl transition-all duration-300 shadow-soft hover:shadow-medium focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2;
+    @apply bg-primary-500 hover:bg-primary-600 text-white font-semibold
+           py-3 px-6 rounded-xl transition-all duration-200
+           shadow-sm hover:shadow-md active:scale-95
+           focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2
+           inline-flex items-center justify-center gap-2;
   }
-  
-  .btn-secondary {
-    @apply bg-secondary-100 hover:bg-secondary-200 text-secondary-800 font-medium py-3 px-6 rounded-xl transition-all duration-300 shadow-soft hover:shadow-medium focus:outline-none focus:ring-2 focus:ring-secondary-500 focus:ring-offset-2;
+
+  /* Amber — THE call-to-action: Add to Cart, Checkout, Shop Now */
+  .btn-cta {
+    @apply bg-secondary-500 hover:bg-secondary-600 text-white font-semibold
+           py-3 px-6 rounded-xl transition-all duration-200
+           shadow-sm hover:shadow-md active:scale-95
+           focus:outline-none focus:ring-2 focus:ring-secondary-500 focus:ring-offset-2
+           inline-flex items-center justify-center gap-2;
   }
-  
+
+  /* Outlined green */
   .btn-outline {
-    @apply border-2 border-primary-500 text-primary-600 hover:bg-primary-500 hover:text-white font-medium py-3 px-6 rounded-xl transition-all duration-300 shadow-soft hover:shadow-medium focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2;
+    @apply border-2 border-primary-500 text-primary-600 hover:bg-primary-500
+           hover:text-white font-semibold py-3 px-6 rounded-xl
+           transition-all duration-200 shadow-sm active:scale-95
+           inline-flex items-center justify-center gap-2;
   }
-  
+
+  /* Ghost green */
   .btn-ghost {
-    @apply text-primary-600 hover:bg-primary-50 font-medium py-3 px-6 rounded-xl transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2;
+    @apply text-primary-600 hover:bg-primary-50 font-medium
+           py-3 px-6 rounded-xl transition-all duration-200
+           inline-flex items-center justify-center gap-2;
   }
-  
-  /* Form Elements */
+
+  /* Outlined amber */
+  .btn-amber-outline {
+    @apply border-2 border-secondary-500 text-secondary-600 hover:bg-secondary-500
+           hover:text-white font-semibold py-3 px-6 rounded-xl
+           transition-all duration-200 shadow-sm active:scale-95
+           inline-flex items-center justify-center gap-2;
+  }
+
+  /* Legacy name — kept for backward compat; same as btn-primary */
+  .btn-secondary {
+    @apply bg-primary-100 hover:bg-primary-200 text-primary-800 font-semibold
+           py-3 px-6 rounded-xl transition-all duration-200
+           shadow-sm hover:shadow-md
+           focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2;
+  }
+
+  /* === INPUTS ============================================================== */
+
   .input-field {
-    @apply w-full px-4 py-3 border-2 border-neutral-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-300 bg-white;
+    @apply w-full px-4 py-3 border border-neutral-200 rounded-xl
+           bg-white text-neutral-800 placeholder-neutral-400
+           focus:outline-none focus:ring-2 focus:ring-primary-400 focus:border-primary-400
+           transition-all duration-200;
   }
-  
-  .input-field:focus {
-    @apply shadow-glow-soft;
+
+  .input-error {
+    @apply border-error-500 focus:ring-error-400 focus:border-error-400;
   }
-  
+
   .select-field {
-    @apply w-full px-4 py-3 border-2 border-neutral-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-300 bg-white appearance-none;
+    @apply w-full px-4 py-3 border border-neutral-200 rounded-xl
+           bg-white text-neutral-800 appearance-none
+           focus:outline-none focus:ring-2 focus:ring-primary-400 focus:border-primary-400
+           transition-all duration-200;
   }
-  
+
   .textarea-field {
-    @apply w-full px-4 py-3 border-2 border-neutral-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-300 bg-white resize-none;
+    @apply w-full px-4 py-3 border border-neutral-200 rounded-xl
+           bg-white text-neutral-800 placeholder-neutral-400 resize-none
+           focus:outline-none focus:ring-2 focus:ring-primary-400 focus:border-primary-400
+           transition-all duration-200;
   }
-  
-  /* Card Components */
+
+  /* === CARDS =============================================================== */
+
   .card {
-    @apply bg-white rounded-2xl shadow-soft border border-neutral-100 p-6 transition-all duration-300 hover:shadow-medium;
+    @apply bg-white rounded-2xl shadow-sm border border-neutral-100 p-6
+           transition-all duration-200;
   }
-  
+
+  .card-hover {
+    @apply hover:shadow-md hover:-translate-y-0.5;
+  }
+
   .card-elevated {
-    @apply bg-white rounded-2xl shadow-medium border border-neutral-100 p-8 transition-all duration-300 hover:shadow-strong;
+    @apply bg-white rounded-2xl shadow-md border border-neutral-100 p-8;
   }
-  
+
+  /* Legacy — kept for contact page and other unredesigned components */
   .card-organic {
-    @apply bg-gradient-to-br from-neutral-50 to-primary-50 rounded-2xl shadow-soft border border-primary-100 p-6 transition-all duration-300 hover:shadow-medium;
+    @apply bg-gradient-to-br from-neutral-50 to-primary-50 rounded-2xl
+           shadow-soft border border-primary-100 p-6
+           transition-all duration-300 hover:shadow-medium;
   }
-  
-  /* Container */
+
+  /* Product card — used by product grids */
+  .product-card {
+    @apply bg-white rounded-2xl shadow-sm border border-neutral-100 overflow-hidden
+           transition-all duration-300 hover:shadow-lg hover:-translate-y-1 cursor-pointer;
+  }
+
+  /* === LAYOUT ============================================================== */
+
   .container-custom {
     @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
   }
-  
-  /* Navigation */
-  .nav-link {
-    @apply text-neutral-600 hover:text-primary-600 font-medium py-2 px-4 rounded-lg transition-colors duration-300;
+
+  .section-padding {
+    @apply py-20 lg:py-28;
   }
-  
-  .nav-link-active {
-    @apply text-primary-600 bg-primary-50 font-medium py-2 px-4 rounded-lg;
+
+  .section-padding-sm {
+    @apply py-14 lg:py-20;
   }
-  
-  /* Badge Components */
+
+  /* === BADGES ============================================================== */
+
   .badge {
-    @apply inline-flex items-center px-3 py-1 rounded-full text-sm font-medium;
+    @apply inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold;
   }
-  
-  .badge-primary {
-    @apply bg-primary-100 text-primary-800;
+
+  .badge-primary   { @apply bg-primary-100   text-primary-700; }
+  .badge-secondary { @apply bg-secondary-100 text-secondary-700; }
+  .badge-earth     { @apply bg-earth-100     text-earth-700; }
+  .badge-organic   { @apply bg-primary-50    text-primary-600 border border-primary-200; }
+  .badge-fresh     { @apply bg-green-100     text-green-700; }
+  .badge-success   { @apply bg-success-50    text-success-600; }
+  .badge-warning   { @apply bg-warning-50    text-warning-600; }
+  .badge-error     { @apply bg-error-50      text-error-600; }
+  /* Legacy */
+  .badge-accent    { @apply bg-accent-100    text-accent-800; }
+
+  /* === NAVIGATION ========================================================== */
+
+  .nav-link {
+    @apply text-neutral-600 hover:text-primary-600 font-medium
+           py-2 px-3 rounded-lg transition-colors duration-200 relative;
   }
-  
-  .badge-secondary {
-    @apply bg-secondary-100 text-secondary-800;
+
+  .nav-link-active {
+    @apply text-primary-600 font-semibold;
   }
-  
-  .badge-accent {
-    @apply bg-accent-100 text-accent-800;
-  }
-  
-  .badge-success {
-    @apply bg-success-50 text-success-600;
-  }
-  
-  .badge-warning {
-    @apply bg-warning-50 text-warning-600;
-  }
-  
-  .badge-error {
-    @apply bg-error-50 text-error-600;
-  }
-  
-  /* Organic Elements */
+
+  /* === BACKGROUNDS ========================================================= */
+
+  /* Updated to warm palette — used by auth, cart, checkout, admin pages */
   .organic-gradient {
-    @apply bg-gradient-to-br from-primary-50 via-accent-50 to-secondary-50;
-  }
-  
-  .leaf-pattern {
-    background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%234B8B3B' fill-opacity='0.05'%3E%3Cpath d='M30 30c0-11.046-8.954-20-20-20s-20 8.954-20 20 8.954 20 20 20 20-8.954 20-20zm0 0c0 11.046 8.954 20 20 20s20-8.954 20-20-8.954-20-20-20-20 8.954-20 20z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+    @apply bg-gradient-to-br from-primary-50 via-neutral-50 to-neutral-100;
   }
 
-  /* Responsive Background Image Utilities */
-  .bg-responsive {
-    background-size: cover;
-    background-position: center;
-    background-repeat: no-repeat;
+  .organic-bg {
+    background-image: theme('backgroundImage.organic-texture');
+    @apply bg-neutral-50;
   }
 
+  .warm-section  { @apply bg-neutral-100; }
+  .brand-section { @apply bg-primary-50; }
+
+  /* Legacy background utilities (kept for ResponsiveBackgroundImage) */
+  .bg-responsive,
   .bg-responsive-sm {
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
   }
 
-  @media (min-width: 640px) {
-    .bg-responsive-sm {
-      background-size: cover;
-      background-position: center;
-    }
-  }
+  /* Legacy aspect ratio utilities */
+  .aspect-hero    { aspect-ratio: 16 / 9; }
+  .aspect-section { aspect-ratio: 21 / 9; }
+  .aspect-card    { aspect-ratio: 4 / 3; }
 
-  @media (min-width: 768px) {
-    .bg-responsive-sm {
-      background-size: cover;
-      background-position: center;
-    }
-  }
-
-  @media (min-width: 1024px) {
-    .bg-responsive-sm {
-      background-size: cover;
-      background-position: center;
-    }
-  }
-
-  /* Aspect Ratio Utilities for Background Images */
-  .aspect-hero {
-    aspect-ratio: 16 / 9;
-  }
-
-  .aspect-section {
-    aspect-ratio: 21 / 9;
-  }
-
-  .aspect-card {
-    aspect-ratio: 4 / 3;
-  }
-
-  /* Responsive Height Utilities */
+  /* Legacy height utilities */
   .h-screen-responsive {
     height: 100vh;
     min-height: 400px;
   }
 
-  @media (min-width: 640px) {
-    .h-screen-responsive {
-      min-height: 500px;
-    }
+  @media (min-width: 640px)  { .h-screen-responsive { min-height: 500px; } }
+  @media (min-width: 1024px) { .h-screen-responsive { min-height: 600px; } }
+
+  /* === URDU ================================================================ */
+
+  .urdu-text {
+    font-family: 'Noto Nastaliq Urdu', serif;
+    direction: rtl;
+    text-align: right;
   }
 
-  @media (min-width: 1024px) {
-    .h-screen-responsive {
-      min-height: 600px;
-    }
+  /* === SKELETON ============================================================ */
+
+  .skeleton {
+    background: linear-gradient(90deg, #F5F4EE 25%, #E8E6DC 50%, #F5F4EE 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
   }
 }
+
+/* ────────────────────────── UTILITIES ─────────────────────────────────────── */
 
 @layer utilities {
-  .text-balance {
-    text-wrap: balance;
-  }
-  
-  .scrollbar-hide {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
-  }
-  
-  .scrollbar-hide::-webkit-scrollbar {
-    display: none;
-  }
-  
-  .line-clamp-1 {
-    overflow: hidden;
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 1;
-  }
-  
-  .line-clamp-2 {
-    overflow: hidden;
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 2;
-  }
-  
-  .line-clamp-3 {
-    overflow: hidden;
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 3;
-  }
+  .text-balance  { text-wrap: balance; }
+
+  .scrollbar-hide                      { -ms-overflow-style: none; scrollbar-width: none; }
+  .scrollbar-hide::-webkit-scrollbar   { display: none; }
+
+  .line-clamp-1 { overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 1; }
+  .line-clamp-2 { overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+  .line-clamp-3 { overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; }
 }
 
-/* Khaalis Harvest Custom Scrollbar */
-::-webkit-scrollbar {
-  width: 8px;
+/* ────────────────────────── SCROLLBAR ─────────────────────────────────────── */
+
+::-webkit-scrollbar              { width: 6px; }
+::-webkit-scrollbar-track        { background: #f0f7ee; }
+::-webkit-scrollbar-thumb        { background: #3d7a2e; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover  { background: #2f6022; }
+
+/* ────────────────────────── ANIMATIONS ────────────────────────────────────── */
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
-::-webkit-scrollbar-track {
-  background: #f0f9f0;
-  border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb {
-  background: linear-gradient(to bottom, #4B8B3B, #22c55e);
-  border-radius: 4px;
-  border: 1px solid #f0f9f0;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(to bottom, #3d7030, #16a34a);
-}
-
-/* Loading animations */
-@keyframes pulse {
-  0%, 100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.5;
-  }
+@keyframes shimmer {
+  from { background-position: -200% 0; }
+  to   { background-position:  200% 0; }
 }
 
 @keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
-.animate-pulse {
-  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+.animate-fadeInUp { animation: fadeInUp 0.5s ease-out; }
+.animate-fadeIn   { animation: fadeIn   0.6s ease-out; }
+.animate-pulse    { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.5; }
 }
 
-.animate-fadeIn {
-  animation: fadeIn 0.6s ease-out;
-}
+/* ────────────────────────── RTL SUPPORT ───────────────────────────────────── */
 
-/* Urdu text support */
-.urdu-text {
-  font-family: 'Noto Nastaliq Urdu', serif;
-  direction: rtl;
-  text-align: right;
-}
-
-/* RTL support */
-[dir="rtl"] {
-  text-align: right;
-}
-
-[dir="rtl"] .text-left {
-  text-align: right;
-}
-
-[dir="rtl"] .text-right {
-  text-align: left;
-}
+[dir="rtl"]            { text-align: right; }
+[dir="rtl"] .text-left { text-align: right; }
+[dir="rtl"] .text-right{ text-align: left; }

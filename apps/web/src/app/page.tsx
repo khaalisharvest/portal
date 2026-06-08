@@ -1,85 +1,59 @@
 'use client';
 
-import { motion } from 'framer-motion';
+import Image from 'next/image';
+import Link from 'next/link';
+import Hero from '@/components/sections/Hero';
 import ProductsSection from '@/components/sections/ProductsSection';
 import HowItWorks from '@/components/sections/HowItWorks';
 import CTA from '@/components/sections/CTA';
-import ResponsiveBackgroundImage from '@/components/ui/ResponsiveBackgroundImage';
 
 export default function HomePage() {
   return (
-    <main className="min-h-screen">
-      {/* Single Continuous Background for Hero + Products */}
-      <ResponsiveBackgroundImage
-        src="/images/hero.png"
-        alt="Fresh organic products background"
-        overlayType="hero"
-        priority={true}
-        quality={90}
-        objectPosition="center"
-        fitContent={false}
-        minHeight="min-h-screen"
-        className="py-8"
-      >
-        <div className="container-custom">
-          {/* Hero Section */}
-          <div className="max-w-3xl mx-auto text-center mb-8">
-            <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8 }}
-              className="mb-8"
-            >
-              <h1 className="text-5xl md:text-7xl font-extrabold text-neutral-900 mb-4 tracking-tight">
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary-600 via-accent-500 to-primary-600">
-                  Khaalis
-                </span>{' '}
-                <span className="text-neutral-800">Harvest</span>
-              </h1>
-              
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.8, delay: 0.1 }}
-                className="mb-6"
-              >
-                <p className="text-2xl md:text-3xl font-medium text-neutral-800 mb-3 tracking-wide">
-                  Pure Organic Products
-                </p>
-                <div className="w-24 h-1 bg-gradient-to-r from-primary-500 to-accent-500 mx-auto rounded-full"></div>
-              </motion.div>
-              
-              <motion.p
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.8, delay: 0.2 }}
-                className="text-lg md:text-xl font-medium text-neutral-700 mb-4 tracking-wide"
-              >
-                Fresh • Local • Delivered
-              </motion.p>
-            </motion.div>
-          </div>
+    <main className="min-h-screen bg-neutral-50">
 
-          {/* Products Section */}
-          <div className="max-w-7xl mx-auto">
-            <ProductsSection showOnly={8} />
-          </div>
+      {/* ── Hero + Products — shared background ─────────────────── */}
+      <section className="relative overflow-hidden">
+
+        {/* Shared background image */}
+        <div className="absolute inset-0">
+          <Image
+            src="/images/products-section.png"
+            alt=""
+            fill
+            priority
+            quality={88}
+            sizes="100vw"
+            className="object-cover object-center"
+          />
+          {/* Gradient overlay — dense at top so hero text is crisp, lighter below so food warmth glows through product cards */}
+          <div className="absolute inset-0 bg-gradient-to-b from-white/95 via-white/88 to-white/78" />
+        </div>
+
+        {/* Hero text strip */}
+        <div className="relative">
+          <Hero />
+        </div>
+
+        {/* Products — same background, no gap */}
+        <div className="relative container-custom pb-12">
+          <ProductsSection showOnly={8} />
           <div className="text-center mt-8">
-            <a
-              href="/products"
-              className="btn-primary inline-flex items-center"
-            >
+            <Link href="/products" className="btn-primary inline-flex items-center gap-2">
               View All Products
-              <svg className="ml-2 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
               </svg>
-            </a>
+            </Link>
           </div>
         </div>
-      </ResponsiveBackgroundImage>
-      
+
+        {/* Bottom fade into HowItWorks */}
+        <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-neutral-50 to-transparent pointer-events-none" />
+      </section>
+
       <HowItWorks />
       <CTA />
+
     </main>
   );
 }

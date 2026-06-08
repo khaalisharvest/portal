@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from 'next';
-import { Inter } from 'next/font/google';
+import { Poppins } from 'next/font/google';
 import './globals.css';
 import { Providers } from './providers';
 import ConditionalHeader from '@/components/layout/ConditionalHeader';
@@ -8,7 +8,12 @@ import WhatsAppButton from '@/components/ui/WhatsAppButton';
 import NotificationBar from '@/components/ui/NotificationBar';
 import { APP_URL } from '@/config/env';
 
-const inter = Inter({ subsets: ['latin'] });
+const poppins = Poppins({
+  subsets: ['latin'],
+  weight: ['300', '400', '500', '600', '700', '800'],
+  variable: '--font-poppins',
+  display: 'swap',
+});
 
 // Disable static generation - app uses React Context (AuthContext, CartContext, FilterContext)
 // which requires dynamic rendering at request time, not static generation at build time
@@ -17,7 +22,7 @@ export const dynamic = 'force-dynamic';
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
-  themeColor: '#4B8B3B',
+  themeColor: '#3d7a2e',
 };
 
 export const metadata: Metadata = {
@@ -66,8 +71,15 @@ export default function RootLayout({
         <link rel="icon" href="/images/favicon-512x512.png" />
         <link rel="shortcut icon" href="/images/favicon-512x512.png" />
         <link rel="apple-touch-icon" href="/images/favicon-512x512.png" />
+        {/* Noto Nastaliq Urdu — preconnect speeds up the request, display=swap prevents render blocking */}
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link
+          rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Noto+Nastaliq+Urdu:wght@400;700&display=swap"
+        />
       </head>
-      <body className={`${inter.className} organic-gradient`}>
+      <body className={`${poppins.variable} font-sans bg-neutral-50 text-neutral-800`}>
         <Providers>
           <NotificationBar />
           <ConditionalHeader />
