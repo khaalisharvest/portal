@@ -1,17 +1,14 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsOptional, IsBoolean, IsNumber, IsArray, IsObject } from 'class-validator';
+import { IsString, IsOptional, IsBoolean, IsNumber, IsArray } from 'class-validator';
 
 export class CreateProductTypeDto {
   @ApiProperty()
   @IsString()
-  categoryId: string;
-  @ApiProperty()
-  @IsString()
-  name: string;
+  displayName: string;
 
   @ApiProperty()
   @IsString()
-  displayName: string;
+  categoryId: string;
 
   @ApiProperty({ required: false })
   @IsOptional()
@@ -20,60 +17,14 @@ export class CreateProductTypeDto {
 
   @ApiProperty({ required: false })
   @IsOptional()
-  @IsObject()
-  specifications?: {
-    fields: Array<{
-      id: string;
-      name: string;
-      label: string;
-      type: 'text' | 'number' | 'email' | 'url' | 'textarea' | 'select' | 'multiselect' | 'checkbox' | 'radio' | 'date' | 'time' | 'datetime' | 'color' | 'range' | 'file';
-      required: boolean;
-      placeholder?: string;
-      description?: string;
-      options?: Array<{ label: string; value: string }>;
-      min?: number;
-      max?: number;
-      step?: number;
-      rows?: number;
-      accept?: string;
-      validation?: {
-        pattern?: string;
-        message?: string;
-      };
-      category?: string;
-    }>;
-  };
+  @IsString()
+  color?: string;
 
-  @ApiProperty({ required: false })
-  @IsOptional()
-  @IsObject()
-  pricing?: {
-    primaryMethod: 'weight' | 'volume' | 'quantity' | 'size';
-    hasWeight: boolean;
-    hasVolume: boolean;
-    hasQuantity: boolean;
-    hasSize: boolean;
-    units: string[];
-  };
-
-  @ApiProperty({ required: false })
-  @IsOptional()
-  @IsObject()
-  requirements?: {
-    needsImages: boolean;
-    needsCertification: boolean;
-    needsLocation: boolean;
-    needsExpiryDate: boolean;
-    needsBatchNumber: boolean;
-    minImages: number;
-    maxImages: number;
-  };
-
-  @ApiProperty({ required: false })
+  @ApiProperty({ required: false, type: [String] })
   @IsOptional()
   @IsArray()
   @IsString({ each: true })
-  allowedUserTypes?: string[];
+  units?: string[];
 
   @ApiProperty({ required: false })
   @IsOptional()
@@ -84,14 +35,4 @@ export class CreateProductTypeDto {
   @IsOptional()
   @IsNumber()
   sortOrder?: number;
-
-  @ApiProperty({ required: false })
-  @IsOptional()
-  @IsString()
-  icon?: string;
-
-  @ApiProperty({ required: false })
-  @IsOptional()
-  @IsString()
-  color?: string;
 }

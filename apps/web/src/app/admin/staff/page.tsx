@@ -105,6 +105,11 @@ export default function StaffManagementPage() {
 
   useEffect(() => { fetchStaff(); fetchActivity(); }, [fetchStaff, fetchActivity]);
 
+  const resetForm = () => {
+    setForm({ name: '', phone: '', email: '', password: '' });
+    setShowAddForm(false);
+  };
+
   const handleAddStaff = async () => {
     if (!form.name || !form.phone || !form.password) {
       toast.error('Name, phone, and password are required');
@@ -119,8 +124,7 @@ export default function StaffManagementPage() {
       });
       if (r.ok) {
         toast.success('Staff member added');
-        setShowAddForm(false);
-        setForm({ name: '', phone: '', email: '', password: '' });
+        resetForm();
         fetchStaff();
       } else {
         const e = await r.json();
@@ -166,36 +170,6 @@ export default function StaffManagementPage() {
             </button>
           </div>
 
-          {/* Add Staff Form */}
-          {showAddForm && (
-            <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
-              <h3 className="text-lg font-medium text-gray-900 mb-4">Add New Staff Member</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Full Name *</label>
-                  <input type="text" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-orange-500 focus:border-orange-500 text-sm" placeholder="Staff member name" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Phone *</label>
-                  <input type="text" value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-orange-500 focus:border-orange-500 text-sm" placeholder="+923001234567" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                  <input type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-orange-500 focus:border-orange-500 text-sm" placeholder="staff@example.com" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Password *</label>
-                  <input type="password" value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-orange-500 focus:border-orange-500 text-sm" placeholder="Min. 6 characters" />
-                </div>
-              </div>
-              <div className="flex justify-end space-x-3 mt-4">
-                <button onClick={() => setShowAddForm(false)} className="px-4 py-2 text-sm text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
-                <button onClick={handleAddStaff} disabled={saving} className="px-4 py-2 text-sm text-white bg-orange-500 hover:bg-orange-600 rounded-lg disabled:opacity-50">
-                  {saving ? 'Adding...' : 'Add Staff Member'}
-                </button>
-              </div>
-            </div>
-          )}
 
           {/* Staff Grid */}
           <div>
@@ -293,6 +267,99 @@ export default function StaffManagementPage() {
             </div>
           </div>
         </div>
+
+        {/* Add Staff Drawer */}
+        {showAddForm && (
+          <div className="fixed inset-0 z-50 flex">
+            {/* Backdrop */}
+            <div className="flex-1 bg-black bg-opacity-40" onClick={resetForm} />
+
+            {/* Panel */}
+            <div className="w-full max-w-md bg-white flex flex-col shadow-2xl overflow-hidden">
+              {/* Header */}
+              <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+                <h3 className="text-lg font-semibold text-gray-900">New Staff Member</h3>
+                <button onClick={resetForm} className="text-gray-400 hover:text-gray-600">
+                  <Icon name="close" className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Scrollable body */}
+              <div className="flex-1 overflow-y-auto">
+                <div className="p-6 space-y-5">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Full Name <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={form.name}
+                      onChange={e => setForm({ ...form, name: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
+                      placeholder="Staff member name"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Phone <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={form.phone}
+                      onChange={e => setForm({ ...form, phone: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
+                      placeholder="+923001234567"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                    <input
+                      type="email"
+                      value={form.email}
+                      onChange={e => setForm({ ...form, email: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
+                      placeholder="staff@example.com"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Password <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="password"
+                      value={form.password}
+                      onChange={e => setForm({ ...form, password: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
+                      placeholder="Min. 6 characters"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="px-6 py-4 border-t border-gray-200 flex justify-end gap-3 bg-gray-50">
+                <button
+                  type="button"
+                  onClick={resetForm}
+                  className="px-4 py-2 text-sm text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleAddStaff}
+                  disabled={saving}
+                  className="px-5 py-2 text-sm font-medium text-white bg-gradient-to-r from-orange-500 to-green-500 rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {saving ? 'Adding...' : 'Add Staff Member'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </AdminLayout>
     </ProtectedRoute>
   );

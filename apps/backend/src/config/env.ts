@@ -77,6 +77,10 @@ export const env = {
   // Uploads
   UPLOAD_PATH: process.env.UPLOAD_PATH!,
   MAX_FILE_SIZE_MB: parseInt(process.env.MAX_FILE_SIZE_MB!, 10),
+  // Cloudinary
+  CLOUDINARY_CLOUD_NAME: process.env.CLOUDINARY_CLOUD_NAME!,
+  CLOUDINARY_API_KEY: process.env.CLOUDINARY_API_KEY!,
+  CLOUDINARY_API_SECRET: process.env.CLOUDINARY_API_SECRET!,
   // Environment flags
   IS_PRODUCTION: process.env.NODE_ENV === 'production',
   IS_DEVELOPMENT: process.env.NODE_ENV === 'development',
@@ -90,5 +94,6 @@ export const {
   SMTP_FROM, ADMIN_EMAIL, ADMIN_WHATSAPP,
   SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS,
   UPLOAD_PATH, MAX_FILE_SIZE_MB,
+  CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET,
   IS_PRODUCTION, IS_DEVELOPMENT, IS_TEST,
 } = env;

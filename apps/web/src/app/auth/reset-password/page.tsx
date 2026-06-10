@@ -2,6 +2,7 @@
 import { useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import toast from 'react-hot-toast';
 
 function ResetForm() {
@@ -37,7 +38,7 @@ function ResetForm() {
   if (!token) {
     return (
       <div className="text-center">
-        <p className="text-red-600 mb-4">Invalid or missing reset link.</p>
+        <p className="text-error-600 mb-4">Invalid or missing reset link.</p>
         <Link href="/auth/forgot-password" className="btn-primary">Request New Link</Link>
       </div>
     );
@@ -47,10 +48,10 @@ function ResetForm() {
     <form onSubmit={handleSubmit} className="space-y-4">
       <input type="password" placeholder="New password (min 8 characters)" value={password}
         onChange={(e) => setPassword(e.target.value)} required
-        className="w-full px-4 py-3 border border-neutral-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500" />
+        className="input-field" />
       <input type="password" placeholder="Confirm new password" value={confirm}
         onChange={(e) => setConfirm(e.target.value)} required
-        className="w-full px-4 py-3 border border-neutral-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500" />
+        className="input-field" />
       <button type="submit" disabled={isLoading} className="w-full btn-primary disabled:opacity-50">
         {isLoading ? 'Resetting...' : 'Reset Password'}
       </button>
@@ -60,10 +61,18 @@ function ResetForm() {
 
 export default function ResetPasswordPage() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-neutral-50 px-4">
-      <div className="max-w-md w-full bg-white rounded-2xl shadow-medium p-8">
+    <div className="bg-neutral-50 min-h-screen flex items-center justify-center py-12 px-4">
+      <div className="max-w-md w-full bg-white rounded-2xl shadow-sm border border-neutral-100 p-8">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-neutral-800">🔒 Reset Password</h1>
+          <div className="mx-auto h-16 w-16 sm:h-20 sm:w-20 relative mb-4">
+            <Image
+              src="/images/logo.png"
+              alt="Khaalis Harvest Logo"
+              fill
+              className="object-contain"
+            />
+          </div>
+          <h1 className="text-3xl font-bold text-neutral-800">Reset Password</h1>
           <p className="text-neutral-600 mt-2">Choose a new password for your account</p>
         </div>
         <Suspense fallback={<div className="text-center text-neutral-500">Loading...</div>}>

@@ -1,107 +1,26 @@
-// Use relative URLs to go through Next.js API routes
 const API_BASE = '/api/v1';
 
 export interface ProductType {
   id: string;
-  name: string;
   displayName: string;
   description?: string;
   categoryId: string;
-  specifications?: {
-    fields: Array<{
-      id: string;
-      name: string;
-      label: string;
-      type: 'text' | 'number' | 'email' | 'url' | 'textarea' | 'select' | 'multiselect' | 'checkbox' | 'radio' | 'date' | 'time' | 'datetime' | 'color' | 'range' | 'file';
-      required: boolean;
-      placeholder?: string;
-      description?: string;
-      options?: Array<{ label: string; value: string }>;
-      min?: number;
-      max?: number;
-      step?: number;
-      rows?: number;
-      accept?: string;
-      validation?: {
-        pattern?: string;
-        message?: string;
-      };
-      category?: string;
-    }>;
-  };
-  pricing?: {
-    primaryMethod: 'weight' | 'volume' | 'quantity' | 'size';
-    hasWeight: boolean;
-    hasVolume: boolean;
-    hasQuantity: boolean;
-    hasSize: boolean;
-    units: string[];
-  };
-  requirements?: {
-    needsImages: boolean;
-    needsCertification: boolean;
-    needsLocation: boolean;
-    needsExpiryDate: boolean;
-    minImages: number;
-    maxImages: number;
-  };
-  allowedUserTypes?: string[];
+  color?: string;
+  units?: string[];
   isActive: boolean;
   sortOrder: number;
-  icon?: string;
-  color?: string;
   createdAt: Date;
   updatedAt: Date;
 }
 
 export interface CreateProductTypeDto {
-  name: string;
   displayName: string;
-  description?: string;
   categoryId: string;
-  specifications?: {
-    fields: Array<{
-      id: string;
-      name: string;
-      label: string;
-      type: 'text' | 'number' | 'email' | 'url' | 'textarea' | 'select' | 'multiselect' | 'checkbox' | 'radio' | 'date' | 'time' | 'datetime' | 'color' | 'range' | 'file';
-      required: boolean;
-      placeholder?: string;
-      description?: string;
-      options?: Array<{ label: string; value: string }>;
-      min?: number;
-      max?: number;
-      step?: number;
-      rows?: number;
-      accept?: string;
-      validation?: {
-        pattern?: string;
-        message?: string;
-      };
-      category?: string;
-    }>;
-  };
-  pricing?: {
-    primaryMethod: 'weight' | 'volume' | 'quantity' | 'size';
-    hasWeight: boolean;
-    hasVolume: boolean;
-    hasQuantity: boolean;
-    hasSize: boolean;
-    units: string[];
-  };
-  requirements?: {
-    needsImages: boolean;
-    needsCertification: boolean;
-    needsLocation: boolean;
-    needsExpiryDate: boolean;
-    minImages: number;
-    maxImages: number;
-  };
-  allowedUserTypes?: string[];
+  description?: string;
+  color?: string;
+  units?: string[];
   isActive?: boolean;
   sortOrder?: number;
-  icon?: string;
-  color?: string;
 }
 
 export const productTypesApi = {
@@ -168,7 +87,7 @@ export const productTypesApi = {
     
     if (!response.ok) {
       const error = await response.json();
-      throw new Error(error.message || 'Failed to delete product type');
+      throw new Error(error.message || error.error || 'Failed to delete product type');
     }
   },
 };

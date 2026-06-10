@@ -16,20 +16,43 @@ export class ProductsController {
   @Roles('super_admin', 'staff')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Create a new product' })
-  @ApiResponse({ status: 201, description: 'Product created successfully' })
   create(@Request() req, @Body() createProductDto: CreateProductDto) {
-    return this.productsService.create(createProductDto, { id: req.user.id, name: req.user.name });
+    const adminId = req.user.id || req.user.sub;
+    return this.productsService.create(createProductDto, adminId, { id: adminId, name: req.user.name || req.user.email });
   }
 
+  // Admin-only: returns ALL products regardless of isAvailable
+  @Get('admin')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('super_admin', 'staff')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Admin: get all products (including unavailable)' })
+  async findAllAdmin(
+    @Query('category') category?: string,
+    @Query('search') search?: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+    @Query('type') type?: string,
+    @Query('status') status?: string,
+  ) {
+    return this.productsService.findAll({
+      category, search, status,
+      page: page ? parseInt(page) : 1,
+      limit: limit ? parseInt(limit) : 10,
+      type,
+      includeAll: true,
+    });
+  }
+
+  // Public: only isAvailable products
   @Get()
   @ApiOperation({ summary: 'Get all products with filters' })
-  @ApiResponse({ status: 200, description: 'Products retrieved successfully' })
-  @ApiQuery({ name: 'category', required: false, description: 'Filter by category' })
-  @ApiQuery({ name: 'featured', required: false, description: 'Filter featured products' })
-  @ApiQuery({ name: 'search', required: false, description: 'Search term' })
-  @ApiQuery({ name: 'page', required: false, description: 'Page number' })
-  @ApiQuery({ name: 'limit', required: false, description: 'Items per page' })
-  @ApiQuery({ name: 'type', required: false, description: 'Filter by product type' })
+  @ApiQuery({ name: 'category', required: false })
+  @ApiQuery({ name: 'featured', required: false })
+  @ApiQuery({ name: 'search', required: false })
+  @ApiQuery({ name: 'page', required: false })
+  @ApiQuery({ name: 'limit', required: false })
+  @ApiQuery({ name: 'type', required: false })
   async findAll(
     @Query('category') category?: string,
     @Query('featured') featured?: string,
@@ -38,37 +61,30 @@ export class ProductsController {
     @Query('limit') limit?: string,
     @Query('type') type?: string,
   ) {
-    const parsedPage = page ? parseInt(page) : 1;
-    const parsedLimit = limit ? parseInt(limit) : 12;
-    const parsedFeatured = featured !== undefined ? (featured === 'true') : undefined;
-
-    const result = await this.productsService.findAll({ category, featured: parsedFeatured, search, page: parsedPage, limit: parsedLimit, type });
-    const categories = await this.productsService.getCategories();
-    const productTypes = await this.productsService.getProductTypes();
-    return {
-      ...result,
-      categories,
-      productTypes,
-    };
+    return this.productsService.findAll({
+      category,
+      featured: featured !== undefined ? featured === 'true' : undefined,
+      search,
+      page: page ? parseInt(page) : 1,
+      limit: limit ? parseInt(limit) : 12,
+      type,
+    });
   }
 
   @Get('categories')
   @ApiOperation({ summary: 'Get all categories' })
-  @ApiResponse({ status: 200, description: 'Categories retrieved successfully' })
   getCategories() {
     return this.productsService.getCategories();
   }
 
   @Get('categories-with-types')
   @ApiOperation({ summary: 'Get all categories with their product types' })
-  @ApiResponse({ status: 200, description: 'Categories with types retrieved successfully' })
   getCategoriesWithTypes() {
     return this.productsService.getCategoriesWithTypes();
   }
 
   @Get(':id')
   @ApiOperation({ summary: 'Get product by ID' })
-  @ApiResponse({ status: 200, description: 'Product retrieved successfully' })
   findOne(@Param('id') id: string) {
     return this.productsService.findOne(id);
   }
@@ -77,31 +93,23 @@ export class ProductsController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('super_admin', 'staff')
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Update product' })
-  @ApiResponse({ status: 200, description: 'Product updated successfully' })
   update(@Request() req, @Param('id') id: string, @Body() updateProductDto: UpdateProductDto) {
-    return this.productsService.update(id, updateProductDto, { id: req.user.id, name: req.user.name });
+    return this.productsService.update(id, updateProductDto, { id: req.user.id, name: req.user.name || req.user.email });
   }
 
-  // Accept PUT for clients that use full update semantics
   @Put(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('super_admin', 'staff')
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Update product (PUT)' })
-  @ApiResponse({ status: 200, description: 'Product updated successfully' })
   putUpdate(@Request() req, @Param('id') id: string, @Body() updateProductDto: UpdateProductDto) {
-    return this.productsService.update(id, updateProductDto, { id: req.user.id, name: req.user.name });
+    return this.productsService.update(id, updateProductDto, { id: req.user.id, name: req.user.name || req.user.email });
   }
 
   @Delete(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('super_admin', 'staff')
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Delete product' })
-  @ApiResponse({ status: 200, description: 'Product deleted successfully' })
   remove(@Request() req, @Param('id') id: string) {
-    return this.productsService.remove(id, { id: req.user.id, name: req.user.name });
+    return this.productsService.remove(id, { id: req.user.id, name: req.user.name || req.user.email });
   }
-
 }

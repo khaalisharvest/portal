@@ -10,11 +10,12 @@ import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { CACHE_KEYS } from '../../common/constants/cache-keys';
 import { ActivityService } from '../activity/activity.service';
+import { CloudinaryService } from './services/cloudinary.service';
 
 @Injectable()
 export class ProductsService {
   private readonly logger = new Logger(ProductsService.name);
-  private readonly CACHE_TTL = 300000; // 5 minutes in milliseconds
+  private readonly CACHE_TTL = 300000;
 
   constructor(
     @InjectRepository(Product)
@@ -23,15 +24,14 @@ export class ProductsService {
     private categoryRepository: Repository<Category>,
     @InjectRepository(ProductType)
     private productTypeRepository: Repository<ProductType>,
+    private cloudinaryService: CloudinaryService,
     @Optional() @Inject(CACHE_MANAGER) private cacheManager?: Cache,
     @Optional() private activityService?: ActivityService,
   ) {}
 
-  async create(createProductDto: CreateProductDto, performedBy?: { id: string; name: string }): Promise<Product> {
-    const product = this.productRepository.create(createProductDto);
+  async create(createProductDto: CreateProductDto, adminId: string, performedBy?: { id: string; name: string }): Promise<Product> {
+    const product = this.productRepository.create({ ...createProductDto, adminId });
     const savedProduct = await this.productRepository.save(product);
-
-    // Clear cache when new product is created (if cache available)
     await this.clearProductRelatedCaches();
 
     if (performedBy && this.activityService) {
@@ -50,22 +50,15 @@ export class ProductsService {
     return savedProduct;
   }
 
-  /**
-   * Clear all product-related caches
-   * Uses batch operation for better performance
-   */
   private async clearProductRelatedCaches(): Promise<void> {
     if (!this.cacheManager) return;
-
     try {
-      // Batch delete for better performance
       await Promise.all([
         this.cacheManager.del(CACHE_KEYS.PRODUCTS.CATEGORIES),
         this.cacheManager.del(CACHE_KEYS.PRODUCTS.PRODUCT_TYPES),
         this.cacheManager.del(CACHE_KEYS.PRODUCTS.FEATURED),
       ]);
     } catch (error) {
-      // Log error but don't fail the operation
       this.logger.warn(`Failed to clear product caches: ${error.message}`);
     }
   }
@@ -77,45 +70,53 @@ export class ProductsService {
     page?: number;
     limit?: number;
     type?: string;
+    includeAll?: boolean;
+    status?: string;
   }): Promise<{ products: Product[]; total: number; page: number; limit: number; totalPages: number; categories: Category[]; productTypes: ProductType[] }> {
     try {
       const page = filters.page || 1;
       const limit = filters.limit && filters.limit > 0 ? filters.limit : 12;
       const skip = (page - 1) * limit;
-      
 
-      // Build base query
       const baseQuery = this.productRepository.createQueryBuilder('product')
         .leftJoinAndSelect('product.category', 'category')
-        .leftJoinAndSelect('product.productType', 'productType')
-        .where('product.isAvailable = :isAvailable', { isAvailable: true });
+        .leftJoinAndSelect('product.productType', 'productType');
 
-      // Apply filters
+      const conditions: string[] = [];
+      const params: Record<string, any> = {};
+
+      if (!filters.includeAll) {
+        conditions.push('product.isAvailable = :isAvailable');
+        params.isAvailable = true;
+      }
       if (filters.category) {
         const categoryIds = filters.category.split(',').map(id => id.trim());
-        baseQuery.andWhere('product.categoryId IN (:...categoryIds)', { categoryIds });
+        conditions.push('product.categoryId IN (:...categoryIds)');
+        params.categoryIds = categoryIds;
       }
-
       if (filters.featured !== undefined) {
-        baseQuery.andWhere('product.featured = :featured', { featured: filters.featured });
+        conditions.push('product.featured = :featured');
+        params.featured = filters.featured;
       }
-
       if (filters.type) {
         const typeIds = filters.type.split(',').map(id => id.trim());
-        baseQuery.andWhere('product.productTypeId IN (:...typeIds)', { typeIds });
+        conditions.push('product.productTypeId IN (:...typeIds)');
+        params.typeIds = typeIds;
       }
-
       if (filters.search) {
-        baseQuery.andWhere(
-          '(product.name ILIKE :search OR product.description ILIKE :search OR product.tags::text ILIKE :search)',
-          { search: `%${filters.search}%` }
-        );
+        conditions.push('(product.name ILIKE :search OR product.description ILIKE :search OR product.tags::text ILIKE :search)');
+        params.search = `%${filters.search}%`;
+      }
+      if (filters.status) {
+        conditions.push('product.status = :status');
+        params.status = filters.status;
       }
 
-      // Get total count
-      const total = await baseQuery.getCount();
+      if (conditions.length > 0) {
+        baseQuery.where(conditions.join(' AND '), params);
+      }
 
-      // Get paginated results
+      const total = await baseQuery.getCount();
       const products = await baseQuery
         .orderBy('product.createdAt', 'DESC')
         .skip(skip)
@@ -123,20 +124,10 @@ export class ProductsService {
         .getMany();
 
       const totalPages = Math.ceil(total / limit);
-
-      // Get categories and product types that have products
       const categories = await this.getCategories();
       const productTypes = await this.getProductTypes();
 
-      return {
-        products,
-        total,
-        page,
-        limit,
-        totalPages,
-        categories,
-        productTypes,
-      };
+      return { products, total, page, limit, totalPages, categories, productTypes };
     } catch (error) {
       throw error;
     }
@@ -144,54 +135,38 @@ export class ProductsService {
 
   async getFeatured(): Promise<Product[]> {
     const cacheKey = CACHE_KEYS.PRODUCTS.FEATURED;
-    
-    // Try to get from cache
     if (this.cacheManager) {
       try {
         const cached = await this.cacheManager.get<Product[]>(cacheKey);
-        if (cached) {
-          return cached;
-        }
+        if (cached) return cached;
       } catch (error) {
         this.logger.warn(`Cache get failed for ${cacheKey}: ${error.message}`);
       }
     }
 
-    // Fetch from database
     const products = await this.productRepository.find({
-      where: { featured: true },
+      where: { featured: true, isAvailable: true, status: 'active' },
       relations: ['category', 'productType'],
       take: 8,
     });
 
-    // Cache the result
     if (this.cacheManager) {
-      try {
-        await this.cacheManager.set(cacheKey, products, this.CACHE_TTL);
-      } catch (error) {
-        this.logger.warn(`Cache set failed for ${cacheKey}: ${error.message}`);
-      }
+      try { await this.cacheManager.set(cacheKey, products, this.CACHE_TTL); } catch {}
     }
-    
     return products;
   }
 
   async getCategories(): Promise<Category[]> {
     const cacheKey = CACHE_KEYS.PRODUCTS.CATEGORIES;
-    
-    // Try to get from cache
     if (this.cacheManager) {
       try {
         const cached = await this.cacheManager.get<Category[]>(cacheKey);
-        if (cached) {
-          return cached;
-        }
+        if (cached) return cached;
       } catch (error) {
         this.logger.warn(`Cache get failed for ${cacheKey}: ${error.message}`);
       }
     }
 
-    // Only return categories that have products
     const categories = await this.categoryRepository
       .createQueryBuilder('category')
       .leftJoinAndSelect('category.productTypes', 'productType')
@@ -202,34 +177,23 @@ export class ProductsService {
       .addOrderBy('category.createdAt', 'DESC')
       .getMany();
 
-    // Cache the result
     if (this.cacheManager) {
-      try {
-        await this.cacheManager.set(cacheKey, categories, this.CACHE_TTL);
-      } catch (error) {
-        this.logger.warn(`Cache set failed for ${cacheKey}: ${error.message}`);
-      }
+      try { await this.cacheManager.set(cacheKey, categories, this.CACHE_TTL); } catch {}
     }
-    
     return categories;
   }
 
   async getProductTypes(): Promise<ProductType[]> {
     const cacheKey = CACHE_KEYS.PRODUCTS.PRODUCT_TYPES;
-    
-    // Try to get from cache
     if (this.cacheManager) {
       try {
         const cached = await this.cacheManager.get<ProductType[]>(cacheKey);
-        if (cached) {
-          return cached;
-        }
+        if (cached) return cached;
       } catch (error) {
         this.logger.warn(`Cache get failed for ${cacheKey}: ${error.message}`);
       }
     }
 
-    // Only return product types that have products
     const productTypes = await this.productTypeRepository
       .createQueryBuilder('productType')
       .leftJoinAndSelect('productType.category', 'category')
@@ -240,20 +204,13 @@ export class ProductsService {
       .addOrderBy('productType.createdAt', 'DESC')
       .getMany();
 
-    // Cache the result
     if (this.cacheManager) {
-      try {
-        await this.cacheManager.set(cacheKey, productTypes, this.CACHE_TTL);
-      } catch (error) {
-        this.logger.warn(`Cache set failed for ${cacheKey}: ${error.message}`);
-      }
+      try { await this.cacheManager.set(cacheKey, productTypes, this.CACHE_TTL); } catch {}
     }
-    
     return productTypes;
   }
 
   async getCategoriesWithTypes(): Promise<Category[]> {
-    // Return all active categories with their active product types for admin forms
     return this.categoryRepository
       .createQueryBuilder('category')
       .leftJoinAndSelect('category.productTypes', 'productType', 'productType.isActive = :isActive', { isActive: true })
@@ -268,20 +225,23 @@ export class ProductsService {
       where: { id },
       relations: ['category', 'productType'],
     });
-
-    if (!product) {
-      throw new NotFoundException(`Product with ID ${id} not found`);
-    }
-
+    if (!product) throw new NotFoundException(`Product with ID ${id} not found`);
     return product;
   }
 
   async update(id: string, updateProductDto: UpdateProductDto, performedBy?: { id: string; name: string }): Promise<Product> {
     const product = await this.findOne(id);
+
+    // Delete Cloudinary images that were removed in this update
+    if (updateProductDto.images && product.images) {
+      const removed = this.cloudinaryService.getRemovedUrls(product.images, updateProductDto.images);
+      if (removed.length) {
+        setImmediate(() => this.cloudinaryService.deleteImages(removed));
+      }
+    }
+
     Object.assign(product, updateProductDto);
     const updatedProduct = await this.productRepository.save(product);
-
-    // Clear cache when product is updated
     await this.clearProductRelatedCaches();
 
     if (performedBy && this.activityService) {
@@ -304,9 +264,15 @@ export class ProductsService {
     const product = await this.findOne(id);
     const productName = product.name;
     const productId = product.id;
+    const images = [...(product.images || [])];
+
     await this.productRepository.remove(product);
 
-    // Clear cache when product is deleted
+    // Delete all Cloudinary images after successful DB deletion
+    if (images.length) {
+      setImmediate(() => this.cloudinaryService.deleteImages(images));
+    }
+
     await this.clearProductRelatedCaches();
 
     if (performedBy && this.activityService) {
@@ -322,5 +288,4 @@ export class ProductsService {
       });
     }
   }
-
 }

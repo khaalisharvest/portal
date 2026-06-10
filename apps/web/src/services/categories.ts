@@ -93,7 +93,7 @@ export const categoriesApi = {
     
     if (!response.ok) {
       const error = await response.json();
-      throw new Error(error.message || 'Failed to delete category');
+      throw new Error(error.message || error.error || 'Failed to delete category');
     }
   },
 };

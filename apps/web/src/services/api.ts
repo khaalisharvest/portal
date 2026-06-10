@@ -7,22 +7,22 @@ export interface Product {
   name: string;
   description: string;
   price: number;
+  originalPrice?: number;
   images: string[];
-  category: {
-    id: string;
-    name: string;
-  };
-  seller: {
-    id: string;
-    businessName: string;
-  };
-  rating: number;
-  reviewCount: number;
+  categoryId: string;
+  productTypeId?: string;
+  category?: { id: string; name: string };
+  productType?: { id: string; displayName: string; color?: string };
+  isOrganic: boolean;
   isAvailable: boolean;
   featured: boolean;
   unit: string;
   tags?: string[];
+  hasVariants?: boolean;
+  variantName?: string;
+  variants?: Array<{ name: string; price: number; originalPrice?: number; isAvailable?: boolean }>;
   createdAt: string;
+  updatedAt: string;
 }
 
 export interface Category {
@@ -56,12 +56,4 @@ export const api = {
     return response.json();
   },
 
-  // Featured products
-  async getFeaturedProducts(): Promise<Product[]> {
-    const response = await fetch(`${API_BASE}/products/featured`);
-    if (!response.ok) {
-      throw new Error('Failed to fetch featured products');
-    }
-    return response.json();
-  },
 };

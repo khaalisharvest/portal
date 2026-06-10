@@ -14,7 +14,6 @@ import { useCategories, useProductTypes } from '@/hooks/useProducts';
 const NAV_LINKS = [
   { href: '/',        label: 'Home'     },
   { href: '/products',label: 'Products' },
-  { href: '/about',   label: 'About'    },
   { href: '/contact', label: 'Contact'  },
 ];
 
@@ -403,135 +402,168 @@ export default function Header() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="md:hidden fixed inset-0 top-16 z-40 bg-black/40 backdrop-blur-[2px]"
+            transition={{ duration: 0.18 }}
+            className="md:hidden fixed inset-0 top-16 z-40 bg-black/30"
             onClick={closeMobile}
           />
         )}
       </AnimatePresence>
 
-      {/* Drawer panel */}
+      {/* Drawer */}
       <AnimatePresence>
         {mobileOpen && (
           <motion.div
             key="mobile-drawer"
-            initial={{ opacity: 0, y: -8 }}
+            initial={{ opacity: 0, y: -6 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            transition={{ duration: 0.2, ease: 'easeOut' }}
-            className="md:hidden fixed inset-x-0 top-16 z-50 max-h-[82vh] overflow-y-auto bg-white border-b border-neutral-100 shadow-2xl"
+            exit={{ opacity: 0, y: -6 }}
+            transition={{ duration: 0.18, ease: 'easeOut' }}
+            className="md:hidden fixed inset-x-0 top-16 z-50 bg-white border-b border-neutral-100 shadow-lg overflow-y-auto max-h-[88vh]"
           >
-            <div className="px-4 py-5 space-y-1">
 
-              {/* ── User info card — logged in ── */}
-              {user && !isLoading && (
-                <div className="flex items-center gap-3 px-3 py-3 mb-4 bg-gradient-to-r from-primary-50 to-neutral-50 rounded-xl border border-primary-100">
-                  <div className="h-10 w-10 bg-primary-500 rounded-full flex items-center justify-center flex-shrink-0 shadow-sm">
-                    <span className="text-white text-sm font-bold leading-none">
-                      {user.name?.charAt(0).toUpperCase() ?? 'U'}
-                    </span>
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-sm font-semibold text-neutral-900 truncate">{user.name}</p>
-                    <p className="text-xs text-neutral-500 truncate">{user.email || user.phone}</p>
-                  </div>
+            {/* ── User row — logged in ─────────────────────────── */}
+            {user && !isLoading && (
+              <div className="flex items-center gap-3 px-5 py-4 border-b border-neutral-100">
+                <div className="h-9 w-9 bg-primary-500 rounded-full flex items-center justify-center flex-shrink-0">
+                  <span className="text-white text-sm font-bold leading-none">
+                    {user.name?.charAt(0).toUpperCase() ?? 'U'}
+                  </span>
                 </div>
-              )}
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-neutral-900 truncate">{user.name}</p>
+                  <p className="text-xs text-neutral-400 truncate">{user.email || user.phone}</p>
+                </div>
+              </div>
+            )}
 
-              {/* ── Nav links ── */}
-              <p className="px-3 pb-1 text-[10px] font-bold tracking-widest text-neutral-400 uppercase">
-                Navigation
-              </p>
+            {/* ── Nav links ───────────────────────────────────────── */}
+            <nav className="px-2 py-3 space-y-0.5">
               {NAV_LINKS.map(({ href, label }) => {
-                const active = isActive(href);
+                const active     = isActive(href);
+                const isProducts = href === '/products';
+                const hasFilter  = isProducts && (!!selectedCategory || !!selectedProductType);
+
+                if (isProducts) {
+                  return (
+                    <div
+                      key={href}
+                      className={`flex items-center rounded-xl transition-colors duration-150 ${
+                        active ? 'bg-primary-50' : 'hover:bg-neutral-50'
+                      }`}
+                    >
+                      {/* "Products" — navigates, only as wide as its text */}
+                      <button
+                        onClick={() => { closeMobile(); router.push(href); }}
+                        className={`px-4 py-3 text-base font-medium text-left transition-colors ${
+                          active ? 'text-primary-600' : 'text-neutral-800'
+                        }`}
+                      >
+                        {label}
+                      </button>
+
+                      {/* › — sits directly after the text */}
+                      <button
+                        onClick={() => {
+                          setMobileOpen(false);
+                          router.push('/products');
+                          setIsCategoryDropdownOpen(true);
+                        }}
+                        aria-label="Browse product categories"
+                        className={`flex items-center gap-0.5 pl-0.5 pr-2 py-3 transition-colors ${
+                          hasFilter ? 'text-primary-500' : 'text-neutral-400'
+                        }`}
+                      >
+                        <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
+                        </svg>
+                      </button>
+
+                      {/* Spacer — fills remaining row width for hover bg */}
+                      <div className="flex-1" />
+                    </div>
+                  );
+                }
+
                 return (
                   <button
                     key={href}
-                    onClick={() => {
-                      closeMobile();
-                      router.push(href);
-                    }}
-                    className={`flex items-center gap-3 w-full px-3 py-3 text-sm font-medium rounded-xl transition-all duration-150 text-left ${
+                    onClick={() => { closeMobile(); router.push(href); }}
+                    className={`flex items-center w-full px-4 py-3 text-base font-medium rounded-xl transition-colors duration-150 text-left ${
                       active
                         ? 'text-primary-600 bg-primary-50'
-                        : 'text-neutral-700 hover:text-primary-600 hover:bg-neutral-50'
+                        : 'text-neutral-800 hover:text-primary-700 hover:bg-neutral-50'
                     }`}
                   >
-                    <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 transition-colors ${active ? 'bg-primary-500' : 'bg-neutral-300'}`} />
                     {label}
-                    {active && (
-                      <span className="ml-auto text-[10px] font-semibold text-primary-500 bg-primary-100 px-2 py-0.5 rounded-full">
-                        Current
-                      </span>
-                    )}
                   </button>
                 );
               })}
+            </nav>
 
-              {/* ── User actions — logged in ── */}
-              {!isLoading && user && (
-                <>
-                  <div className="pt-3 mt-2 border-t border-neutral-100">
-                    <p className="px-3 pb-1 text-[10px] font-bold tracking-widest text-neutral-400 uppercase">
+            {/* ── Account section — logged in ─────────────────────── */}
+            {!isLoading && user && (
+              <div className="px-2 py-3 border-t border-neutral-100 space-y-0.5">
+                <MobileMenuItem
+                  onClick={() => { closeMobile(); router.push(isAdmin ? '/admin/dashboard' : '/orders'); }}
+                  icon={isAdmin
+                    ? <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z" />
+                    : <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l-1 7a2 2 0 01-2 2H8a2 2 0 01-2-2L5 9z" />
+                  }
+                >
+                  {isAdmin ? 'Dashboard' : 'My Orders'}
+                </MobileMenuItem>
+
+                {!isAdmin && (
+                  <>
+                    <MobileMenuItem
+                      onClick={() => { closeMobile(); router.push('/account'); }}
+                      icon={<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />}
+                    >
                       My Account
-                    </p>
-                    <button
-                      onClick={() => { closeMobile(); router.push(isAdmin ? '/admin/dashboard' : '/orders'); }}
-                      className="flex items-center gap-3 w-full px-3 py-3 text-sm font-medium text-neutral-700 hover:text-primary-600 hover:bg-neutral-50 rounded-xl transition-all duration-150 text-left"
+                    </MobileMenuItem>
+                    <MobileMenuItem
+                      onClick={() => { closeMobile(); router.push('/wishlist'); }}
+                      icon={<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />}
+                      hoverClass="hover:text-rose-500 hover:bg-rose-50"
                     >
-                      <span className="w-1.5 h-1.5 rounded-full bg-neutral-300 flex-shrink-0" />
-                      {isAdmin ? 'Dashboard' : 'My Orders'}
-                    </button>
-                    {!isAdmin && (
-                      <>
-                        <button
-                          onClick={() => { closeMobile(); router.push('/account'); }}
-                          className="flex items-center gap-3 w-full px-3 py-3 text-sm font-medium text-neutral-700 hover:text-primary-600 hover:bg-neutral-50 rounded-xl transition-all duration-150 text-left"
-                        >
-                          <span className="w-1.5 h-1.5 rounded-full bg-neutral-300 flex-shrink-0" />
-                          My Account
-                        </button>
-                        <button
-                          onClick={() => { closeMobile(); router.push('/wishlist'); }}
-                          className="flex items-center gap-3 w-full px-3 py-3 text-sm font-medium text-neutral-700 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all duration-150 text-left"
-                        >
-                          <span className="w-1.5 h-1.5 rounded-full bg-neutral-300 flex-shrink-0" />
-                          Wishlist
-                        </button>
-                      </>
-                    )}
-                    <button
-                      onClick={() => { logout(); closeMobile(); }}
-                      className="flex items-center gap-3 w-full px-3 py-3 mt-1 text-sm font-medium text-error-600 hover:bg-error-50 rounded-xl transition-all duration-150 text-left"
-                    >
-                      <span className="w-1.5 h-1.5 rounded-full bg-error-400 flex-shrink-0" />
-                      Sign out
-                    </button>
-                  </div>
-                </>
-              )}
+                      Wishlist
+                    </MobileMenuItem>
+                  </>
+                )}
 
-              {/* ── Auth buttons — guest ── */}
-              {!isLoading && !user && (
-                <div className="pt-4 mt-2 border-t border-neutral-100 space-y-2">
-                  <Link
-                    href="/auth/login"
-                    onClick={closeMobile}
-                    className="flex items-center justify-center gap-2 w-full px-4 py-3 text-sm font-semibold text-white bg-primary-500 hover:bg-primary-600 rounded-xl transition-colors duration-200"
-                  >
-                    Sign In to Your Account
-                  </Link>
-                  <Link
-                    href="/auth/signup"
-                    onClick={closeMobile}
-                    className="flex items-center justify-center gap-2 w-full px-4 py-3 text-sm font-semibold text-primary-600 border-2 border-primary-200 hover:border-primary-400 hover:bg-primary-50 rounded-xl transition-all duration-200"
-                  >
-                    Create Account
-                  </Link>
-                </div>
-              )}
+                <button
+                  onClick={() => { logout(); closeMobile(); }}
+                  className="flex items-center gap-3 w-full px-4 py-3 text-sm font-medium text-error-500 hover:bg-error-50 rounded-xl transition-colors duration-150 text-left"
+                >
+                  <svg className="h-4 w-4 text-error-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75}
+                      d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                  </svg>
+                  Sign out
+                </button>
+              </div>
+            )}
 
-            </div>
+            {/* ── Auth buttons — guest ─────────────────────────────── */}
+            {!isLoading && !user && (
+              <div className="px-4 py-4 border-t border-neutral-100 space-y-2.5">
+                <Link
+                  href="/auth/login"
+                  onClick={closeMobile}
+                  className="btn-primary w-full justify-center"
+                >
+                  Sign In
+                </Link>
+                <Link
+                  href="/auth/signup"
+                  onClick={closeMobile}
+                  className="btn-outline w-full justify-center"
+                >
+                  Create Account
+                </Link>
+              </div>
+            )}
+
           </motion.div>
         )}
       </AnimatePresence>
@@ -539,7 +571,32 @@ export default function Header() {
   );
 }
 
-/* ─── Reusable dropdown menu item ─────────────────────────────────────────── */
+/* ─── Mobile menu item with icon ──────────────────────────────────────────── */
+function MobileMenuItem({
+  onClick,
+  icon,
+  hoverClass = 'hover:text-primary-600 hover:bg-neutral-50',
+  children,
+}: {
+  onClick: () => void;
+  icon: React.ReactNode;
+  hoverClass?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`flex items-center gap-3 w-full px-4 py-3 text-sm font-medium text-neutral-700 rounded-xl transition-colors duration-150 text-left ${hoverClass}`}
+    >
+      <svg className="h-4 w-4 text-neutral-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        {icon}
+      </svg>
+      {children}
+    </button>
+  );
+}
+
+/* ─── Desktop dropdown menu item ───────────────────────────────────────────── */
 function DropdownItem({
   href,
   onClick,

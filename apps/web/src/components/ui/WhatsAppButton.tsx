@@ -62,7 +62,7 @@ export default function WhatsAppButton() {
 
         {/* Tooltip on hover */}
         <div className="absolute right-full mr-3 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
-          <div className="bg-gray-900 text-white text-sm font-medium px-3 py-2 rounded-lg whitespace-nowrap shadow-lg">
+          <div className="bg-neutral-900 text-white text-sm font-medium px-3 py-2 rounded-lg whitespace-nowrap shadow-lg">
             Chat with us
             <div className="absolute left-full top-1/2 -translate-y-1/2 -translate-x-1">
               <div className="border-4 border-transparent border-l-gray-900"></div>

@@ -1,19 +1,14 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import { Category } from '@/services/categories';
 import { ProductType } from '@/services/productTypes';
-import { useAuth } from '@/contexts/AuthContext';
-import Dropdown, { DropdownOption } from '@/components/ui/Dropdown';
-import { useSingleDropdown, useMultiDropdown, dropdownUtils } from '@/hooks/useDropdown';
-import FilterBar from '@/components/ui/FilterBar';
+import Dropdown from '@/components/ui/Dropdown';
+import { useSingleDropdown, dropdownUtils } from '@/hooks/useDropdown';
 import CategoryTabs from '@/components/ui/CategoryTabs';
 import Icon from '@/components/ui/Icon';
 import ConfirmationDialog from '@/components/ui/ConfirmationDialog';
-import DynamicFormSection from '@/components/ui/DynamicFormSection';
-import { DynamicFieldConfig } from '@/components/ui/DynamicField';
-import { API_URL } from '@/config/env';
 import toast from 'react-hot-toast';
 
 interface Product {
@@ -25,42 +20,19 @@ interface Product {
   images: string[];
   categoryId: string;
   productTypeId?: string;
-  supplierId?: string;
   adminId: string;
   inventoryType: 'marketplace' | 'warehouse';
   isAvailable: boolean;
   unit: string;
-  stockQuantity?: number;
-  minStockLevel?: number;
   featured: boolean;
   isOrganic: boolean;
-  isFresh: boolean;
-  weight?: number;
-  dimensions?: Record<string, any>;
-  marketplaceSupplier?: string;
   marketplaceInfo?: {
     supplierName?: string;
     supplierContact?: string;
-    estimatedDeliveryTime?: string;
-    minimumOrderQuantity?: number;
-    maximumOrderQuantity?: number;
-    leadTime?: number;
   };
-  specifications?: {
-    quality?: string;
-    variety?: string;
-    season?: string;
-    origin?: string;
-    certification?: string[];
-  };
-  nutritionInfo?: {
-    calories?: string;
-    fiber?: string;
-    sugar?: string;
-    vitamins?: string[];
-    minerals?: string[];
-  };
+  specifications?: Record<string, any>;
   tags?: string[];
+  status?: 'draft' | 'active' | 'archived';
   // Variant fields
   hasVariants?: boolean;
   variantName?: string;
@@ -74,7 +46,7 @@ interface Product {
   updatedAt: string;
 }
 
-// Using imported types from services
+const ALL_UNITS = ['kg', 'g', 'lb', 'liter', 'ml', 'piece', 'dozen', 'pack', 'bunch', 'box', 'bag', 'bottle', 'jar', 'plant', 'seedling'];
 
 export default function ProductsManagement() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -84,94 +56,55 @@ export default function ProductsManagement() {
   const [showForm, setShowForm] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [viewMode, setViewMode] = useState<'list' | 'card'>('list');
-  
-  // Dynamic form states
-  const [selectedProductType, setSelectedProductType] = useState<ProductType | null>(null);
-  const [dynamicFields, setDynamicFields] = useState<DynamicFieldConfig[]>([]);
-  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
-  
+  // Files selected but not yet uploaded — uploaded to Cloudinary only on Save
+  const [pendingFiles, setPendingFiles] = useState<Array<{ file: File; preview: string }>>([]);
+  // Controlled URL paste input — clears when form resets
+  const [urlInput, setUrlInput] = useState('');
+  // Ref for cleaning up blob URLs on unmount
+  const pendingFilesRef = useRef(pendingFiles);
+  pendingFilesRef.current = pendingFiles;
+
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalProducts, setTotalProducts] = useState(0);
   const [itemsPerPage] = useState(10);
-  
+
   // Filter states
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
   const [selectedProductTypeFilter, setSelectedProductTypeFilter] = useState('');
-  
+
   // Confirmation dialog states
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<{ id: string; name: string } | null>(null);
-  
+
   // Dropdown hooks for form
   const categoryDropdown = useSingleDropdown('', (value) => {
-    console.log('🔄 Category dropdown changed to:', value);
     setFormData(prev => {
       const updated = {...prev, categoryId: value || ''};
-      console.log('🔄 Updated form data categoryId:', updated.categoryId);
       return updated;
     });
     // Clear product type when category changes
     productTypeDropdown.clear();
   });
-  
+
   const productTypeDropdown = useSingleDropdown('', (value) => {
-    // When product type changes: update formData and reset unit to first allowed unit (if defined)
     const selected = productTypes.find(pt => pt.id === value);
-    const nextUnit = selected?.pricing?.units?.[0] || formData.unit;
+    const nextUnit = selected?.units?.[0] || formData.unit;
     setFormData(prev => ({
       ...prev,
       productTypeId: value || '',
       unit: nextUnit,
     }));
-    
-    // Load dynamic fields when product type changes
-    if (value && selected) {
-      setSelectedProductType(selected);
-      setDynamicFields(selected.specifications?.fields || []);
-    } else {
-      setSelectedProductType(null);
-      setDynamicFields([]);
-    }
   });
-  
+
   const unitDropdown = useSingleDropdown('kg', (value) => {
     setFormData(prev => ({...prev, unit: value}));
   });
 
-  // Handle dynamic field changes
-  const handleDynamicFieldChange = (fieldName: string, value: any) => {
-    setFormData(prev => ({
-      ...prev,
-      [fieldName]: value
-    }));
-    
-    // Clear error for this field
-    if (formErrors[fieldName]) {
-      setFormErrors(prev => {
-        const newErrors = { ...prev };
-        delete newErrors[fieldName];
-        return newErrors;
-      });
-    }
-  };
-
   const inventoryTypeDropdown = useSingleDropdown('warehouse', (value) => {
     setFormData(prev => ({ ...prev, inventoryType: value as 'marketplace' | 'warehouse' }));
-  });
-
-  // Dropdown hooks for filters
-  const categoryFilterDropdown = useSingleDropdown('', (value) => {
-    setSelectedCategory(value);
-    // Clear product type filter when category changes
-    setSelectedProductTypeFilter('');
-    productTypeFilterDropdown.clear();
-  });
-  
-  const productTypeFilterDropdown = useSingleDropdown('', (value) => {
-    setSelectedProductTypeFilter(value);
   });
 
   // Handle page change
@@ -179,50 +112,26 @@ export default function ProductsManagement() {
     setCurrentPage(page);
     fetchProducts(page, searchTerm, selectedCategory, selectedProductTypeFilter);
   };
+
   const [formData, setFormData] = useState({
     name: '',
     description: '',
     price: '',
     originalPrice: '',
-    images: '',
+    images: [] as string[],
     categoryId: '',
     productTypeId: '',
-    supplierId: '',
-    adminId: '',
-    inventoryType: 'warehouse',
+    inventoryType: 'warehouse' as 'warehouse' | 'marketplace',
     isAvailable: true,
     unit: 'kg',
-    stockQuantity: '',
-    minStockLevel: '',
     featured: false,
     isOrganic: false,
-    isFresh: true,
-    weight: '',
-    dimensions: '',
-    marketplaceSupplier: '',
-    // Variant fields
+    tags: '',
+    supplierName: '',
+    supplierContact: '',
     hasVariants: false,
     variantName: '',
-    variants: [],
-    // Specifications (flexible key-value pairs)
-    quality: '',
-    variety: '',
-    season: '',
-    origin: '',
-    certification: '',
-    // Nutrition Info (flexible key-value pairs)
-    calories: '',
-    fiber: '',
-    sugar: '',
-    vitamins: '',
-    minerals: '',
-    // Tags
-    tags: '',
-    // Marketplace Info
-    estimatedDeliveryTime: '',
-    minimumOrderQuantity: '',
-    maximumOrderQuantity: '',
-    leadTime: '',
+    variants: [] as Array<{name: string; price: number; originalPrice?: number; isAvailable?: boolean}>,
   });
 
   useEffect(() => {
@@ -230,21 +139,25 @@ export default function ProductsManagement() {
     fetchAllCategoriesAndTypes();
   }, []);
 
+  // Revoke all blob URLs when component unmounts to prevent memory leaks
+  useEffect(() => () => {
+    pendingFilesRef.current.forEach(({ preview }) => URL.revokeObjectURL(preview));
+  }, []);
+
   const fetchAllCategoriesAndTypes = async () => {
     try {
       // Fetch all categories with their product types in a single API call
-      // This provides complete data for admin forms and maintains relationships
       const response = await fetch(`/api/v1/products/categories-with-types`, {
         headers: {
           'Authorization': `Bearer ${typeof window !== 'undefined' ? localStorage.getItem('backend_token') : ''}`,
         },
       });
-      
+
       if (response.ok) {
         const data = await response.json();
         const categoriesData = data.data || data;
         setCategories(categoriesData);
-        
+
         // Extract all product types from categories for dropdown filtering
         const allProductTypes: ProductType[] = [];
         categoriesData?.forEach((category: any) => {
@@ -255,7 +168,7 @@ export default function ProductsManagement() {
         setProductTypes(allProductTypes);
       }
     } catch (error) {
-      console.error('Error fetching categories with types:', error);
+      // Error fetching categories
     }
   };
 
@@ -268,119 +181,105 @@ export default function ProductsManagement() {
   const fetchProducts = async (page: number = currentPage, search: string = searchTerm, category: string = selectedCategory, type: string = selectedProductTypeFilter) => {
     try {
       setLoading(true);
-      
+
       const params = new URLSearchParams();
       params.append('page', page.toString());
       params.append('limit', itemsPerPage.toString());
-      
+
       if (search) params.append('search', search);
       if (category) params.append('category', category);
       if (type) params.append('type', type);
-      
-      const response = await fetch(`/api/v1/products?${params}`, {
+
+      const response = await fetch(`/api/v1/products/admin?${params}`, {
         headers: {
           'Authorization': `Bearer ${typeof window !== 'undefined' ? localStorage.getItem('backend_token') : ''}`,
         },
       });
-      
+
       const data = await response.json();
       setProducts(data.data?.products || data.products || []);
       setTotalPages(data.data?.totalPages || data.totalPages || 1);
       setTotalProducts(data.data?.total || data.total || 0);
     } catch (error) {
-      console.error('Error fetching products:', error);
+      // Error fetching products
     } finally {
       setLoading(false);
     }
   };
 
 
-  const { user } = useAuth();
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      // Compute images array from comma/newline separated input
-      const imagesArray = formData.images
-        ? formData.images
-            .split(/\n|,/)
-            .map(s => s.trim())
-            .filter(Boolean)
-        : [];
-
-      // Build dynamic specifications object from product type fields
-      const selectedType = productTypes.find(pt => pt.id === (formData.productTypeId || ''));
-      const dynamicSpecs: Record<string, any> = {};
-      if (selectedType?.specifications?.fields?.length) {
-        selectedType.specifications.fields.forEach(field => {
-          const key = field.name;
-          const value = (formData as any)[key];
-          if (value !== undefined && value !== '') {
-            dynamicSpecs[key] = field.type === 'number' ? Number(value) : value;
+      // Upload any locally-staged files to Cloudinary now (on Save, not on select)
+      // Start from saved URLs, strip any nulls/empty that may exist from old data
+      let allImages = formData.images.filter((u): u is string => typeof u === 'string' && u.length > 0);
+      if (pendingFiles.length > 0) {
+        const token = localStorage.getItem('backend_token');
+        const uploadedUrls: string[] = [];
+        try {
+          for (const { file } of pendingFiles) {
+            const fd = new FormData();
+            fd.append('file', file);
+            const res = await fetch('/api/v1/products/upload-image', {
+              method: 'POST',
+              headers: { Authorization: `Bearer ${token}` },
+              body: fd,
+            });
+            if (!res.ok) throw new Error('Image upload failed');
+            const data = await res.json();
+            if (!data.url || typeof data.url !== 'string') throw new Error('Upload returned invalid URL');
+            uploadedUrls.push(data.url);
           }
-        });
+        } catch (err) {
+          // Delete any images already uploaded in this batch before surfacing the error
+          if (uploadedUrls.length) {
+            void Promise.allSettled(
+              uploadedUrls.map(url =>
+                fetch(`/api/v1/products/upload-image?url=${encodeURIComponent(url)}`, {
+                  method: 'DELETE',
+                  headers: { Authorization: `Bearer ${token}` },
+                })
+              )
+            );
+          }
+          throw err;
+        }
+        allImages = [...allImages, ...uploadedUrls];
       }
 
-      const productData = {
+      const productData: Record<string, any> = {
         name: formData.name,
         description: formData.description,
         price: parseFloat(formData.price),
         originalPrice: formData.originalPrice ? parseFloat(formData.originalPrice) : undefined,
-        images: imagesArray,
+        images: allImages,
         categoryId: formData.categoryId && formData.categoryId !== '' ? formData.categoryId : undefined,
         productTypeId: formData.productTypeId && formData.productTypeId !== '' ? formData.productTypeId : undefined,
-        supplierId: formData.supplierId || undefined,
-        adminId: user?.id || 'admin-id',
         inventoryType: formData.inventoryType,
         isAvailable: formData.isAvailable,
         unit: formData.unit,
-        stockQuantity: formData.inventoryType === 'marketplace' && formData.stockQuantity ? parseFloat(formData.stockQuantity) : undefined,
-        minStockLevel: formData.inventoryType === 'marketplace' && formData.minStockLevel ? parseFloat(formData.minStockLevel) : undefined,
         featured: formData.featured,
         isOrganic: formData.isOrganic,
-        isFresh: formData.isFresh,
-        weight: formData.weight ? parseFloat(formData.weight) : undefined,
-        dimensions: formData.dimensions ? JSON.parse(formData.dimensions) : undefined,
-        marketplaceSupplier: formData.inventoryType === 'marketplace' ? formData.marketplaceSupplier : undefined,
-        specifications: {
-          quality: formData.quality,
-          variety: formData.variety,
-          season: formData.season,
-          origin: formData.origin,
-          certification: formData.certification ? formData.certification.split(',').map(c => c.trim()) : [],
-          ...dynamicSpecs,
-        },
-        nutritionInfo: {
-          calories: formData.calories,
-          fiber: formData.fiber,
-          sugar: formData.sugar,
-          vitamins: formData.vitamins ? formData.vitamins.split(',').map(v => v.trim()) : [],
-          minerals: formData.minerals ? formData.minerals.split(',').map(m => m.trim()) : [],
-        },
-        tags: formData.tags ? formData.tags.split(',').map(t => t.trim()) : [],
+        tags: formData.tags ? formData.tags.split(',').map((t: string) => t.trim()).filter(Boolean) : [],
+        specifications: undefined,
         marketplaceInfo: formData.inventoryType === 'marketplace' ? {
-          supplierName: formData.marketplaceSupplier,
-          estimatedDeliveryTime: formData.estimatedDeliveryTime,
-          minimumOrderQuantity: formData.minimumOrderQuantity ? parseInt(formData.minimumOrderQuantity) : undefined,
-          maximumOrderQuantity: formData.maximumOrderQuantity ? parseInt(formData.maximumOrderQuantity) : undefined,
-          leadTime: formData.leadTime ? parseInt(formData.leadTime) : undefined,
+          supplierName: formData.supplierName,
+          supplierContact: formData.supplierContact,
         } : undefined,
         // Variant data
         hasVariants: formData.hasVariants,
         variantName: formData.hasVariants ? formData.variantName : undefined,
-        variants: formData.hasVariants ? formData.variants.filter((v: any) => v.name && v.price > 0) : undefined,
+        variants: formData.hasVariants ? formData.variants.filter(v => v.name && v.price > 0) : undefined,
       };
 
-      // Debug final product data
-      console.log('📤 Final Product Data - categoryId:', productData.categoryId);
-
-      const url = editingProduct 
-        ? `/api/v1/products/${editingProduct.id}` 
+      const url = editingProduct
+        ? `/api/v1/products/${editingProduct.id}`
         : `/api/v1/products`;
       const method = editingProduct ? 'PUT' : 'POST';
 
       const backendToken = localStorage.getItem('backend_token');
-      
+
       const response = await fetch(url, {
         method,
         headers: {
@@ -391,64 +290,56 @@ export default function ProductsManagement() {
       });
 
       if (response.ok) {
+        toast.success(editingProduct ? 'Product updated successfully' : 'Product created successfully');
         fetchProducts();
         resetForm();
+      } else {
+        const errorData = await response.json().catch(() => ({}));
+        const msg = Array.isArray(errorData.message) ? errorData.message[0] : (errorData.message || errorData.error || 'Failed to save product');
+        toast.error(msg);
       }
     } catch (error) {
-      // Error saving product
+      console.error('[ProductSave] caught error:', error);
+      toast.error(error instanceof Error ? error.message : 'An error occurred while saving the product');
     }
   };
 
   const handleEdit = (product: Product) => {
+    // Revoke stale blob previews from a previous create/edit session
+    pendingFiles.forEach(({ preview }) => URL.revokeObjectURL(preview));
+    setPendingFiles([]);
+    setUrlInput('');
+
     setEditingProduct(product);
+
     setFormData({
       name: product.name,
       description: product.description,
       price: product.price.toString(),
       originalPrice: product.originalPrice?.toString() || '',
-      images: (product.images || []).join(', '),
+      images: Array.isArray(product.images) ? product.images.filter(Boolean) : [],
       categoryId: product.categoryId,
       productTypeId: product.productTypeId || '',
-      supplierId: product.supplierId || '',
-      adminId: product.adminId || '',
       inventoryType: product.inventoryType || 'warehouse',
       isAvailable: product.isAvailable,
       unit: product.unit || 'kg',
-      stockQuantity: product.stockQuantity?.toString() || '',
-      minStockLevel: product.minStockLevel?.toString() || '',
       featured: product.featured || false,
       isOrganic: product.isOrganic || false,
-      isFresh: product.isFresh || true,
-      weight: product.weight?.toString() || '',
-      dimensions: product.dimensions ? JSON.stringify(product.dimensions) : '',
-      marketplaceSupplier: product.marketplaceSupplier || '',
+      tags: product.tags?.join(', ') || '',
+      supplierName: product.marketplaceInfo?.supplierName || '',
+      supplierContact: product.marketplaceInfo?.supplierContact || '',
       // Variant fields
       hasVariants: product.hasVariants || false,
       variantName: product.variantName || '',
       variants: (product.variants as any) || [],
-      quality: product.specifications?.quality || '',
-      variety: product.specifications?.variety || '',
-      season: product.specifications?.season || '',
-      origin: product.specifications?.origin || '',
-      certification: product.specifications?.certification?.join(', ') || '',
-      calories: product.nutritionInfo?.calories || '',
-      fiber: product.nutritionInfo?.fiber || '',
-      sugar: product.nutritionInfo?.sugar || '',
-      vitamins: product.nutritionInfo?.vitamins?.join(', ') || '',
-      minerals: product.nutritionInfo?.minerals?.join(', ') || '',
-      tags: product.tags?.join(', ') || '',
-      estimatedDeliveryTime: product.marketplaceInfo?.estimatedDeliveryTime || '',
-      minimumOrderQuantity: product.marketplaceInfo?.minimumOrderQuantity?.toString() || '',
-      maximumOrderQuantity: product.marketplaceInfo?.maximumOrderQuantity?.toString() || '',
-      leadTime: product.marketplaceInfo?.leadTime?.toString() || '',
     });
-    
+
     // Update dropdown values
     categoryDropdown.setValue(product.categoryId);
     productTypeDropdown.setValue(product.productTypeId || '');
     unitDropdown.setValue(product.unit || 'kg');
     inventoryTypeDropdown.setValue(product.inventoryType || 'warehouse');
-    
+
     setShowForm(true);
   };
 
@@ -462,7 +353,7 @@ export default function ProductsManagement() {
 
     try {
       const backendToken = localStorage.getItem('backend_token');
-      
+
       const response = await fetch(`/api/v1/products/${pendingDelete.id}`, {
         method: 'DELETE',
         headers: {
@@ -471,10 +362,13 @@ export default function ProductsManagement() {
         },
       });
       if (response.ok) {
+        toast.success('Product deleted successfully');
         fetchProducts();
+      } else {
+        toast.error('Failed to delete product');
       }
     } catch (error) {
-      // Error deleting product
+      toast.error('An error occurred while deleting the product');
     } finally {
       setShowConfirmDialog(false);
       setPendingDelete(null);
@@ -492,136 +386,34 @@ export default function ProductsManagement() {
       description: '',
       price: '',
       originalPrice: '',
-      images: '',
+      images: [],
       categoryId: '',
       productTypeId: '',
-      supplierId: '',
-      adminId: '',
       inventoryType: 'warehouse',
       isAvailable: true,
       unit: 'kg',
-      stockQuantity: '',
-      minStockLevel: '',
       featured: false,
       isOrganic: false,
-      isFresh: true,
-      weight: '',
-      dimensions: '',
-      marketplaceSupplier: '',
-      // Variant fields
+      tags: '',
+      supplierName: '',
+      supplierContact: '',
       hasVariants: false,
       variantName: '',
       variants: [],
-      quality: '',
-      variety: '',
-      season: '',
-      origin: '',
-      certification: '',
-      calories: '',
-      fiber: '',
-      sugar: '',
-      vitamins: '',
-      minerals: '',
-      tags: '',
-      estimatedDeliveryTime: '',
-      minimumOrderQuantity: '',
-      maximumOrderQuantity: '',
-      leadTime: '',
     });
-    
-    // Reset dropdown values
+
+    // Revoke any local blob previews to free memory
+    pendingFiles.forEach(({ preview }) => URL.revokeObjectURL(preview));
+    setPendingFiles([]);
+    setUrlInput('');
+
     categoryDropdown.clear();
     productTypeDropdown.clear();
     unitDropdown.setValue('kg');
-    
+    inventoryTypeDropdown.setValue('warehouse');
     setEditingProduct(null);
     setShowForm(false);
   };
-
-  const handleImageUpload = async (file: File): Promise<string> => {
-    const token = localStorage.getItem('backend_token');
-    const formData = new FormData();
-    formData.append('file', file);
-
-    const res = await fetch('/api/v1/products/upload-image', {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${token}` },
-      body: formData,
-    });
-
-    if (!res.ok) throw new Error('Upload failed');
-    const data = await res.json();
-    return data.url;
-  };
-
-  // Convert data to dropdown options for form - show ALL categories/types
-  const categoryOptions: DropdownOption[] = dropdownUtils.toOptions(categories);
-  
-  // Debug logging for category issue
-  console.log('🔍 Category Dropdown Value:', categoryDropdown.value);
-  console.log('🔍 Form Data CategoryId:', formData.categoryId);
-
-  // Filter product types based on selected category
-  const getFilteredProductTypes = () => {
-    const selectedCategory = categoryDropdown.value;
-    
-    if (!selectedCategory) {
-      // If no category selected, show all product types
-      return productTypes;
-    }
-    
-    // Find the selected category and return its product types
-    const selectedCategoryData = categories.find(cat => cat.id === selectedCategory);
-    return selectedCategoryData?.productTypes || [];
-  };
-
-  const productTypeOptions: DropdownOption[] = dropdownUtils.toOptions(getFilteredProductTypes());
-
-  // Convert data to dropdown options for filters - only show categories/types that have products
-  const categoryFilterOptions: DropdownOption[] = dropdownUtils.toOptions(categories);
-  
-  // Filter product types for filter dropdown based on selected category
-  const getFilteredProductTypesForFilter = () => {
-    if (!selectedCategory) {
-      // If no category selected, show all product types that have products
-      return productTypes;
-    }
-    
-    // Filter product types that belong to selected category
-    return productTypes.filter(productType => 
-      productType.categoryId === selectedCategory
-    );
-  };
-  
-  const productTypeFilterOptions: DropdownOption[] = dropdownUtils.toOptions(getFilteredProductTypesForFilter());
-
-  const unitOptions: DropdownOption[] = [
-    { value: 'kg', label: 'Kilogram (kg)' },
-    { value: 'g', label: 'Gram (g)' },
-    { value: 'lb', label: 'Pound (lb)' },
-    { value: 'oz', label: 'Ounce (oz)' },
-    { value: 'liter', label: 'Liter (L)' },
-    { value: 'ml', label: 'Milliliter (ml)' },
-    { value: 'gallon', label: 'Gallon' },
-    { value: 'piece', label: 'Piece' },
-    { value: 'dozen', label: 'Dozen' },
-    { value: 'pack', label: 'Pack' },
-    { value: 'bunch', label: 'Bunch' },
-    { value: 'box', label: 'Box' },
-    { value: 'basket', label: 'Basket' },
-    { value: 'bag', label: 'Bag' },
-    { value: 'bottle', label: 'Bottle' },
-    { value: 'jar', label: 'Jar' },
-    { value: 'plant', label: 'Plant' },
-    { value: 'seedling', label: 'Seedling' },
-    { value: 'cutting', label: 'Cutting' },
-    { value: 'bulb', label: 'Bulb' },
-  ];
-
-  const inventoryTypeOptions: DropdownOption[] = [
-    { value: 'warehouse', label: 'Khaalis Harvest Warehouse/Farm' },
-    { value: 'marketplace', label: 'External Supplier' },
-  ];
 
   if (loading) {
     return (
@@ -667,7 +459,7 @@ export default function ProductsManagement() {
               </svg>
             </button>
           </div>
-          
+
           <button
             onClick={() => setShowForm(true)}
             className="bg-gradient-to-r from-orange-500 to-green-500 text-white px-6 py-2 rounded-lg hover:from-orange-600 hover:to-green-600 transition-all duration-200 flex items-center space-x-2"
@@ -713,26 +505,23 @@ export default function ProductsManagement() {
       {/* Category and Product Type Navigation */}
       <CategoryTabs
         categories={categories}
-        productTypes={productTypes}
+        productTypes={productTypes.map(pt => ({ ...pt, name: pt.displayName })) as any}
         selectedCategory={selectedCategory}
         selectedProductType={selectedProductTypeFilter}
         onCategoryChange={(value) => {
-          const categoryValue = Array.isArray(value) ? value[0] || '' : value;
-          setSelectedCategory(categoryValue);
-          categoryFilterDropdown.setValue(categoryValue);
+          const v = Array.isArray(value) ? value[0] || '' : value;
+          setSelectedCategory(v);
+          setSelectedProductTypeFilter('');
         }}
         onProductTypeChange={(value) => {
-          const typeValue = Array.isArray(value) ? value[0] || '' : value;
-          setSelectedProductTypeFilter(typeValue);
-          productTypeFilterDropdown.setValue(typeValue);
+          const v = Array.isArray(value) ? value[0] || '' : value;
+          setSelectedProductTypeFilter(v);
         }}
         onClearFilters={() => {
           setSearchTerm('');
           setSelectedCategory('');
           setSelectedProductTypeFilter('');
           setCurrentPage(1);
-          categoryFilterDropdown.clear();
-          productTypeFilterDropdown.clear();
           fetchProducts(1, '', '', '');
         }}
         className="mb-6"
@@ -750,7 +539,7 @@ export default function ProductsManagement() {
             </h3>
           </div>
         </div>
-        
+
         {viewMode === 'list' ? (
           /* List View */
           <div className="overflow-x-auto">
@@ -761,7 +550,6 @@ export default function ProductsManagement() {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Source</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stock</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
@@ -770,7 +558,7 @@ export default function ProductsManagement() {
               <tbody className="bg-white divide-y divide-gray-200">
                 {products.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="px-6 py-12 text-center text-gray-500">
+                    <td colSpan={7} className="px-6 py-12 text-center text-gray-500">
                       <div className="flex flex-col items-center space-y-2">
                         <div className="h-16 w-16 relative">
                           <Image
@@ -781,8 +569,8 @@ export default function ProductsManagement() {
                           />
                         </div>
                         <p>
-                          {totalProducts === 0 
-                            ? 'No products available. Add your first product!' 
+                          {totalProducts === 0
+                            ? 'No products available. Add your first product!'
                             : 'No products match your current filters. Try adjusting your search or filter criteria.'
                           }
                         </p>
@@ -819,32 +607,12 @@ export default function ProductsManagement() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                          product.inventoryType === 'warehouse' 
-                            ? 'bg-blue-100 text-blue-800' 
+                          product.inventoryType === 'warehouse'
+                            ? 'bg-blue-100 text-blue-800'
                             : 'bg-purple-100 text-purple-800'
                         }`}>
                           {product.inventoryType === 'warehouse' ? 'Khaalis Harvest' : 'External Supplier'}
                         </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        {product.inventoryType === 'warehouse' && product.stockQuantity !== undefined ? (
-                          <div className="text-sm">
-                            <div className={`font-medium ${
-                              product.stockQuantity <= (product.minStockLevel || 0) 
-                                ? 'text-red-600' 
-                                : product.stockQuantity <= (product.minStockLevel || 0) * 2 
-                                  ? 'text-yellow-600' 
-                                  : 'text-green-600'
-                            }`}>
-                              {product.stockQuantity} {product.unit}
-                            </div>
-                            {product.stockQuantity <= (product.minStockLevel || 0) && (
-                              <div className="text-xs text-red-500">Low Stock</div>
-                            )}
-                          </div>
-                        ) : (
-                          <div className="text-sm text-gray-500">N/A</div>
-                        )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm text-gray-900 font-semibold">
@@ -889,7 +657,7 @@ export default function ProductsManagement() {
               {products.map((product) => {
                 const category = categories.find(c => c.id === product.categoryId);
                 const productType = productTypes.find(p => p.id === product.productTypeId);
-                
+
                 return (
                   <div key={product.id} className="bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200">
                     {/* Image */}
@@ -900,7 +668,7 @@ export default function ProductsManagement() {
                         alt={product.name}
                       />
                     </div>
-                    
+
                     {/* Content */}
                     <div className="p-4">
                       {/* Header */}
@@ -915,52 +683,28 @@ export default function ProductsManagement() {
                               Organic
                             </span>
                           )}
-                          {product.isFresh && (
-                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                              Fresh
-                            </span>
-                          )}
                         </div>
                       </div>
-                      
+
                       {/* Category & Type */}
                       <div className="flex items-center space-x-2 mb-3">
                         <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
                           {category?.name || 'N/A'}
                         </span>
-                        <span 
+                        <span
                           className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium text-white"
                           style={{ backgroundColor: productType?.color || '#6B7280' }}
                         >
                           {productType?.displayName || 'N/A'}
                         </span>
                       </div>
-                      
+
                       {/* Price */}
                       <div className="flex items-center justify-between mb-3">
                         <div className="text-2xl font-bold text-gray-900">₨{product.price}</div>
                         <div className="text-sm text-gray-600">per {product.unit}</div>
                       </div>
-                      
-                      {/* Stock Quantity (only for marketplace products) */}
-                      {product.inventoryType === 'marketplace' && product.stockQuantity !== undefined && (
-                        <div className="mb-3">
-                          <div className="flex items-center justify-between">
-                            <span className="text-sm text-gray-600">Stock:</span>
-                            <span className={`text-sm font-medium ${
-                              product.stockQuantity <= (product.minStockLevel || 0) 
-                                ? 'text-red-600' 
-                                : product.stockQuantity <= (product.minStockLevel || 0) * 2 
-                                  ? 'text-yellow-600' 
-                                  : 'text-green-600'
-                            }`}>
-                              {product.stockQuantity} {product.unit}
-                              {product.stockQuantity <= (product.minStockLevel || 0) && ' (Low Stock)'}
-                            </span>
-                          </div>
-                        </div>
-                      )}
-                      
+
                       {/* Status and Source */}
                       <div className="flex items-center justify-between mb-4">
                         <div className="flex items-center space-x-2">
@@ -970,8 +714,8 @@ export default function ProductsManagement() {
                           {product.isAvailable ? 'Available' : 'Unavailable'}
                         </span>
                           <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                            product.inventoryType === 'warehouse' 
-                              ? 'bg-blue-100 text-blue-800' 
+                            product.inventoryType === 'warehouse'
+                              ? 'bg-blue-100 text-blue-800'
                               : 'bg-purple-100 text-purple-800'
                           }`}>
                             {product.inventoryType === 'warehouse' ? 'Khaalis Harvest' : 'External Supplier'}
@@ -981,7 +725,7 @@ export default function ProductsManagement() {
                           {new Date(product.createdAt).toLocaleDateString()}
                         </div>
                       </div>
-                      
+
                       {/* Quick Actions */}
                       <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center space-x-2">
@@ -989,34 +733,25 @@ export default function ProductsManagement() {
                           <button
                             onClick={async () => {
                               try {
-                                const updatedProduct = { ...product, isAvailable: !product.isAvailable };
                                 const response = await fetch(`/api/v1/products/${product.id}`, {
                                   method: 'PUT',
                                   headers: {
                                     'Content-Type': 'application/json',
                                     'Authorization': `Bearer ${localStorage.getItem('backend_token')}`,
                                   },
-                                  body: JSON.stringify({
-                                    ...updatedProduct,
-                                    stockQuantity: updatedProduct.stockQuantity,
-                                    minStockLevel: updatedProduct.minStockLevel,
-                                    specifications: updatedProduct.specifications,
-                                    nutritionInfo: updatedProduct.nutritionInfo,
-                                    tags: updatedProduct.tags,
-                                    marketplaceInfo: updatedProduct.marketplaceInfo,
-                                  }),
+                                  body: JSON.stringify({ isAvailable: !product.isAvailable }),
                                 });
-                                
+
                                 if (response.ok) {
                                   await fetchProducts();
                                 }
                               } catch (error) {
-                                console.error('Error updating product availability:', error);
+                                // Error updating product availability
                               }
                             }}
                             className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 ${
-                              product.isAvailable 
-                                ? 'bg-gradient-to-r from-orange-500 to-green-500' 
+                              product.isAvailable
+                                ? 'bg-gradient-to-r from-orange-500 to-green-500'
                                 : 'bg-gray-300'
                             }`}
                             title={`${product.isAvailable ? 'Make unavailable' : 'Make available'}`}
@@ -1032,7 +767,7 @@ export default function ProductsManagement() {
                           </span>
                         </div>
                       </div>
-                      
+
                       {/* Actions */}
                       <div className="flex space-x-2">
                         <button
@@ -1060,7 +795,6 @@ export default function ProductsManagement() {
           </div>
         )}
 
-        {/* Pagination */}
         {totalPages > 1 && (
           <div className="px-6 py-4 border-t border-gray-200">
             <div className="flex items-center justify-between">
@@ -1075,11 +809,13 @@ export default function ProductsManagement() {
                 >
                   Previous
                 </button>
-                
-                {/* Page Numbers */}
-                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                  const page = i + 1;
-                  return (
+
+                {/* Page Numbers — sliding window */}
+                {(() => {
+                  const delta = 2;
+                  const start = Math.max(1, currentPage - delta);
+                  const end = Math.min(totalPages, currentPage + delta);
+                  return Array.from({ length: end - start + 1 }, (_, i) => start + i).map(page => (
                     <button
                       key={page}
                       onClick={() => handlePageChange(page)}
@@ -1091,9 +827,9 @@ export default function ProductsManagement() {
                     >
                       {page}
                     </button>
-                  );
-                })}
-                
+                  ));
+                })()}
+
                 <button
                   onClick={() => handlePageChange(currentPage + 1)}
                   disabled={currentPage === totalPages}
@@ -1107,26 +843,26 @@ export default function ProductsManagement() {
         )}
       </div>
 
-      {/* Add/Edit Form Modal */}
+      {/* Add/Edit Form Drawer */}
       {showForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-6xl max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-bold text-gray-900">
-                  {editingProduct ? 'Edit Product' : 'Add New Product'}
-                </h2>
-                <button
-                  onClick={resetForm}
-                  className="text-gray-400 hover:text-gray-600"
-                >
-                  <Icon name="close" className="w-6 h-6" />
-                </button>
-              </div>
-              <form onSubmit={handleSubmit} className="space-y-6">
+        <div className="fixed inset-0 z-50 flex">
+          <div className="flex-1 bg-black bg-opacity-40" onClick={resetForm} />
+          <div className="w-full max-w-2xl bg-white flex flex-col shadow-2xl overflow-hidden">
+            {/* Drawer Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 flex-shrink-0">
+              <h3 className="text-lg font-semibold text-gray-900">
+                {editingProduct ? 'Edit Product' : 'New Product'}
+              </h3>
+              <button onClick={resetForm} className="text-gray-400 hover:text-gray-600">
+                <Icon name="close" className="w-5 h-5" />
+              </button>
+            </div>
+            {/* Drawer Body */}
+            <div className="flex-1 overflow-y-auto">
+              <form onSubmit={handleSubmit} id="product-form" className="p-6 space-y-6">
                 {/* Basic Information */}
                 <div>
-                  <h4 className="text-lg font-semibold text-gray-900 mb-4">
+                  <h4 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">
                     Basic Information
                   </h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1147,13 +883,13 @@ export default function ProductsManagement() {
                         showCheckmark={false}
                       />
                     </div>
-                    
+
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
                         Product Type <span className="text-red-500">*</span>
                       </label>
                       <Dropdown
-                        options={dropdownUtils.toOptions(productTypes.filter(pt => pt.categoryId === categoryDropdown.value))}
+                        options={dropdownUtils.toOptions(productTypes.filter(pt => pt.categoryId === categoryDropdown.value).map(pt => ({ ...pt, name: pt.displayName })))}
                         value={productTypeDropdown.value}
                         onChange={productTypeDropdown.handleChange}
                         placeholder="Select product type"
@@ -1165,7 +901,7 @@ export default function ProductsManagement() {
                         showCheckmark={false}
                       />
                     </div>
-                    
+
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
                         Product Name <span className="text-red-500">*</span>
@@ -1179,7 +915,7 @@ export default function ProductsManagement() {
                         required
                       />
                     </div>
-                    
+
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
                         Price (₨) <span className="text-red-500">*</span>
@@ -1194,7 +930,7 @@ export default function ProductsManagement() {
                         required
                       />
                     </div>
-                    
+
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
                         Original Price (₨)
@@ -1208,13 +944,20 @@ export default function ProductsManagement() {
                         placeholder="0.00"
                       />
                     </div>
-                    
+
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
                         Unit
                       </label>
                       <Dropdown
-                        options={selectedProductType?.pricing?.units?.map(unit => ({ value: unit, label: unit })) || []}
+                        options={
+                          (() => {
+                            const selectedPT = productTypes.find(pt => pt.id === productTypeDropdown.value);
+                            return selectedPT?.units?.length
+                              ? selectedPT.units.map((u: string) => ({ value: u, label: u }))
+                              : ALL_UNITS.map(u => ({ value: u, label: u }));
+                          })()
+                        }
                         value={unitDropdown.value}
                         onChange={unitDropdown.handleChange}
                         placeholder="Select unit"
@@ -1227,7 +970,7 @@ export default function ProductsManagement() {
                       />
                     </div>
                   </div>
-                  
+
                   <div className="mt-4">
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Description
@@ -1240,71 +983,85 @@ export default function ProductsManagement() {
                       placeholder="Describe the product..."
                     />
                   </div>
-                  
+
                   <div className="mt-4">
                     <label className="block text-sm font-medium text-neutral-700 mb-2">Product Images</label>
                     <div className="flex flex-wrap gap-2 mb-2">
-                      {formData.images
-                        .split(/\n|,/)
-                        .map(s => s.trim())
-                        .filter(Boolean)
-                        .map((url, idx) => (
-                          <div key={idx} className="relative w-20 h-20">
-                            <img
-                              src={url}
-                              alt=""
-                              className="w-full h-full object-cover rounded-lg"
-                              onError={(e) => { (e.target as HTMLImageElement).src = '/images/placeholder.svg'; }}
-                            />
-                            <button
-                              type="button"
-                              onClick={() => {
-                                const imageUrls = formData.images
-                                  .split(/\n|,/)
-                                  .map(s => s.trim())
-                                  .filter(Boolean);
-                                imageUrls.splice(idx, 1);
-                                setFormData(prev => ({ ...prev, images: imageUrls.join(', ') }));
-                              }}
-                              className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white rounded-full text-xs flex items-center justify-center hover:bg-red-600 transition-colors"
-                            >×</button>
-                          </div>
-                        ))}
+                      {/* Saved / pasted URLs */}
+                      {formData.images.map((url, idx) => (
+                        <div key={`saved-${idx}`} className="relative w-20 h-20">
+                          <img
+                            src={url}
+                            alt=""
+                            className="w-full h-full object-cover rounded-lg"
+                            onError={(e) => { (e.target as HTMLImageElement).src = '/images/placeholder.svg'; }}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setFormData(prev => ({ ...prev, images: prev.images.filter((_, i) => i !== idx) }))}
+                            className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white rounded-full text-xs flex items-center justify-center hover:bg-red-600 transition-colors"
+                          >×</button>
+                        </div>
+                      ))}
+                      {/* Locally staged files — shown as preview, uploaded on Save */}
+                      {pendingFiles.map(({ preview }, idx) => (
+                        <div key={`pending-${idx}`} className="relative w-20 h-20">
+                          <img src={preview} alt="" className="w-full h-full object-cover rounded-lg opacity-80" />
+                          <span className="absolute bottom-0 left-0 right-0 text-center text-xs bg-orange-500 text-white rounded-b-lg py-0.5 leading-tight">
+                            on save
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              URL.revokeObjectURL(preview);
+                              setPendingFiles(prev => prev.filter((_, i) => i !== idx));
+                            }}
+                            className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white rounded-full text-xs flex items-center justify-center hover:bg-red-600 transition-colors"
+                          >×</button>
+                        </div>
+                      ))}
                     </div>
-                    <label className="flex items-center gap-2 cursor-pointer bg-neutral-50 border-2 border-dashed border-neutral-300 rounded-xl px-4 py-3 hover:border-primary-400 transition-colors">
+                    {/* Choose file — stored locally, NO upload until Save */}
+                    <label className="flex items-center gap-2 cursor-pointer bg-neutral-50 border-2 border-dashed border-neutral-300 rounded-xl px-4 py-3 hover:border-orange-400 transition-colors">
                       <svg className="w-5 h-5 text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                       </svg>
-                      <span className="text-sm text-neutral-500">Upload image (JPG, PNG, WebP — max 5MB)</span>
+                      <span className="text-sm text-neutral-500">Choose images (JPG, PNG, WebP — max 5MB each)</span>
                       <input
                         type="file"
                         accept="image/jpeg,image/png,image/webp"
+                        multiple
                         className="hidden"
-                        onChange={async (e) => {
-                          const file = e.target.files?.[0];
-                          if (!file) return;
-                          try {
-                            const url = await handleImageUpload(file);
-                            const existing = formData.images ? formData.images.split(/\n|,/).map(s => s.trim()).filter(Boolean) : [];
-                            setFormData(prev => ({ ...prev, images: [...existing, url].join(', ') }));
-                            toast.success('Image uploaded');
-                          } catch {
-                            toast.error('Image upload failed. Max 5MB, JPG/PNG/WebP only.');
-                          }
+                        onChange={(e) => {
+                          const files = Array.from(e.target.files || []);
+                          const oversized = files.filter(f => f.size > 5 * 1024 * 1024);
+                          if (oversized.length) { toast.error(`${oversized.length} file(s) exceed 5MB and were skipped.`); }
+                          const valid = files.filter(f => f.size <= 5 * 1024 * 1024);
+                          if (valid.length) setPendingFiles(prev => [...prev, ...valid.map(file => ({ file, preview: URL.createObjectURL(file) }))]);
                           e.target.value = '';
                         }}
                       />
                     </label>
                     <p className="text-xs text-gray-500 mt-1">
-                      Upload files directly, or enter image URLs separated by commas below
+                      Files upload when you click Save. Or paste an image URL below and press Enter.
                     </p>
                     <div className="mt-2">
                       <input
                         type="text"
-                        value={formData.images}
-                        onChange={(e) => setFormData(prev => ({...prev, images: e.target.value}))}
+                        value={urlInput}
+                        onChange={(e) => setUrlInput(e.target.value)}
+                        placeholder="Paste image URL and press Enter to add"
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-sm"
-                        placeholder="Or paste image URLs here (comma separated)"
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            const url = urlInput.trim();
+                            if (url) {
+                              setFormData(prev => ({ ...prev, images: [...prev.images, url] }));
+                              setUrlInput('');
+                            }
+                          }
+                        }}
                       />
                     </div>
                   </div>
@@ -1312,10 +1069,10 @@ export default function ProductsManagement() {
 
                 {/* Variant Settings */}
                 <div>
-                  <h4 className="text-lg font-semibold text-gray-900 mb-4">
+                  <h4 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">
                     Variant Settings
                   </h4>
-                  
+
                   {/* Has Variants Toggle */}
                   <div className="mb-6">
                     <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
@@ -1364,88 +1121,88 @@ export default function ProductsManagement() {
                         <label className="block text-sm font-medium text-gray-700 mb-2">
                           Variant Options <span className="text-red-500">*</span>
                         </label>
-                        
+
                         {formData.variants.map((variant, index) => (
                           <div key={index} className="w-full mb-3 p-3 bg-gray-50 rounded-lg">
                             <div className="flex items-center gap-3 w-full">
-                              {/* Option Name - Takes more width */}
+                              {/* Option Name */}
                               <div className="flex-1 min-w-0">
                                 <input
                                   type="text"
-                                  value={(variant as any).name || ''}
+                                  value={variant.name || ''}
                                   onChange={(e) => {
-                                    const newVariants = [...(formData.variants as any)];
+                                    const newVariants = [...formData.variants];
                                     newVariants[index] = { ...newVariants[index], name: e.target.value };
-                                    setFormData(prev => ({...prev, variants: newVariants as any}));
+                                    setFormData(prev => ({...prev, variants: newVariants}));
                                   }}
                                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                                   placeholder="Option name (e.g., Small, Large, Premium)"
                                   required
                                 />
                               </div>
-                              
-                              {/* Price - Fixed width */}
+
+                              {/* Price */}
                               <div className="w-24">
                                 <input
                                   type="number"
                                   step="0.01"
-                                  value={(variant as any).price || ''}
+                                  value={variant.price || ''}
                                   onChange={(e) => {
-                                    const newVariants = [...(formData.variants as any)];
+                                    const newVariants = [...formData.variants];
                                     newVariants[index] = { ...newVariants[index], price: parseFloat(e.target.value) || 0 };
-                                    setFormData(prev => ({...prev, variants: newVariants as any}));
+                                    setFormData(prev => ({...prev, variants: newVariants}));
                                   }}
                                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                                   placeholder="Price"
                                   required
                                 />
                               </div>
-                              
-                              {/* Original Price - Fixed width */}
+
+                              {/* Original Price */}
                               <div className="w-24">
                                 <input
                                   type="number"
                                   step="0.01"
-                                  value={(variant as any).originalPrice || ''}
+                                  value={variant.originalPrice || ''}
                                   onChange={(e) => {
-                                    const newVariants = [...(formData.variants as any)];
+                                    const newVariants = [...formData.variants];
                                     newVariants[index] = { ...newVariants[index], originalPrice: parseFloat(e.target.value) || 0 };
-                                    setFormData(prev => ({...prev, variants: newVariants as any}));
+                                    setFormData(prev => ({...prev, variants: newVariants}));
                                   }}
                                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                                   placeholder="Original"
                                 />
                               </div>
-                              
-                              {/* Available Toggle - Fixed width */}
+
+                              {/* Available Toggle */}
                               <div className="w-20 flex items-center justify-center">
                                 <button
                                   type="button"
                                   onClick={() => {
-                                    const newVariants = [...(formData.variants as any)];
-                                    newVariants[index] = { ...newVariants[index], isAvailable: !(newVariants[index] as any).isAvailable };
-                                    setFormData(prev => ({...prev, variants: newVariants as any}));
+                                    const newVariants = [...formData.variants];
+                                    newVariants[index] = { ...newVariants[index], isAvailable: !newVariants[index].isAvailable };
+                                    setFormData(prev => ({...prev, variants: newVariants}));
                                   }}
                                   className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors duration-200 ${
-                                    (variant as any).isAvailable !== false ? 'bg-green-600' : 'bg-gray-300'
+                                    variant.isAvailable !== false ? 'bg-green-600' : 'bg-gray-300'
                                   }`}
-                                  title={(variant as any).isAvailable !== false ? 'Available' : 'Unavailable'}
+                                  title={variant.isAvailable !== false ? 'Available' : 'Unavailable'}
                                 >
                                   <span
                                     className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform duration-200 ${
-                                      (variant as any).isAvailable !== false ? 'translate-x-5' : 'translate-x-1'
+                                      variant.isAvailable !== false ? 'translate-x-5' : 'translate-x-1'
                                     }`}
                                   />
                                 </button>
                               </div>
-                              
-                              {/* Remove Button - Fixed width */}
+
+                              {/* Remove Button */}
                               <div className="w-10 flex items-center justify-center">
                                 <button
                                   type="button"
                                   onClick={() => {
-                                    const newVariants = (formData.variants as any).filter((_: any, i: number) => i !== index);
-                                    setFormData(prev => ({...prev, variants: newVariants as any}));
+                                    const newVariants = formData.variants.filter((_, i) => i !== index);
+                                    setFormData(prev => ({...prev, variants: newVariants}));
                                   }}
                                   className="text-red-500 hover:text-red-700 p-1"
                                   title="Remove this variant"
@@ -1462,7 +1219,7 @@ export default function ProductsManagement() {
                           onClick={() => {
                             setFormData(prev => ({
                               ...prev,
-                              variants: [...(prev.variants as any), { name: '', price: 0, originalPrice: 0, isAvailable: true }] as any
+                              variants: [...prev.variants, { name: '', price: 0, originalPrice: 0, isAvailable: true }]
                             }));
                           }}
                           className="w-full py-2 px-4 border-2 border-dashed border-gray-300 rounded-lg text-gray-600 hover:border-blue-500 hover:text-blue-500 transition-colors flex items-center justify-center space-x-2"
@@ -1470,7 +1227,7 @@ export default function ProductsManagement() {
                           <Icon name="plus" className="w-4 h-4" />
                           <span>Add Variant Option</span>
                         </button>
-                        
+
                         <p className="text-xs text-gray-500 mt-2">
                           Add different options for this product. Each variant can have its own price, original price, and availability status.
                         </p>
@@ -1479,20 +1236,9 @@ export default function ProductsManagement() {
                   )}
                 </div>
 
-                {/* Dynamic Fields based on Product Type */}
-                {selectedProductType && dynamicFields.length > 0 && (
-                  <DynamicFormSection
-                    title={`${selectedProductType.displayName} Specifications`}
-                    fields={dynamicFields}
-                    formData={formData}
-                    onFieldChange={handleDynamicFieldChange}
-                    errors={formErrors}
-                  />
-                )}
-
                 {/* Inventory Settings */}
                 <div>
-                  <h4 className="text-lg font-semibold text-gray-900 mb-4">
+                  <h4 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">
                     Inventory Settings
                   </h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1516,32 +1262,31 @@ export default function ProductsManagement() {
                         showCheckmark={false}
                       />
                     </div>
-                    
+
                     {formData.inventoryType === 'marketplace' && (
                       <>
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Current Stock Quantity
+                            Supplier Name
                           </label>
                           <input
-                            type="number"
-                            value={formData.stockQuantity}
-                            onChange={(e) => setFormData(prev => ({...prev, stockQuantity: e.target.value}))}
+                            type="text"
+                            value={formData.supplierName}
+                            onChange={e => setFormData(prev => ({...prev, supplierName: e.target.value}))}
                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                            placeholder="0"
+                            placeholder="Enter supplier name"
                           />
                         </div>
-                        
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Minimum Stock Level
+                            Supplier Contact
                           </label>
                           <input
-                            type="number"
-                            value={formData.minStockLevel}
-                            onChange={(e) => setFormData(prev => ({...prev, minStockLevel: e.target.value}))}
+                            type="text"
+                            value={formData.supplierContact}
+                            onChange={e => setFormData(prev => ({...prev, supplierContact: e.target.value}))}
                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                            placeholder="0"
+                            placeholder="Enter supplier contact"
                           />
                         </div>
                       </>
@@ -1551,7 +1296,7 @@ export default function ProductsManagement() {
 
                 {/* Product Settings */}
                 <div>
-                  <h4 className="text-lg font-semibold text-gray-900 mb-4">
+                  <h4 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">
                     Product Settings
                   </h4>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -1574,7 +1319,7 @@ export default function ProductsManagement() {
                         />
                       </button>
                     </div>
-                    
+
                     <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                       <div>
                         <span className="text-sm font-medium text-gray-800">Featured</span>
@@ -1594,7 +1339,7 @@ export default function ProductsManagement() {
                         />
                       </button>
                     </div>
-                    
+
                     <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                       <div>
                         <span className="text-sm font-medium text-gray-800">Organic</span>
@@ -1615,25 +1360,41 @@ export default function ProductsManagement() {
                       </button>
                     </div>
                   </div>
+
+                  {/* Tags */}
+                  <div className="mt-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Tags
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.tags}
+                      onChange={(e) => setFormData(prev => ({...prev, tags: e.target.value}))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                      placeholder="Enter tags, comma separated (e.g., organic, fresh, local)"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">Separate tags with commas</p>
+                  </div>
                 </div>
 
-                {/* Form Actions */}
-                <div className="flex justify-end space-x-3 pt-6 border-t border-gray-200">
-                  <button
-                    type="button"
-                    onClick={resetForm}
-                    className="px-4 py-2 text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300 transition-colors"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-                  >
-                    {editingProduct ? 'Update Product' : 'Create Product'}
-                  </button>
-                </div>
               </form>
+            </div>
+            {/* Drawer Footer */}
+            <div className="px-6 py-4 border-t border-gray-200 flex justify-end gap-3 bg-gray-50 flex-shrink-0">
+              <button
+                type="button"
+                onClick={resetForm}
+                className="px-4 py-2 text-sm text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                form="product-form"
+                className="px-5 py-2 text-sm font-medium text-white bg-gradient-to-r from-orange-500 to-green-500 rounded-lg hover:opacity-90 transition-opacity"
+              >
+                {editingProduct ? 'Update Product' : 'Create Product'}
+              </button>
             </div>
           </div>
         </div>

@@ -1,15 +1,10 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { BACKEND_URL } from '@/config/env.server';
+import { NextRequest } from 'next/server';
+import { proxy } from '@/lib/proxy';
 
-export async function POST(request: NextRequest) {
-  const authHeader = request.headers.get('Authorization');
-  if (!authHeader) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  const formData = await request.formData();
-  const response = await fetch(`${BACKEND_URL}/api/v1/upload/image`, {
-    method: 'POST',
-    headers: { Authorization: authHeader },
-    body: formData as any,
-  });
-  const data = await response.json();
-  return NextResponse.json(data, { status: response.status });
-}
+// Protected: upload image to Cloudinary (super_admin, staff)
+export const POST = (req: NextRequest) =>
+  proxy(req, { path: '/api/v1/upload/image', requireAuth: true });
+
+// Protected: delete image from Cloudinary by URL (?url=...)
+export const DELETE = (req: NextRequest) =>
+  proxy(req, { path: '/api/v1/upload/image', requireAuth: true });

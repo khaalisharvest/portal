@@ -124,16 +124,16 @@ export default function Dropdown({
   };
 
   const variantClasses = {
-    default: 'bg-white border border-gray-300 focus:border-orange-500 focus:ring-1 focus:ring-orange-500',
+    default: 'bg-white border border-neutral-200 focus:border-primary-500 focus:ring-1 focus:ring-primary-500',
     outline: 'bg-white/20 backdrop-blur-sm border-2 border-white/30 focus:border-white/50 focus:ring-2 focus:ring-white/50 text-neutral-800',
-    filled: 'bg-gray-50 border border-gray-200 focus:border-orange-500 focus:ring-1 focus:ring-orange-500',
+    filled: 'bg-neutral-50 border border-neutral-200 focus:border-primary-500 focus:ring-1 focus:ring-primary-500',
   };
 
   return (
     <div className={clsx('relative', className)} ref={dropdownRef}>
       {/* Label */}
       {label && (
-        <label className="block text-sm font-medium text-gray-700 mb-2">
+        <label className="block text-sm font-medium text-neutral-700 mb-2">
           {label}
         </label>
       )}
@@ -148,8 +148,8 @@ export default function Dropdown({
           sizeClasses[size],
           variantClasses[variant],
           disabled
-            ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-            : 'hover:border-orange-400 cursor-pointer',
+            ? 'bg-neutral-100 text-neutral-400 cursor-not-allowed'
+            : 'hover:border-secondary-400 cursor-pointer',
           error && 'border-red-500 focus:border-red-500 focus:ring-red-500',
           className
         )}
@@ -161,7 +161,7 @@ export default function Dropdown({
               {selectedOptions.slice(0, multiple ? 2 : 1).map((option, index) => (
                 <div key={option.value} className="flex items-center space-x-1">
                   {option.icon && (
-                    <span className="text-gray-500">
+                    <span className="text-neutral-500">
                       {typeof option.icon === 'string' ? (
                         <Icon name={option.icon} />
                       ) : (
@@ -170,7 +170,7 @@ export default function Dropdown({
                     </span>
                   )}
                   {multiple && selectedOptions.length > 2 && index === 1 && (
-                    <span className="text-gray-500">+{selectedOptions.length - 1}</span>
+                    <span className="text-neutral-500">+{selectedOptions.length - 1}</span>
                   )}
                 </div>
               ))}
@@ -211,28 +211,28 @@ export default function Dropdown({
 
       {/* Error Message */}
       {error && (
-        <p className="mt-1 text-sm text-red-600">{error}</p>
+        <p className="mt-1 text-sm text-error-600">{error}</p>
       )}
 
       {/* Dropdown Menu */}
       {isOpen && (
         <div
           className={clsx(
-            'absolute z-[99999] w-full mt-1 bg-white border border-gray-200 border-b-2 border-b-gray-300 rounded-lg shadow-xl',
+            'absolute z-[99999] w-full mt-1 bg-white border border-neutral-200 border-b-2 border-b-neutral-300 rounded-lg shadow-xl',
             align === 'right' ? 'right-0' : 'left-0'
           )}
           style={{ maxHeight, zIndex: 99999 }}
         >
           {/* Search Input */}
           {searchable && (
-            <div className="p-3 border-b border-gray-200">
+            <div className="p-3 border-b border-neutral-200">
               <input
                 ref={searchRef}
                 type="text"
                 placeholder="Search options..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-orange-500 focus:border-orange-500"
+                className="w-full px-3 py-2 text-sm border border-neutral-300 rounded-md focus:outline-none focus:ring-1 focus:ring-secondary-500 focus:border-secondary-500"
               />
             </div>
           )}
@@ -240,7 +240,7 @@ export default function Dropdown({
           {/* Options List */}
           <div className="py-1 max-h-60 overflow-auto bg-white relative" style={{ zIndex: 99999 }}>
             {filteredOptions.length === 0 ? (
-              <div className="px-4 py-3 text-sm text-gray-500 text-center">
+              <div className="px-4 py-3 text-sm text-neutral-500 text-center">
                 {searchTerm ? 'No options found' : 'No options available'}
               </div>
             ) : (
@@ -257,15 +257,15 @@ export default function Dropdown({
                     className={clsx(
                       'w-full px-4 py-3 text-left flex items-center space-x-3 transition-colors duration-150 relative bg-white',
                       isSelected
-                        ? 'bg-orange-50 text-orange-900'
-                        : 'text-gray-900 hover:bg-gray-50',
+                        ? 'bg-secondary-50 text-secondary-900'
+                        : 'text-neutral-900 hover:bg-neutral-50',
                       isDisabled && 'opacity-50 cursor-not-allowed hover:bg-transparent'
                     )}
                     style={{ zIndex: 99999 }}
                   >
                     {/* Option Icon */}
                     {option.icon && (
-                      <span className="text-gray-500 flex-shrink-0">
+                      <span className="text-neutral-500 flex-shrink-0">
                         {typeof option.icon === 'string' ? (
                           <Icon name={option.icon} />
                         ) : (
@@ -285,14 +285,14 @@ export default function Dropdown({
                             'ml-2 px-2 py-1 text-xs font-medium rounded-full',
                             option.color
                               ? `bg-${option.color}-100 text-${option.color}-800`
-                              : 'bg-gray-100 text-gray-800'
+                              : 'bg-neutral-100 text-neutral-800'
                           )}>
                             {option.badge}
                           </span>
                         )}
                       </div>
                       {option.description && (
-                        <p className="text-xs text-gray-500 mt-1 truncate">
+                        <p className="text-xs text-neutral-500 mt-1 truncate">
                           {option.description}
                         </p>
                       )}
@@ -300,7 +300,7 @@ export default function Dropdown({
 
                     {/* Checkmark */}
                     {isSelected && showCheckmark && (
-                      <CheckIcon className="w-5 h-5 text-orange-600 flex-shrink-0" />
+                      <CheckIcon className="w-5 h-5 text-secondary-600 flex-shrink-0" />
                     )}
                   </button>
                 );

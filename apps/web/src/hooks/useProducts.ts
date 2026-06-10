@@ -1,12 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState, AppDispatch } from '@/store';
-import { 
-  setLoading, 
-  setProducts, 
-  setFeaturedProducts, 
-  setCategories, 
-  setError 
+import {
+  setLoading,
+  setProducts,
+  setCategories,
+  setError
 } from '@/store/slices/productSlice';
 import { api } from '@/services/api';
 import { productTypesApi } from '@/services/productTypes';
@@ -25,27 +24,17 @@ export const useProducts = () => {
     }
   };
 
-  const fetchFeaturedProducts = async () => {
-    try {
-      const data = await api.getFeaturedProducts();
-      dispatch(setFeaturedProducts(data));
-    } catch (err) {
-      // Error fetching featured products
-    }
-  };
-
   const fetchCategories = async () => {
     try {
       const data = await api.getCategories();
       dispatch(setCategories(data));
     } catch (err) {
-      // Error fetching categories
+      // silent
     }
   };
 
   useEffect(() => {
     fetchProducts();
-    fetchFeaturedProducts();
     fetchCategories();
   }, []);
 
@@ -54,29 +43,6 @@ export const useProducts = () => {
     isLoading,
     error,
     refetch: fetchProducts,
-  };
-};
-
-export const useFeaturedProducts = () => {
-  const dispatch = useDispatch<AppDispatch>();
-  const { featuredProducts } = useSelector((state: RootState) => state.product);
-
-  const fetchFeaturedProducts = async () => {
-    try {
-      const data = await api.getFeaturedProducts();
-      dispatch(setFeaturedProducts(data));
-    } catch (err) {
-      // Error fetching featured products
-    }
-  };
-
-  useEffect(() => {
-    fetchFeaturedProducts();
-  }, []);
-
-  return {
-    featuredProducts,
-    refetch: fetchFeaturedProducts,
   };
 };
 

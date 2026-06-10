@@ -15,7 +15,6 @@ interface Category {
 
 interface ProductType {
   id: string;
-  name: string;
   displayName: string;
   description?: string;
   color?: string;
@@ -91,7 +90,7 @@ export default function CategoryTabs({
   }, [productTypes]);
 
   return (
-    <div className={`bg-white shadow-lg border-b border-gray-200 relative hidden md:block ${className}`} ref={dropdownRef}>
+    <div className={`bg-white shadow-lg border-b border-neutral-200 relative hidden md:block ${className}`} ref={dropdownRef}>
       <div className="container-custom">
         <div className="flex flex-wrap items-center justify-start gap-2 py-4">
           {/* All Products Button */}
@@ -103,8 +102,8 @@ export default function CategoryTabs({
             }}
             className={`px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
               !selectedCategory
-                ? 'bg-orange-500 text-white shadow-md'
-                : 'text-gray-700 hover:bg-gray-100'
+                ? 'bg-primary-500 text-white shadow-sm'
+                : 'text-neutral-700 hover:bg-neutral-100'
             }`}
           >
             All Products
@@ -123,8 +122,8 @@ export default function CategoryTabs({
                   onClick={() => handleCategoryClick(category.id)}
                   className={`px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 flex items-center space-x-1 ${
                     isActive
-                      ? 'bg-orange-500 text-white shadow-md'
-                      : 'text-gray-700 hover:bg-gray-100'
+                      ? 'bg-primary-500 text-white shadow-sm'
+                      : 'text-neutral-700 hover:bg-neutral-100'
                   }`}
                 >
                   <span>{category.name}</span>
@@ -155,22 +154,22 @@ export default function CategoryTabs({
         if (!category || categoryProductTypes.length === 0) return null;
         
         return (
-          <div className="absolute top-full left-0 right-0 mt-2 w-full z-50 overflow-hidden border-2 border-green-800">
+          <div className="absolute top-full left-0 right-0 mt-2 w-full z-50 overflow-hidden border border-neutral-200 rounded-b-xl shadow-lg">
             <div className="flex flex-col md:flex-row h-80 md:h-96 max-h-[70vh]">
               {/* Left Half - Product Type Options */}
               <div className="w-full md:w-1/2 bg-white flex flex-col min-h-0">
                 {/* Header */}
-                <div className="px-4 py-3 text-xs font-semibold text-gray-800 uppercase tracking-wider bg-gray-50">
+                <div className="px-4 py-3 text-xs font-semibold text-neutral-800 uppercase tracking-wider bg-neutral-50">
                   <div className="flex items-center space-x-3">
                     <div>
                       <div className="flex items-center space-x-2">
-                        <span className="font-bold text-gray-900">{category.name}</span>
-                        <span className="px-2 py-1 text-xs font-medium bg-orange-100 text-orange-800 rounded-full">
+                        <span className="font-bold text-neutral-900">{category.name}</span>
+                        <span className="px-2 py-1 text-xs font-medium bg-primary-100 text-primary-700 rounded-full">
                           {categoryProductTypes.length} {categoryProductTypes.length === 1 ? 'type' : 'types'}
                         </span>
                       </div>
                       {category.description && (
-                        <p className="text-xs text-gray-700 font-normal normal-case mt-0.5">
+                        <p className="text-xs text-neutral-700 font-normal normal-case mt-0.5">
                           {category.description}
                         </p>
                       )}
@@ -188,17 +187,17 @@ export default function CategoryTabs({
                           onClick={() => handleProductTypeClick(type.id)}
                           className={`w-full text-left px-4 py-3 text-sm transition-all duration-300 flex items-center space-x-3 group relative ${
                             isTypeActive
-                              ? 'bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-lg'
-                              : 'text-gray-800 hover:text-gray-900 hover:bg-gray-50'
+                              ? 'bg-primary-500 text-white shadow-sm'
+                              : 'text-neutral-800 hover:text-neutral-900 hover:bg-neutral-50'
                           }`}
                         >
                           
                           {/* Type name with enhanced typography */}
                           <div className="flex-1 text-left">
                             <span className={`block font-medium transition-all duration-300 ${
-                              isTypeActive 
-                                ? 'text-white font-bold text-base' 
-                                : 'text-gray-800 group-hover:text-gray-900 group-hover:font-semibold'
+                              isTypeActive
+                                ? 'text-white font-semibold'
+                                : 'text-neutral-800 group-hover:text-neutral-900 group-hover:font-semibold'
                             }`}>
                               {type.displayName}
                             </span>
@@ -224,7 +223,7 @@ export default function CategoryTabs({
                 }}
               >
                 {/* Optional overlay for better text contrast if needed */}
-                <div className="absolute inset-0 bg-black/10"></div>
+                <div className="absolute inset-0 bg-neutral-900/10"></div>
               </div>
             </div>
           </div>

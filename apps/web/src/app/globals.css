@@ -278,6 +278,25 @@
   50%       { opacity: 0.5; }
 }
 
+@keyframes notification-scroll {
+  from { transform: translateX(0); }
+  to   { transform: translateX(var(--nb-translate, -25%)); }
+}
+
+.notification-scroll {
+  display: inline-flex;
+  position: absolute;
+  inset: 0;
+  align-items: center;
+  white-space: nowrap;
+  animation: notification-scroll var(--nb-duration, 50s) linear infinite;
+  will-change: transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .notification-scroll { animation-duration: calc(var(--nb-duration, 50s) * 3); }
+}
+
 /* ────────────────────────── RTL SUPPORT ───────────────────────────────────── */
 
 [dir="rtl"]            { text-align: right; }

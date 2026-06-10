@@ -129,38 +129,44 @@ export default function MobileCategoryDropdown({
   if (!isOpen) return null;
 
   return (
-    <div 
-      className="md:hidden fixed inset-0 z-50 bg-black bg-opacity-50" 
+    <div
+      className="md:hidden fixed inset-0 z-50 bg-black/40"
       onClick={onClose}
       role="dialog"
       aria-modal="true"
       aria-labelledby="category-dropdown-title"
     >
-      <div 
+      <div
         ref={dropdownRef}
         className="absolute bottom-0 left-0 right-0 bg-white rounded-t-3xl shadow-2xl max-h-[85vh] overflow-hidden"
         onClick={(e) => e.stopPropagation()}
         role="document"
       >
+        {/* Drag handle */}
+        <div className="flex justify-center pt-3 pb-1">
+          <div className="w-10 h-1 bg-neutral-200 rounded-full" />
+        </div>
+
         {/* Header */}
-        <div className="bg-white px-6 py-4 border-b border-gray-200">
-          <div className="flex items-center justify-between">
-            <h3 id="category-dropdown-title" className="text-lg font-semibold text-gray-900">Categories</h3>
-            <button
-              onClick={onClose}
-              className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-all duration-200"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
+        <div className="px-6 py-3 border-b border-neutral-100 flex items-center justify-between">
+          <h3 id="category-dropdown-title" className="text-base font-semibold text-neutral-900">
+            Browse Categories
+          </h3>
+          <button
+            onClick={onClose}
+            className="p-1.5 text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 rounded-full transition-colors"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
         </div>
 
         {/* Content */}
         <div className="overflow-y-auto max-h-[65vh] bg-white overscroll-contain">
-          {/* All Products Link */}
-          <div className="px-4 py-2 border-b border-gray-100">
+
+          {/* All Products */}
+          <div className="px-4 py-2 border-b border-neutral-100">
             <button
               onClick={() => {
                 onCategoryChange('');
@@ -170,8 +176,8 @@ export default function MobileCategoryDropdown({
               }}
               className={`w-full text-left py-2 px-1 text-base font-medium transition-colors ${
                 !selectedCategory
-                  ? 'text-orange-600 border-l-4 border-orange-500 pl-3'
-                  : 'text-gray-700 hover:text-orange-600'
+                  ? 'text-primary-600 border-l-4 border-primary-500 pl-3'
+                  : 'text-neutral-700 hover:text-primary-600'
               }`}
             >
               All Products
@@ -181,29 +187,29 @@ export default function MobileCategoryDropdown({
           {/* Categories */}
           <div className="py-1">
             {categories && categories.length > 0 ? categories.map((category) => {
-              const isActive = selectedCategory === category.id;
+              const isActive          = selectedCategory === category.id;
               const categoryProductTypes = getFilteredProductTypes(category.id);
-              const isDropdownOpen = openDropdown === category.id;
-              const hasProductTypes = categoryProductTypes.length > 0;
-              
+              const isDropdownOpen    = openDropdown === category.id;
+              const hasProductTypes   = categoryProductTypes.length > 0;
+
               return (
                 <div key={category.id}>
-                  {/* Category Link */}
+                  {/* Category row */}
                   <div className="px-4 py-1">
                     <button
                       onClick={() => handleCategoryClick(category.id)}
                       className={`w-full text-left py-2 px-1 text-base font-medium transition-colors flex items-center justify-between ${
                         isActive
-                          ? 'text-orange-600 border-l-4 border-orange-500 pl-3'
-                          : 'text-gray-700 hover:text-orange-600'
+                          ? 'text-primary-600 border-l-4 border-primary-500 pl-3'
+                          : 'text-neutral-700 hover:text-primary-600'
                       }`}
                     >
                       <span>{category.name}</span>
                       {hasProductTypes && (
-                        <svg 
-                          className={`w-4 h-4 transition-transform duration-200 ${isDropdownOpen ? 'rotate-180' : ''}`} 
-                          fill="none" 
-                          stroke="currentColor" 
+                        <svg
+                          className={`w-4 h-4 text-neutral-400 transition-transform duration-200 ${isDropdownOpen ? 'rotate-180' : ''}`}
+                          fill="none"
+                          stroke="currentColor"
                           viewBox="0 0 24 24"
                           aria-hidden="true"
                         >
@@ -213,11 +219,12 @@ export default function MobileCategoryDropdown({
                     </button>
                   </div>
 
-                  {/* Product Types Dropdown */}
+                  {/* Product types panel */}
                   {isDropdownOpen && hasProductTypes && (
-                    <div className="bg-gray-50 px-4 py-1">
+                    <div className="bg-neutral-50 px-4 py-1">
                       <div className="flex space-x-3 max-h-64 min-h-[120px]">
-                        {/* Product Types List - 50% Width */}
+
+                        {/* Types list */}
                         <div className="w-1/2 overflow-y-auto max-h-64 relative overscroll-contain">
                           {categoryProductTypes.map((type) => {
                             const isTypeActive = selectedProductType === type.id;
@@ -229,39 +236,38 @@ export default function MobileCategoryDropdown({
                                   e.stopPropagation();
                                   handleProductTypeClick(type.id);
                                 }}
-                                className={`w-full text-left py-2 text-sm transition-colors relative ${
+                                className={`w-full text-left py-2 text-sm font-medium transition-colors relative ${
                                   isTypeActive
-                                    ? 'text-orange-600 pl-8'
-                                    : 'text-gray-600 hover:text-orange-600 pl-6'
+                                    ? 'text-primary-600 pl-8'
+                                    : 'text-neutral-600 hover:text-primary-600 pl-6'
                                 }`}
                               >
                                 {isTypeActive && (
-                                  <div className="absolute left-6 top-0 bottom-0 w-1 bg-orange-500" aria-hidden="true"></div>
+                                  <div className="absolute left-6 top-0 bottom-0 w-0.5 bg-primary-500" aria-hidden="true" />
                                 )}
                                 {type.displayName}
                               </button>
                             );
                           })}
-                          
-                          {/* Scroll Indicator */}
+
                           {categoryProductTypes.length > 4 && (
-                            <div className="absolute bottom-0 left-0 right-0 h-4 bg-gradient-to-t from-gray-50 to-transparent pointer-events-none" aria-hidden="true"></div>
+                            <div className="absolute bottom-0 left-0 right-0 h-4 bg-gradient-to-t from-neutral-50 to-transparent pointer-events-none" aria-hidden="true" />
                           )}
                         </div>
-                        
-                        {/* Category Image - 50% Width */}
-                        <div className="w-1/2 min-h-[120px] max-h-64 rounded-lg overflow-hidden flex-shrink-0">
+
+                        {/* Category image */}
+                        <div className="w-1/2 min-h-[120px] max-h-64 rounded-xl overflow-hidden flex-shrink-0">
                           {category.image ? (
-                            <img 
-                              src={category.image} 
+                            <img
+                              src={category.image}
                               alt={`${category.name} category`}
                               className="w-full h-full object-cover"
                               loading="lazy"
                             />
                           ) : (
-                            <div className="w-full h-full min-h-[120px] bg-gray-200 flex items-center justify-center">
-                              <svg className="h-8 w-8 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                            <div className="w-full h-full min-h-[120px] bg-neutral-100 flex items-center justify-center">
+                              <svg className="h-8 w-8 text-neutral-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                               </svg>
                             </div>
                           )}
@@ -273,18 +279,17 @@ export default function MobileCategoryDropdown({
               );
             }) : (
               <div className="text-center py-12 px-6">
-                <div className="p-4 bg-gray-100 rounded-full w-16 h-16 mx-auto mb-4 flex items-center justify-center">
-                  <svg className="h-8 w-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                <div className="w-16 h-16 mx-auto mb-4 bg-neutral-100 rounded-full flex items-center justify-center">
+                  <svg className="h-7 w-7 text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
                   </svg>
                 </div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">No Categories Available</h3>
-                <p className="text-gray-500">Please check back later for new categories</p>
+                <h3 className="text-base font-semibold text-neutral-900 mb-1">No Categories Yet</h3>
+                <p className="text-sm text-neutral-400">Check back soon for fresh categories</p>
               </div>
             )}
           </div>
         </div>
-
       </div>
     </div>
   );

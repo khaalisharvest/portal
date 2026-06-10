@@ -2,7 +2,6 @@ import { Injectable, NotFoundException, ConflictException, ForbiddenException } 
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Review } from '../entities/review.entity';
-import { Product } from '../entities/product.entity';
 import { CreateReviewDto } from '../dto/create-review.dto';
 
 @Injectable()
@@ -10,14 +9,9 @@ export class ReviewsService {
   constructor(
     @InjectRepository(Review)
     private reviewRepository: Repository<Review>,
-    @InjectRepository(Product)
-    private productRepository: Repository<Product>,
   ) {}
 
   async create(productId: string, userId: string, dto: CreateReviewDto): Promise<Review> {
-    const product = await this.productRepository.findOne({ where: { id: productId } });
-    if (!product) throw new NotFoundException('Product not found');
-
     const existing = await this.reviewRepository.findOne({ where: { productId, userId } });
     if (existing) throw new ConflictException('You have already reviewed this product');
 
@@ -48,16 +42,8 @@ export class ReviewsService {
     await this.updateProductRating(review.productId);
   }
 
-  private async updateProductRating(productId: string): Promise<void> {
-    const result = await this.reviewRepository
-      .createQueryBuilder('r')
-      .select('AVG(r.rating)', 'avg')
-      .addSelect('COUNT(r.id)', 'count')
-      .where('r.productId = :productId AND r.isActive = true', { productId })
-      .getRawOne();
-    await this.productRepository.update(productId, {
-      rating: result.avg ? Math.round(parseFloat(result.avg) * 10) / 10 : 0,
-      reviewCount: parseInt(result.count) || 0,
-    });
+  private async updateProductRating(_productId: string): Promise<void> {
+    // rating and reviewCount fields no longer exist on Product entity —
+    // aggregate stats are computed on-the-fly in findByProduct()
   }
 }

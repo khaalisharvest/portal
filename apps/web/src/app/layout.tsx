@@ -4,8 +4,8 @@ import './globals.css';
 import { Providers } from './providers';
 import ConditionalHeader from '@/components/layout/ConditionalHeader';
 import ConditionalFooter from '@/components/layout/ConditionalFooter';
+import ConditionalNotificationBar from '@/components/layout/ConditionalNotificationBar';
 import WhatsAppButton from '@/components/ui/WhatsAppButton';
-import NotificationBar from '@/components/ui/NotificationBar';
 import { APP_URL } from '@/config/env';
 
 const poppins = Poppins({
@@ -81,7 +81,7 @@ export default function RootLayout({
       </head>
       <body className={`${poppins.variable} font-sans bg-neutral-50 text-neutral-800`}>
         <Providers>
-          <NotificationBar />
+          <ConditionalNotificationBar />
           <ConditionalHeader />
           <main className="min-h-screen">
             {children}

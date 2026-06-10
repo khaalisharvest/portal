@@ -5,22 +5,22 @@ interface Product {
   name: string;
   description: string;
   price: number;
+  originalPrice?: number;
   images: string[];
-  category: {
-    id: string;
-    name: string;
-  };
-  seller: {
-    id: string;
-    businessName: string;
-  };
-  rating: number;
-  reviewCount: number;
+  categoryId: string;
+  productTypeId?: string;
+  category?: { id: string; name: string };
+  productType?: { id: string; displayName: string; color?: string };
+  isOrganic: boolean;
   isAvailable: boolean;
   featured: boolean;
   unit: string;
   tags?: string[];
+  hasVariants?: boolean;
+  variantName?: string;
+  variants?: Array<{ name: string; price: number; originalPrice?: number; isAvailable?: boolean }>;
   createdAt: string;
+  updatedAt: string;
 }
 
 interface Category {
@@ -35,7 +35,6 @@ interface Category {
 
 interface ProductState {
   products: Product[];
-  featuredProducts: Product[];
   categories: Category[];
   isLoading: boolean;
   error: string | null;
@@ -45,7 +44,6 @@ interface ProductState {
 
 const initialState: ProductState = {
   products: [],
-  featuredProducts: [],
   categories: [],
   isLoading: false,
   error: null,
@@ -64,9 +62,6 @@ const productSlice = createSlice({
       state.products = action.payload;
       state.isLoading = false;
       state.error = null;
-    },
-    setFeaturedProducts: (state, action: PayloadAction<Product[]>) => {
-      state.featuredProducts = action.payload;
     },
     setCategories: (state, action: PayloadAction<Category[]>) => {
       state.categories = action.payload;
@@ -90,7 +85,6 @@ const productSlice = createSlice({
 export const {
   setLoading,
   setProducts,
-  setFeaturedProducts,
   setCategories,
   setError,
   setSearchQuery,

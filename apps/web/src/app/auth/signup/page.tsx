@@ -102,8 +102,8 @@ export default function SignupPage() {
           className="card-elevated"
         >
           {/* Header */}
-          <div className="text-center mb-8">
-            <div className="mx-auto h-36 w-36 relative mb-4">
+          <div className="text-center mb-6">
+            <div className="mx-auto h-20 w-20 sm:h-28 sm:w-28 relative mb-3">
               <Image
                 src="/images/logo.png"
                 alt="Khaalis Harvest Logo"

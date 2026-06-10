@@ -78,47 +78,81 @@ function AccountContent() {
   };
 
   const tabs = [
-    { id: 'profile', label: 'Profile', icon: '👤' },
-    { id: 'addresses', label: 'Addresses', icon: '📍' },
-    { id: 'security', label: 'Security', icon: '🔒' },
+    {
+      id: 'profile',
+      label: 'Profile',
+      icon: (
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+        </svg>
+      ),
+    },
+    {
+      id: 'addresses',
+      label: 'Addresses',
+      icon: (
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />
+        </svg>
+      ),
+    },
+    {
+      id: 'security',
+      label: 'Security',
+      icon: (
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
+        </svg>
+      ),
+    },
   ] as const;
 
   return (
     <div className="min-h-screen bg-neutral-50 py-8">
       <div className="container-custom max-w-4xl">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-neutral-800">My Account</h1>
+          <h1 className="text-3xl font-bold text-neutral-900">My Account</h1>
           <p className="text-neutral-600 mt-1">Welcome back, {user?.name?.split(' ')[0]}</p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           {/* Sidebar */}
           <div className="lg:col-span-1">
-            <div className="bg-white rounded-2xl shadow-soft p-4">
+            <div className="bg-white rounded-2xl shadow-sm p-4">
               {tabs.map(tab => (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`w-full text-left px-4 py-3 rounded-xl mb-1 transition-colors flex items-center gap-3 ${
+                  className={`w-full text-left px-4 py-3 rounded-xl mb-1 transition-colors flex items-center gap-3 min-h-[44px] ${
                     activeTab === tab.id ? 'bg-primary-50 text-primary-700 font-medium' : 'text-neutral-600 hover:bg-neutral-50'
                   }`}
                 >
-                  <span>{tab.icon}</span>
+                  {tab.icon}
                   {tab.label}
                 </button>
               ))}
               <hr className="my-2" />
-              <Link href="/orders" className="w-full text-left px-4 py-3 rounded-xl text-neutral-600 hover:bg-neutral-50 flex items-center gap-3">
-                <span>📦</span> My Orders
+              <Link href="/orders" className="w-full text-left px-4 py-3 rounded-xl text-neutral-600 hover:bg-neutral-50 flex items-center gap-3 min-h-[44px]">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" />
+                </svg>
+                My Orders
               </Link>
-              <Link href="/wishlist" className="w-full text-left px-4 py-3 rounded-xl text-neutral-600 hover:bg-neutral-50 flex items-center gap-3">
-                <span>❤️</span> Wishlist
+              <Link href="/wishlist" className="w-full text-left px-4 py-3 rounded-xl text-neutral-600 hover:bg-neutral-50 flex items-center gap-3 min-h-[44px]">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" />
+                </svg>
+                Wishlist
               </Link>
               <button
                 onClick={logout}
-                className="w-full text-left px-4 py-3 rounded-xl text-red-600 hover:bg-red-50 flex items-center gap-3"
+                className="w-full text-left px-4 py-3 rounded-xl text-error-600 hover:bg-error-50 flex items-center gap-3 min-h-[44px]"
               >
-                <span>🚪</span> Logout
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75" />
+                </svg>
+                Logout
               </button>
             </div>
           </div>
@@ -126,8 +160,8 @@ function AccountContent() {
           {/* Main Content */}
           <div className="lg:col-span-3">
             {activeTab === 'profile' && (
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="bg-white rounded-2xl shadow-soft p-6">
-                <h2 className="text-xl font-bold text-neutral-800 mb-6">Personal Information</h2>
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="bg-white rounded-2xl shadow-sm p-6">
+                <h2 className="text-xl font-bold text-neutral-900 mb-6">Personal Information</h2>
                 <form onSubmit={handleUpdateProfile} className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-neutral-700 mb-1">Full Name</label>
@@ -165,11 +199,16 @@ function AccountContent() {
             )}
 
             {activeTab === 'addresses' && (
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="bg-white rounded-2xl shadow-soft p-6">
-                <h2 className="text-xl font-bold text-neutral-800 mb-6">Saved Addresses</h2>
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="bg-white rounded-2xl shadow-sm p-6">
+                <h2 className="text-xl font-bold text-neutral-900 mb-6">Saved Addresses</h2>
                 {addresses.length === 0 ? (
                   <div className="text-center py-8 text-neutral-500">
-                    <p className="text-4xl mb-3">📍</p>
+                    <div className="flex justify-center mb-3">
+                      <svg className="w-10 h-10 text-neutral-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />
+                      </svg>
+                    </div>
                     <p>No saved addresses yet. Add one during checkout.</p>
                   </div>
                 ) : (
@@ -178,7 +217,7 @@ function AccountContent() {
                       <div key={addr.id} className="border border-neutral-200 rounded-xl p-4 flex justify-between items-start">
                         <div>
                           <div className="flex items-center gap-2 mb-1">
-                            <span className="font-medium text-neutral-800">{addr.fullName}</span>
+                            <span className="font-medium text-neutral-900">{addr.fullName}</span>
                             <span className="text-xs bg-neutral-100 text-neutral-600 px-2 py-0.5 rounded-full capitalize">{addr.type}</span>
                             {addr.isDefault && <span className="text-xs bg-primary-100 text-primary-700 px-2 py-0.5 rounded-full">Default</span>}
                           </div>
@@ -188,7 +227,7 @@ function AccountContent() {
                         </div>
                         <button
                           onClick={() => handleDeleteAddress(addr.id)}
-                          className="text-red-400 hover:text-red-600 text-sm"
+                          className="text-error-400 hover:text-error-600 text-sm"
                         >
                           Remove
                         </button>
@@ -200,12 +239,12 @@ function AccountContent() {
             )}
 
             {activeTab === 'security' && (
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="bg-white rounded-2xl shadow-soft p-6">
-                <h2 className="text-xl font-bold text-neutral-800 mb-6">Security Settings</h2>
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="bg-white rounded-2xl shadow-sm p-6">
+                <h2 className="text-xl font-bold text-neutral-900 mb-6">Security Settings</h2>
                 <div className="space-y-4">
                   <div className="border border-neutral-200 rounded-xl p-4 flex justify-between items-center">
                     <div>
-                      <h3 className="font-medium text-neutral-800">Password</h3>
+                      <h3 className="font-medium text-neutral-900">Password</h3>
                       <p className="text-sm text-neutral-500">Change your account password</p>
                     </div>
                     <Link href="/auth/forgot-password" className="btn-secondary text-sm">

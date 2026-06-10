@@ -7,6 +7,7 @@ import { motion } from 'framer-motion';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCart } from '@/contexts/CartContext';
 import toast from 'react-hot-toast';
+import ProductLoader from '@/components/ui/ProductLoader';
 
 interface WishlistItem {
   id: string;
@@ -83,22 +84,27 @@ export default function WishlistPage() {
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-primary-600" />
+        <ProductLoader size="lg" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-neutral-50 py-8">
+    <div className="min-h-screen bg-neutral-50 py-6 sm:py-8">
       <div className="container-custom">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-neutral-800">My Wishlist</h1>
+          <h1 className="text-3xl font-bold text-neutral-900">My Wishlist</h1>
           <p className="text-neutral-600 mt-1">{wishlist.length} item{wishlist.length !== 1 ? 's' : ''} saved</p>
         </div>
 
         {wishlist.length === 0 ? (
           <div className="text-center py-16">
-            <div className="text-6xl mb-4">🌿</div>
+            <div className="flex justify-center mb-4">
+              <svg className="w-14 h-14 text-primary-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 21C12 21 3 14.5 3 8.5A5.5 5.5 0 0 1 12 5.5 5.5 5.5 0 0 1 21 8.5C21 14.5 12 21 12 21Z" />
+                <path d="M8 4 Q10 2 12 3 Q14 2 16 4" />
+              </svg>
+            </div>
             <h2 className="text-2xl font-bold text-neutral-700 mb-2">Your wishlist is empty</h2>
             <p className="text-neutral-500 mb-6">Save products you love for later</p>
             <Link href="/products" className="btn-primary">Browse Products</Link>
@@ -111,7 +117,7 @@ export default function WishlistPage() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: idx * 0.05 }}
-                className="bg-white rounded-2xl shadow-soft overflow-hidden group"
+                className="bg-white rounded-2xl shadow-sm overflow-hidden group"
               >
                 <div className="relative h-48">
                   <Image
@@ -123,10 +129,10 @@ export default function WishlistPage() {
                   />
                   <button
                     onClick={() => removeFromWishlist(item.productId)}
-                    className="absolute top-3 right-3 p-2 bg-white rounded-full shadow-md hover:bg-red-50 transition-colors"
+                    className="absolute top-3 right-3 p-2 bg-white rounded-full shadow-md hover:bg-error-50 transition-colors"
                     title="Remove from wishlist"
                   >
-                    <svg className="w-5 h-5 text-red-500" fill="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-5 h-5 text-error-500" fill="currentColor" viewBox="0 0 24 24">
                       <path d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
                     </svg>
                   </button>
@@ -134,12 +140,12 @@ export default function WishlistPage() {
                 <div className="p-4">
                   <p className="text-xs text-primary-600 font-medium mb-1">{item.product.category?.name}</p>
                   <Link href={`/products/${item.productId}`}>
-                    <h3 className="font-semibold text-neutral-800 hover:text-primary-600 transition-colors line-clamp-2">{item.product.name}</h3>
+                    <h3 className="font-semibold text-neutral-900 hover:text-primary-600 transition-colors line-clamp-2">{item.product.name}</h3>
                   </Link>
                   <div className="flex items-center gap-2 mt-2 mb-4">
-                    <span className="text-lg font-bold text-primary-700">PKR {item.product.price.toLocaleString()}</span>
+                    <span className="text-lg font-bold text-neutral-900">₨{item.product.price.toLocaleString()}</span>
                     {item.product.originalPrice && item.product.originalPrice > item.product.price && (
-                      <span className="text-sm text-neutral-400 line-through">PKR {item.product.originalPrice.toLocaleString()}</span>
+                      <span className="text-sm text-neutral-400 line-through">₨{item.product.originalPrice.toLocaleString()}</span>
                     )}
                     <span className="text-xs text-neutral-500">/{item.product.unit}</span>
                   </div>

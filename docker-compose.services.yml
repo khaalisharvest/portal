@@ -20,7 +20,7 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: password
     ports:
-      - "5433:5432"     # host:5433 → container:5432  (matches .env DB_PORT=5433)
+      - "5434:5432"     # host:5434 → container:5432  (5433 conflicts with other projects)
     volumes:
       - postgres_dev_data:/var/lib/postgresql/data
     restart: unless-stopped

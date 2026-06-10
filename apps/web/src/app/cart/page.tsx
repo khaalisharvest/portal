@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -8,19 +8,30 @@ import { motion } from 'framer-motion';
 import { useCart } from '@/contexts/CartContext';
 import { useAuth } from '@/contexts/AuthContext';
 import Icon from '@/components/ui/Icon';
+import ProductLoader from '@/components/ui/ProductLoader';
 import ConfirmationDialog from '@/components/ui/ConfirmationDialog';
 import toast from 'react-hot-toast';
 import { settingsApi, DeliveryCalculation } from '@/services/settings';
 import { configService } from '@/services/config';
+import { useEffect } from 'react';
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+function fmt(n: number) {
+  return Number(n).toLocaleString('en-PK', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+}
+
+// ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function CartPage() {
   const router = useRouter();
   const { state, updateQuantity, removeFromCart, clearCart } = useCart();
   const { user } = useAuth();
+
   const [isUpdating, setIsUpdating] = useState<string | null>(null);
-  const [deliveryCalculation, setDeliveryCalculation] = useState<DeliveryCalculation | null>(null);
-  const [isCalculatingDelivery, setIsCalculatingDelivery] = useState(false);
-  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [deliveryCalc, setDeliveryCalc] = useState<DeliveryCalculation | null>(null);
+  const [calcLoading, setCalcLoading] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
   const [pendingAction, setPendingAction] = useState<{
     type: 'remove' | 'clear';
     productId?: string;
@@ -28,475 +39,382 @@ export default function CartPage() {
     productName?: string;
   } | null>(null);
 
-  // Calculate delivery fee when cart total changes
+  // ── Delivery fee ─────────────────────────────────────────────────────────
+
   useEffect(() => {
-    if (state.totalPrice > 0) {
-      calculateDeliveryFee();
-    }
+    if (state.totalPrice > 0) calcDelivery();
   }, [state.totalPrice]);
 
-  const calculateDeliveryFee = async () => {
-    if (state.totalPrice <= 0) return;
-    
-    setIsCalculatingDelivery(true);
+  const calcDelivery = async () => {
+    setCalcLoading(true);
     try {
-      // Get delivery settings from config
-      const deliverySettings = await configService.getDeliverySettings();
-      
-      if (!deliverySettings.isDeliveryEnabled) {
-        setDeliveryCalculation({
-          deliveryFee: 0,
-          isFree: true,
-          reason: 'Delivery is disabled'
-        });
+      const s = await configService.getDeliverySettings();
+      if (!s.isDeliveryEnabled) {
+        setDeliveryCalc({ deliveryFee: 0, isFree: true, reason: 'Delivery is disabled' });
         return;
       }
-
-      if (state.totalPrice >= deliverySettings.freeDeliveryThreshold) {
-        setDeliveryCalculation({
-          deliveryFee: 0,
-          isFree: true,
-          reason: `Your order qualifies for free delivery`
-        });
+      if (state.totalPrice >= s.freeDeliveryThreshold) {
+        setDeliveryCalc({ deliveryFee: 0, isFree: true, reason: 'Your order qualifies for free delivery' });
         return;
       }
-
-      const amountNeeded = deliverySettings.freeDeliveryThreshold - state.totalPrice;
-      setDeliveryCalculation({
-        deliveryFee: deliverySettings.deliveryFee,
+      const needed = s.freeDeliveryThreshold - state.totalPrice;
+      setDeliveryCalc({
+        deliveryFee: s.deliveryFee,
         isFree: false,
-        reason: `Add ₨${amountNeeded.toFixed(2)} more to get free delivery (spend ₨${deliverySettings.freeDeliveryThreshold} or more)`
+        reason: `Add ₨${fmt(needed)} more for free delivery (min ₨${fmt(s.freeDeliveryThreshold)})`,
       });
-    } catch (error) {
-      console.error('Error calculating delivery fee:', error);
-      throw error; // Don't fallback, let the error propagate
+    } catch {
+      // silent — show ₨0 fallback
     } finally {
-      setIsCalculatingDelivery(false);
+      setCalcLoading(false);
     }
   };
 
-  const handleQuantityChange = async (productId: string, selectedVariant: string | undefined, newQuantity: number) => {
-    if (newQuantity < 1) {
-      removeFromCart(productId, selectedVariant);
+  // ── Quantity & remove ─────────────────────────────────────────────────────
+
+  const handleQty = (productId: string, variant: string | undefined, next: number) => {
+    if (next < 1) {
+      removeFromCart(productId, variant);
       return;
     }
-
     setIsUpdating(productId);
     try {
-      updateQuantity(productId, selectedVariant, newQuantity);
-      toast.success('Quantity updated');
-    } catch (error) {
-      toast.error('Failed to update quantity');
+      updateQuantity(productId, variant, next);
     } finally {
       setIsUpdating(null);
     }
   };
 
-  const handleRemoveItem = (productId: string, selectedVariant: string | undefined, productName: string) => {
-    setPendingAction({
-      type: 'remove',
-      productId,
-      selectedVariant,
-      productName
-    });
-    setShowConfirmDialog(true);
+  const askRemove = (productId: string, variant: string | undefined, name: string) => {
+    setPendingAction({ type: 'remove', productId, selectedVariant: variant, productName: name });
+    setShowConfirm(true);
   };
 
-  const handleClearCart = () => {
-    setPendingAction({
-      type: 'clear'
-    });
-    setShowConfirmDialog(true);
+  const askClear = () => {
+    setPendingAction({ type: 'clear' });
+    setShowConfirm(true);
   };
 
-  const handleConfirmAction = async () => {
+  const confirmAction = () => {
     if (!pendingAction) return;
-
-    try {
-      if (pendingAction.type === 'remove' && pendingAction.productId && pendingAction.productName) {
-        setIsUpdating(pendingAction.productId);
-        removeFromCart(pendingAction.productId, pendingAction.selectedVariant);
-        toast.success(`${pendingAction.productName} removed from basket`);
-      } else if (pendingAction.type === 'clear') {
-        clearCart();
-        toast.success('Basket cleared successfully');
-      }
-    } catch (error) {
-      console.error('Error performing action:', error);
-      toast.error('Failed to perform action');
-    } finally {
+    if (pendingAction.type === 'remove' && pendingAction.productId) {
+      setIsUpdating(pendingAction.productId);
+      removeFromCart(pendingAction.productId, pendingAction.selectedVariant);
+      toast.success(`${pendingAction.productName} removed from basket`);
       setIsUpdating(null);
-      setShowConfirmDialog(false);
-      setPendingAction(null);
+    } else if (pendingAction.type === 'clear') {
+      clearCart();
+      toast.success('Basket cleared');
     }
-  };
-
-  const handleCancelAction = () => {
-    setShowConfirmDialog(false);
+    setShowConfirm(false);
     setPendingAction(null);
   };
 
-  const handleProceedToCheckout = () => {
-    if (state.isLoading) {
-      return; // Don't proceed while loading
-    }
-    
-    if (state.items.length === 0) {
-      toast.error('Your basket is empty');
+  // ── Checkout ──────────────────────────────────────────────────────────────
+
+  const goToCheckout = () => {
+    if (state.items.length === 0) { toast.error('Your basket is empty'); return; }
+    const hasUnavailable = state.items.some(i => !i.isAvailable);
+    if (hasUnavailable) {
+      toast.error('Some items are unavailable. Please remove them before checking out.');
       return;
     }
-
     router.push('/checkout');
   };
 
-  // Show loading state while cart is being loaded
+  // ── Computed totals ───────────────────────────────────────────────────────
+
+  const totalSavings = state.items.reduce((acc, item) => {
+    const orig = item.variantOriginalPrice ?? item.originalPrice;
+    if (orig && orig > item.price) acc += (orig - item.price) * item.quantity;
+    return acc;
+  }, 0);
+
+  const deliveryFee = deliveryCalc?.deliveryFee ?? 0;
+  const grandTotal = state.totalPrice + deliveryFee;
+
+  // ── Loading ───────────────────────────────────────────────────────────────
+
   if (state.isLoading) {
     return (
       <div className="min-h-screen organic-gradient flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-500 mx-auto mb-4"></div>
-          <p className="text-neutral-600">Loading your basket...</p>
+        <div className="text-center space-y-3">
+          <ProductLoader size="lg" />
+          <p className="text-neutral-500 text-sm">Loading your basket…</p>
         </div>
       </div>
     );
   }
+
+  // ── Empty basket ──────────────────────────────────────────────────────────
 
   if (state.items.length === 0) {
     return (
       <div className="min-h-screen organic-gradient">
-        {/* Breadcrumb */}
-        <div className="bg-white border-b border-primary-100">
-          <div className="container-custom py-4">
-            <nav className="flex items-center space-x-2 text-sm">
-              <button
-                onClick={() => router.push('/')}
-                className="text-neutral-500 hover:text-primary-600 transition-colors"
-              >
-                Home
-              </button>
-              <Icon name="chevron-right" className="w-4 h-4 text-neutral-400" />
-              <span className="text-neutral-900 font-medium">Basket</span>
-            </nav>
+        <Breadcrumb />
+        <div className="container-custom py-16 text-center space-y-5">
+          <div className="w-28 h-28 mx-auto">
+            <Image src="/images/logo.png" alt="Khaalis Harvest" width={112} height={112} className="w-full h-full object-contain opacity-60" />
           </div>
-        </div>
-
-        <div className="container-custom py-8 sm:py-12">
-          <div className="text-center">
-            <div className="w-24 h-24 sm:w-32 sm:h-32 mx-auto mb-4 sm:mb-6 flex items-center justify-center">
-              <Image
-                src="/images/logo.png"
-                alt="Khaalis Harvest"
-                width={128}
-                height={128}
-                className="w-full h-full object-contain"
-              />
-            </div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-3 sm:mb-4">Your Basket is Empty</h1>
-            <p className="text-base sm:text-lg text-gray-600 mb-6 sm:mb-8">
-              Add some organic products to get started!
-            </p>
-            <button
-              onClick={() => router.push('/products')}
-              className="btn-primary flex items-center space-x-2 mx-auto text-sm sm:text-base"
-            >
-              <Icon name="plus" className="w-4 h-4 sm:w-5 sm:h-5" />
-              <span>Browse Organic Products</span>
-            </button>
-          </div>
+          <h1 className="text-2xl sm:text-3xl font-bold text-neutral-900">Your Basket is Empty</h1>
+          <p className="text-neutral-500">Add some organic products to get started!</p>
+          <button onClick={() => router.push('/products')} className="btn-primary mx-auto">
+            <Icon name="plus" className="w-4 h-4" />
+            Browse Organic Products
+          </button>
         </div>
       </div>
     );
   }
 
+  // ── Main render ───────────────────────────────────────────────────────────
+
   return (
     <div className="min-h-screen organic-gradient">
-      {/* Breadcrumb */}
-      <div className="bg-white border-b border-primary-100">
-        <div className="container-custom py-4">
-          <nav className="flex items-center space-x-2 text-sm">
-            <button
-              onClick={() => router.push('/')}
-              className="text-neutral-500 hover:text-primary-600 transition-colors"
-            >
-              Home
-            </button>
-            <Icon name="chevron-right" className="w-4 h-4 text-neutral-400" />
-            <span className="text-neutral-900 font-medium">Basket</span>
-          </nav>
-        </div>
-      </div>
+      <Breadcrumb />
 
-      <div className="container-custom py-4 sm:py-6 lg:py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
-          {/* Cart Items */}
+      <div className="container-custom py-6 lg:py-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
+
+          {/* ── Cart items ─────────────────────────────────────────────────── */}
           <div className="lg:col-span-2">
-            <div className="card">
-              <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-neutral-200">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-0">
-                  <h1 className="text-lg sm:text-xl lg:text-2xl font-bold text-neutral-900">
-                    Your Basket
-                    <span className="ml-2 text-xs sm:text-sm font-normal text-neutral-500">
-                      ({state.totalItems} items)
-                    </span>
-                  </h1>
-                  <button
-                    onClick={handleClearCart}
-                    className="text-red-600 hover:text-red-800 text-xs sm:text-sm font-medium inline-flex items-center gap-1.5 ml-auto sm:ml-0 transition-colors"
-                  >
-                    <Icon name="delete" className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" />
-                    <span className="whitespace-nowrap">Clear Basket</span>
-                  </button>
-                </div>
+            <div className="card p-0 overflow-hidden">
+              {/* Header */}
+              <div className="px-5 py-4 border-b border-neutral-100 flex items-center justify-between">
+                <h1 className="text-xl font-bold text-neutral-900">
+                  Your Basket
+                  <span className="ml-2 text-sm font-normal text-neutral-400">
+                    ({state.totalItems} {state.totalItems === 1 ? 'item' : 'items'})
+                  </span>
+                </h1>
+                <button
+                  onClick={askClear}
+                  className="text-error-500 hover:text-error-600 text-sm font-medium inline-flex items-center gap-1.5 transition-colors"
+                >
+                  <Icon name="delete" className="w-4 h-4" />
+                  Clear Basket
+                </button>
               </div>
 
-              <div className="divide-y divide-gray-200">
-                {state.items.map((item, index) => (
-                  <motion.div
-                    key={item.id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.3, delay: index * 0.1 }}
-                    className="p-3 sm:p-4 lg:p-6"
-                  >
-                    <div className="flex items-start space-x-3 sm:space-x-4">
-                      {/* Product Image */}
-                      <div className="flex-shrink-0 w-16 h-16 sm:w-20 sm:h-20">
-                        <Link 
-                          href={`/products/${item.productId}`}
-                          className="block w-full h-full hover:opacity-90 transition-opacity duration-200"
-                        >
+              {/* Items */}
+              <div className="divide-y divide-neutral-100">
+                {state.items.map((item, i) => {
+                  const origPrice = item.variantOriginalPrice ?? item.originalPrice;
+                  const hasDiscount = origPrice != null && origPrice > item.price;
+                  const lineTotal = item.price * item.quantity;
+                  const spinning = isUpdating === item.productId;
+
+                  return (
+                    <motion.div
+                      key={item.id}
+                      initial={{ opacity: 0, y: 12 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.25, delay: i * 0.06 }}
+                      className="p-4 sm:p-5"
+                    >
+                      <div className="flex gap-3 sm:gap-4">
+                        {/* Image */}
+                        <Link href={`/products/${item.productId}`} className="flex-shrink-0 w-16 h-16 sm:w-20 sm:h-20 rounded-xl overflow-hidden border border-neutral-100 hover:opacity-90 transition-opacity">
                           <Image
-                            src={item.image}
+                            src={item.image || '/images/placeholder.svg'}
                             alt={item.name}
                             width={80}
                             height={80}
-                            className="w-full h-full object-cover rounded-lg cursor-pointer"
+                            className="w-full h-full object-cover"
+                            onError={(e) => { (e.target as HTMLImageElement).src = '/images/placeholder.svg'; }}
                           />
                         </Link>
-                      </div>
 
-                      {/* Product Details */}
-                      <div className="flex-1 min-w-0 relative">
-                        {/* Delete Button - Consistent position for all screen sizes */}
-                        <button
-                          onClick={() => handleRemoveItem(item.productId, item.selectedVariant, item.name)}
-                          className="absolute top-0 right-0 text-red-600 hover:text-red-800 p-1.5 hover:bg-red-50 rounded-lg transition-colors z-10"
-                          title="Remove item"
-                        >
-                          <Icon name="delete" className="w-4 h-4 sm:w-5 sm:h-5" />
-                        </button>
+                        {/* Details */}
+                        <div className="flex-1 min-w-0 relative">
+                          {/* Remove button */}
+                          <button
+                            onClick={() => askRemove(item.productId, item.selectedVariant, item.name)}
+                            className="absolute top-0 right-0 p-1.5 text-error-400 hover:text-error-600 hover:bg-error-50 rounded-lg transition-colors z-10"
+                            title="Remove item"
+                          >
+                            <Icon name="delete" className="w-4 h-4" />
+                          </button>
 
-                        <div className="flex items-start justify-between pr-8 sm:pr-10">
-                          <div className="flex-1 min-w-0">
-                            <Link 
-                              href={`/products/${item.productId}`}
-                              className="block hover:text-orange-600 transition-colors duration-200"
-                            >
-                              <h3 className="text-sm sm:text-base lg:text-lg font-semibold text-gray-900 hover:text-orange-600 transition-colors duration-200 pr-2">
-                                {item.name}
-                              </h3>
-                            </Link>
-                            {item.selectedVariant && (
-                              <p className="text-xs sm:text-sm text-orange-600 font-medium mt-1">
-                                {item.selectedVariant}
-                              </p>
+                          {/* Name */}
+                          <Link href={`/products/${item.productId}`} className="block pr-8 hover:text-primary-600 transition-colors">
+                            <h3 className="text-sm sm:text-base font-semibold text-neutral-900 line-clamp-2 leading-snug">
+                              {item.name}
+                            </h3>
+                          </Link>
+
+                          {/* Variant */}
+                          {item.selectedVariant && (
+                            <p className="text-xs text-secondary-600 font-medium mt-0.5">{item.selectedVariant}</p>
+                          )}
+
+                          {/* Unit price row */}
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="text-sm font-semibold text-neutral-900">₨{fmt(item.price)}</span>
+                            {hasDiscount && (
+                              <span className="text-xs text-neutral-400 line-through">₨{fmt(origPrice!)}</span>
                             )}
-                            <p className="text-xs sm:text-sm text-gray-500 mt-1">
-                              per {item.unit}
-                            </p>
-                            <div className="flex items-center space-x-2 mt-1">
-                              <div className="flex items-center space-x-2">
-                                <span className="text-sm sm:text-base font-bold text-gray-900">
-                                  ₨{item.price}
-                                </span>
-                                {item.variantOriginalPrice && item.variantOriginalPrice > item.price && (
-                                  <span className="text-xs text-gray-500 line-through">
-                                    ₨{item.variantOriginalPrice}
-                                  </span>
-                                )}
-                              </div>
-                              {!item.isAvailable && (
-                                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                                  Unavailable
-                                </span>
-                              )}
-                            </div>
+                            <span className="text-xs text-neutral-400">/ {item.unit}</span>
+                            {!item.isAvailable && (
+                              <span className="px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-error-50 text-error-600 border border-error-100">
+                                Out of Stock
+                              </span>
+                            )}
                           </div>
-                        </div>
 
-                        {/* Quantity Controls and Total - Mobile */}
-                        <div className="flex flex-col sm:hidden mt-4 gap-3">
-                          <div className="flex items-center justify-between gap-2 overflow-hidden">
-                            <div className="flex items-center border border-gray-300 rounded-lg flex-shrink-0">
+                          {/* Quantity stepper + line total */}
+                          <div className="flex items-center justify-between mt-3">
+                            {/* Stepper */}
+                            <div className="flex items-center border border-neutral-200 rounded-xl overflow-hidden bg-white">
                               <button
-                                onClick={() => handleQuantityChange(item.productId, item.selectedVariant, item.quantity - 1)}
-                                disabled={isUpdating === item.productId}
-                                className="px-2 py-1.5 text-gray-600 hover:text-gray-800 hover:bg-gray-50 transition-colors disabled:opacity-50"
+                                onClick={() => handleQty(item.productId, item.selectedVariant, item.quantity - 1)}
+                                disabled={spinning}
+                                className="px-2.5 py-1.5 text-neutral-500 hover:text-neutral-800 hover:bg-neutral-50 transition-colors disabled:opacity-40"
                               >
                                 <Icon name="minus" className="w-3.5 h-3.5" />
                               </button>
-                              <span className="px-2.5 py-1.5 text-gray-900 font-medium min-w-[2rem] text-center text-sm">
-                                {isUpdating === item.productId ? (
-                                  <div className="animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-orange-500 mx-auto"></div>
-                                ) : (
-                                  item.quantity
-                                )}
+                              <span className="px-3 py-1.5 font-semibold text-neutral-900 min-w-[2.5rem] text-center text-sm tabular-nums">
+                                {spinning ? (
+                                  <span className="animate-spin inline-block h-3.5 w-3.5 rounded-full border-b-2 border-primary-500" />
+                                ) : item.quantity}
                               </span>
                               <button
-                                onClick={() => handleQuantityChange(item.productId, item.selectedVariant, item.quantity + 1)}
-                                disabled={isUpdating === item.productId || !item.isAvailable}
-                                className="px-2 py-1.5 text-gray-600 hover:text-gray-800 hover:bg-gray-50 transition-colors disabled:opacity-50"
+                                onClick={() => handleQty(item.productId, item.selectedVariant, item.quantity + 1)}
+                                disabled={spinning || !item.isAvailable}
+                                className="px-2.5 py-1.5 text-neutral-500 hover:text-neutral-800 hover:bg-neutral-50 transition-colors disabled:opacity-40"
                               >
                                 <Icon name="plus" className="w-3.5 h-3.5" />
                               </button>
                             </div>
-                            <div className="text-right flex-shrink-0 min-w-0">
-                              <div className="text-sm sm:text-base font-bold text-gray-900 truncate">
-                                ₨{(item.price * item.quantity).toFixed(2)}
-                              </div>
-                              <div className="text-xs text-gray-500 truncate">
-                                {item.quantity} × ₨{item.price}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
 
-                        {/* Desktop Layout: Quantity Controls and Total */}
-                        <div className="hidden sm:flex items-center justify-between mt-4">
-                          <div className="flex items-center space-x-3">
-                            <div className="flex items-center border border-gray-300 rounded-lg">
-                              <button
-                                onClick={() => handleQuantityChange(item.productId, item.selectedVariant, item.quantity - 1)}
-                                disabled={isUpdating === item.productId}
-                                className="px-3 py-2 text-gray-600 hover:text-gray-800 hover:bg-gray-50 transition-colors disabled:opacity-50"
-                              >
-                                <Icon name="minus" className="w-4 h-4" />
-                              </button>
-                              <span className="px-4 py-2 text-gray-900 font-medium min-w-[3rem] text-center">
-                                {isUpdating === item.productId ? (
-                                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-orange-500 mx-auto"></div>
-                                ) : (
-                                  item.quantity
-                                )}
-                              </span>
-                              <button
-                                onClick={() => handleQuantityChange(item.productId, item.selectedVariant, item.quantity + 1)}
-                                disabled={isUpdating === item.productId || !item.isAvailable}
-                                className="px-3 py-2 text-gray-600 hover:text-gray-800 hover:bg-gray-50 transition-colors disabled:opacity-50"
-                              >
-                                <Icon name="plus" className="w-4 h-4" />
-                              </button>
-                            </div>
-                          </div>
-                          
-                          <div className="text-right">
-                            <div className="text-lg font-bold text-gray-900">
-                              ₨{(item.price * item.quantity).toFixed(2)}
-                            </div>
-                            <div className="text-sm text-gray-500">
-                              {item.quantity} × ₨{item.price}
-                              {item.variantOriginalPrice && item.variantOriginalPrice > item.price && (
-                                <span className="ml-1 line-through">₨{item.variantOriginalPrice}</span>
-                              )}
+                            {/* Line total */}
+                            <div className="text-right">
+                              <div className="text-base font-bold text-neutral-900">₨{fmt(lineTotal)}</div>
+                              <div className="text-xs text-neutral-400 tabular-nums">
+                                {item.quantity} × ₨{fmt(item.price)}
+                              </div>
                             </div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  </motion.div>
-                ))}
+                    </motion.div>
+                  );
+                })}
               </div>
             </div>
           </div>
 
-          {/* Order Summary */}
+          {/* ── Order summary ───────────────────────────────────────────────── */}
           <div className="lg:col-span-1">
-            <div className="bg-white rounded-lg shadow-sm sticky top-4">
-              <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200">
-                <h2 className="text-base sm:text-lg font-semibold text-gray-900">Order Summary</h2>
+            <div className="card p-0 overflow-hidden sticky top-4">
+              <div className="px-5 py-4 border-b border-neutral-100">
+                <h2 className="text-base font-bold text-neutral-900">Order Summary</h2>
               </div>
 
-              <div className="px-4 sm:px-6 py-4 space-y-3 sm:space-y-4">
-                <div className="flex justify-between text-xs sm:text-sm">
-                  <span className="text-gray-600">Subtotal ({state.totalItems} items)</span>
-                  <span className="font-medium">₨{state.totalPrice.toFixed(2)}</span>
+              <div className="px-5 py-5 space-y-3">
+                {/* Subtotal */}
+                <div className="flex justify-between text-sm">
+                  <span className="text-neutral-500">Subtotal ({state.totalItems} {state.totalItems === 1 ? 'item' : 'items'})</span>
+                  <span className="font-semibold text-neutral-900">₨{fmt(state.totalPrice)}</span>
                 </div>
-                
-                <div className="flex justify-between text-xs sm:text-sm">
-                  <span className="text-gray-600">Delivery Fee</span>
-                  <span className="font-medium">
-                    {isCalculatingDelivery ? (
-                      <span className="text-gray-500">Calculating...</span>
-                    ) : deliveryCalculation ? (
-                      deliveryCalculation.isFree ? (
-                        <span className="text-green-600">Free</span>
+
+                {/* Savings — only shown when there are actual discounts */}
+                {totalSavings > 0 && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-primary-600 font-medium">You save</span>
+                    <span className="font-semibold text-primary-600">-₨{fmt(totalSavings)}</span>
+                  </div>
+                )}
+
+                {/* Delivery */}
+                <div className="flex justify-between text-sm">
+                  <span className="text-neutral-500">Delivery</span>
+                  <span className="font-semibold">
+                    {calcLoading ? (
+                      <span className="text-neutral-400 text-xs">Calculating…</span>
+                    ) : deliveryCalc ? (
+                      deliveryCalc.isFree ? (
+                        <span className="text-primary-600 font-semibold">Free</span>
                       ) : (
-                        <span className="text-gray-900">₨{(deliveryCalculation.deliveryFee || 0).toFixed(2)}</span>
+                        <span className="text-neutral-900">₨{fmt(deliveryCalc.deliveryFee)}</span>
                       )
                     ) : (
-                      <span className="text-gray-500">₨0.00</span>
+                      <span className="text-neutral-400">—</span>
                     )}
                   </span>
                 </div>
-                
-                {/* Delivery Information */}
-                {deliveryCalculation && !isCalculatingDelivery && (
-                  <div className="text-xs text-gray-500 bg-gray-50 p-2 rounded">
-                    {deliveryCalculation.reason}
+
+                {/* Delivery info */}
+                {deliveryCalc && !calcLoading && (
+                  <div className="text-xs text-neutral-500 bg-neutral-50 border border-neutral-100 rounded-xl px-3 py-2 leading-relaxed">
+                    {deliveryCalc.reason}
                   </div>
                 )}
-                
-                <div className="flex justify-between text-xs sm:text-sm">
-                  <span className="text-gray-600">Discount</span>
-                  <span className="font-medium">₨0.00</span>
-                </div>
 
-                <div className="border-t border-gray-200 pt-3 sm:pt-4">
-                  <div className="flex justify-between text-base sm:text-lg font-bold">
+                {/* Total */}
+                <div className="border-t border-neutral-100 pt-3">
+                  <div className="flex justify-between text-lg font-bold text-neutral-900">
                     <span>Total</span>
-                    <span>
-                      ₨{((state.totalPrice || 0) + (deliveryCalculation?.deliveryFee || 0)).toFixed(2)}
-                    </span>
+                    <span>₨{fmt(grandTotal)}</span>
                   </div>
+                  {totalSavings > 0 && (
+                    <p className="text-xs text-primary-600 mt-1 text-right">
+                      You're saving ₨{fmt(totalSavings)} on this order
+                    </p>
+                  )}
                 </div>
 
-                <button
-                  onClick={handleProceedToCheckout}
-                  className="w-full bg-gradient-to-r from-orange-500 to-green-500 text-white py-3 sm:py-4 rounded-lg hover:from-orange-600 hover:to-green-600 transition-all duration-200 flex items-center justify-center space-x-2 text-sm sm:text-base"
-                >
-                  <Icon name="credit-card" className="w-4 h-4 sm:w-5 sm:h-5" />
-                  <span>Proceed to Checkout</span>
-                </button>
-
-                <button
-                  onClick={() => router.push('/products')}
-                  className="w-full border border-gray-300 text-gray-700 py-3 sm:py-4 rounded-lg hover:bg-gray-50 transition-colors flex items-center justify-center space-x-2 text-sm sm:text-base"
-                >
-                  <Icon name="plus" className="w-4 h-4 sm:w-5 sm:h-5" />
-                  <span>Continue Shopping</span>
-                </button>
+                {/* CTAs */}
+                <div className="space-y-2 pt-1">
+                  <button onClick={goToCheckout} className="btn-cta w-full">
+                    <Icon name="credit-card" className="w-4 h-4" />
+                    Proceed to Checkout
+                  </button>
+                  <button onClick={() => router.push('/products')} className="btn-outline w-full">
+                    <Icon name="plus" className="w-4 h-4" />
+                    Continue Shopping
+                  </button>
+                </div>
               </div>
             </div>
           </div>
+
         </div>
       </div>
 
-      {/* Confirmation Dialog */}
+      {/* Confirmation dialog */}
       <ConfirmationDialog
-        isOpen={showConfirmDialog}
-        onClose={handleCancelAction}
-        onConfirm={handleConfirmAction}
+        isOpen={showConfirm}
+        onClose={() => { setShowConfirm(false); setPendingAction(null); }}
+        onConfirm={confirmAction}
         title={pendingAction?.type === 'remove' ? 'Remove Item' : 'Clear Basket'}
         message={
-          pendingAction?.type === 'remove' 
-            ? `Remove ${pendingAction.productName} from your basket?`
-            : 'Clear your entire basket?'
+          pendingAction?.type === 'remove'
+            ? `Remove "${pendingAction.productName}" from your basket?`
+            : 'Remove all items from your basket?'
         }
-        confirmText={pendingAction?.type === 'remove' ? 'Remove' : 'Clear Basket'}
-        cancelText="Cancel"
+        confirmText={pendingAction?.type === 'remove' ? 'Remove' : 'Clear All'}
+        cancelText="Keep"
         type="danger"
         isLoading={isUpdating !== null}
       />
+    </div>
+  );
+}
+
+function Breadcrumb() {
+  const router = useRouter();
+  return (
+    <div className="bg-white border-b border-neutral-100">
+      <div className="container-custom py-3">
+        <nav className="flex items-center gap-1.5 text-sm text-neutral-500">
+          <button onClick={() => router.push('/')} className="hover:text-primary-600 transition-colors">
+            Home
+          </button>
+          <Icon name="chevron-right" className="w-3.5 h-3.5 text-neutral-300" />
+          <span className="text-neutral-900 font-medium">Basket</span>
+        </nav>
+      </div>
     </div>
   );
 }
