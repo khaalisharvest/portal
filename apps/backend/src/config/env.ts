@@ -81,6 +81,8 @@ export const env = {
   CLOUDINARY_CLOUD_NAME: process.env.CLOUDINARY_CLOUD_NAME!,
   CLOUDINARY_API_KEY: process.env.CLOUDINARY_API_KEY!,
   CLOUDINARY_API_SECRET: process.env.CLOUDINARY_API_SECRET!,
+  // Error tracking — optional, Sentry disabled if absent
+  SENTRY_DSN: process.env.SENTRY_DSN,
   // Environment flags
   IS_PRODUCTION: process.env.NODE_ENV === 'production',
   IS_DEVELOPMENT: process.env.NODE_ENV === 'development',

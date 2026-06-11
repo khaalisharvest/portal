@@ -8,6 +8,7 @@ import {
 } from '@nestjs/common';
 import { Request, Response } from 'express';
 import { QueryFailedError } from 'typeorm';
+import * as Sentry from '@sentry/nestjs';
 
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
@@ -46,6 +47,10 @@ export class AllExceptionsFilter implements ExceptionFilter {
 
     if (status >= 500) {
       this.logger.error(`${request.method} ${request.url} → ${status}`);
+      // Capture unexpected server errors in Sentry
+      if (exception instanceof Error) {
+        Sentry.captureException(exception);
+      }
     } else if (status >= 400) {
       const msg = Array.isArray(message) ? message[0] : message;
       this.logger.warn(`${request.method} ${request.url} → ${status}: ${msg}`);

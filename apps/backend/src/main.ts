@@ -1,3 +1,6 @@
+import { initSentry } from './instrument';
+initSentry(); // Must run before NestJS initialises
+
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, Logger } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
