@@ -38,7 +38,7 @@ export class ProductsController {
     return this.productsService.findAll({
       category, search, status,
       page: page ? parseInt(page) : 1,
-      limit: limit ? parseInt(limit) : 10,
+      limit: limit ? Math.min(parseInt(limit), 100) : 10,
       type,
       includeAll: true,
     });
@@ -66,7 +66,7 @@ export class ProductsController {
       featured: featured !== undefined ? featured === 'true' : undefined,
       search,
       page: page ? parseInt(page) : 1,
-      limit: limit ? parseInt(limit) : 12,
+      limit: limit ? Math.min(parseInt(limit), 100) : 12,
       type,
     });
   }

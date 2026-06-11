@@ -43,6 +43,8 @@ export async function middleware(request: NextRequest) {
     loginUrl.searchParams.set('redirect', pathname);
     const res = NextResponse.redirect(loginUrl);
     res.cookies.set('auth_token', '', { maxAge: 0, path: '/' });
+    res.cookies.set('backend_token', '', { maxAge: 0, path: '/' });
+    res.cookies.set('refresh_token', '', { maxAge: 0, path: '/' });
     return res;
   }
 }

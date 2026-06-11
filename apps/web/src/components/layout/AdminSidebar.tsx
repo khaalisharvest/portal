@@ -200,7 +200,7 @@ export default function AdminSidebar({ isCollapsed, onToggle }: AdminSidebarProp
       <div key={item.id}>
         <div className="relative">
           {hasChildren ? (
-            <a
+            <Link
               href={item.href}
               onClick={handleItemClick}
               className={`flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors group ${isActive
@@ -222,9 +222,9 @@ export default function AdminSidebar({ isCollapsed, onToggle }: AdminSidebarProp
                   />
                 </>
               )}
-            </a>
+            </Link>
           ) : (
-            <a
+            <Link
               href={item.href}
               className={`flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors group ${isActive
                   ? 'bg-primary-100 text-primary-700 border-r-2 border-primary-500'
@@ -239,7 +239,7 @@ export default function AdminSidebar({ isCollapsed, onToggle }: AdminSidebarProp
               {!isCollapsed && (
                 <span className="truncate">{item.label}</span>
               )}
-            </a>
+            </Link>
           )}
         </div>
 

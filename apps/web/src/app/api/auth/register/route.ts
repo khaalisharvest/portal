@@ -60,7 +60,6 @@ export async function POST(request: NextRequest) {
 
         const res = NextResponse.json({
           user: registeredUser,
-          token,
           message: 'Account created successfully',
         });
         const cookieOpts = {

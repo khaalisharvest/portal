@@ -35,7 +35,7 @@ export class ReviewsService {
   async remove(reviewId: string, userId: string, userRole: string): Promise<void> {
     const review = await this.reviewRepository.findOne({ where: { id: reviewId } });
     if (!review) throw new NotFoundException('Review not found');
-    if (review.userId !== userId && !['admin', 'super_admin'].includes(userRole)) {
+    if (review.userId !== userId && !['super_admin', 'staff'].includes(userRole)) {
       throw new ForbiddenException('You can only delete your own reviews');
     }
     await this.reviewRepository.remove(review);

@@ -100,7 +100,7 @@ export class SettingsService {
     const publicKeys = [
       'delivery_fee', 'free_delivery_threshold', 'is_delivery_enabled', 'cod_enabled',
       'min_order_amount',
-      'bank_name', 'bank_account_name', 'bank_account_number', 'bank_iban',
+      'bank_name', 'bank_account_name',  // removed: bank_account_number, bank_iban
       'admin_whatsapp',
       'store_maintenance_mode',
       'instagram_url', 'facebook_url', 'tiktok_url',

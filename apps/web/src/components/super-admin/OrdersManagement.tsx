@@ -141,8 +141,7 @@ export default function OrdersManagement() {
       } else {
         throw new Error('Failed to fetch orders');
       }
-    } catch (error) {
-      console.error('Error fetching orders:', error);
+    } catch {
       toast.error('Failed to load orders');
     } finally {
       setLoading(false);
@@ -173,8 +172,7 @@ export default function OrdersManagement() {
       } else {
         throw new Error('Failed to update order status');
       }
-    } catch (error) {
-      console.error('Error updating order status:', error);
+    } catch {
       toast.error('Failed to update order status');
     } finally {
       setIsUpdating(false);
@@ -200,8 +198,7 @@ export default function OrdersManagement() {
       } else {
         throw new Error('Failed to update payment status');
       }
-    } catch (error) {
-      console.error('Error updating payment status:', error);
+    } catch {
       toast.error('Failed to update payment status');
     } finally {
       setIsUpdating(false);

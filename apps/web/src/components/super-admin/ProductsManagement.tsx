@@ -53,6 +53,7 @@ export default function ProductsManagement() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [productTypes, setProductTypes] = useState<ProductType[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [viewMode, setViewMode] = useState<'list' | 'card'>('list');
@@ -198,8 +199,8 @@ export default function ProductsManagement() {
       setProducts(data.data?.products || data.products || []);
       setTotalPages(data.data?.totalPages || data.totalPages || 1);
       setTotalProducts(data.data?.total || data.total || 0);
-    } catch (error) {
-      // Error fetching products
+    } catch {
+      toast.error('Failed to load products');
     } finally {
       setLoading(false);
     }
@@ -208,6 +209,8 @@ export default function ProductsManagement() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSaving) return;
+    setIsSaving(true);
     try {
       // Upload any locally-staged files to Cloudinary now (on Save, not on select)
       // Start from saved URLs, strip any nulls/empty that may exist from old data
@@ -293,8 +296,9 @@ export default function ProductsManagement() {
         toast.error(msg);
       }
     } catch (error) {
-      console.error('[ProductSave] caught error:', error);
       toast.error(error instanceof Error ? error.message : 'An error occurred while saving the product');
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -474,7 +478,7 @@ export default function ProductsManagement() {
             placeholder="Search products by name, description, or tags..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            onKeyPress={(e) => {
+            onKeyDown={(e) => {
               if (e.key === 'Enter') {
                 setCurrentPage(1);
                 fetchProducts(1, searchTerm, selectedCategory, selectedProductTypeFilter);
@@ -1382,9 +1386,10 @@ export default function ProductsManagement() {
               <button
                 type="submit"
                 form="product-form"
-                className="px-5 py-2 text-sm font-medium text-white bg-gradient-to-r from-orange-500 to-green-500 rounded-lg hover:opacity-90 transition-opacity"
+                disabled={isSaving}
+                className="px-5 py-2 text-sm font-medium text-white bg-gradient-to-r from-orange-500 to-green-500 rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {editingProduct ? 'Update Product' : 'Create Product'}
+                {isSaving ? 'Saving...' : editingProduct ? 'Update Product' : 'Create Product'}
               </button>
             </div>
           </div>

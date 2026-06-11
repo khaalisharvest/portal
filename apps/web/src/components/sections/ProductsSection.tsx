@@ -171,7 +171,14 @@ export default function ProductsSection({
   };
 
   const handleSearch = () => {
-    if (!searchTerm.trim()) return;
+    if (!searchTerm.trim()) {
+      if (hasSearched) {
+        // Clear the search — reload without search term
+        setHasSearched(false);
+        fetchProducts(1, activeCategoryIds, activeTypeIds, '');
+      }
+      return;
+    }
     setHasSearched(true);
     setCurrentPage(1);
     fetchProducts(1, activeCategoryIds, activeTypeIds, searchTerm);

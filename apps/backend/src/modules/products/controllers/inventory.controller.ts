@@ -25,7 +25,10 @@ export class InventoryController {
   ) {}
 
   @Get()
-  @ApiOperation({ summary: 'Get inventory for a product' })
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('super_admin', 'staff')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get inventory for a product (admin only)' })
   async get(@Param('productId') productId: string) {
     const inv = await this.inventoryRepository.findOne({ where: { productId } });
     return inv || { productId, quantity: 0, reservedQuantity: 0, availableQuantity: 0 };

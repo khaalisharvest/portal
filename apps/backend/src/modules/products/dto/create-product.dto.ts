@@ -1,13 +1,16 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsNumber, IsBoolean, IsOptional, IsArray, Min, IsObject, IsIn } from 'class-validator';
+import { IsString, IsNumber, IsBoolean, IsOptional, IsArray, Min, IsObject, IsIn, IsNotEmpty, MaxLength } from 'class-validator';
 
 export class CreateProductDto {
   @ApiProperty()
   @IsString()
+  @IsNotEmpty()
+  @MaxLength(200)
   name: string;
 
   @ApiProperty()
   @IsString()
+  @MaxLength(5000)
   description: string;
 
   @ApiProperty()
@@ -22,6 +25,7 @@ export class CreateProductDto {
 
   @ApiProperty()
   @IsString()
+  @IsNotEmpty()
   categoryId: string;
 
   @ApiProperty({ required: false })
@@ -46,6 +50,7 @@ export class CreateProductDto {
 
   @ApiProperty({ required: false })
   @IsString()
+  @IsNotEmpty()
   unit: string;
 
   @ApiProperty({ required: false })

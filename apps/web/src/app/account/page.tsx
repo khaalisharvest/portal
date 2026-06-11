@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { useAuth } from '@/contexts/AuthContext';
+import { authFetch } from '@/lib/authFetch';
 import toast from 'react-hot-toast';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 
@@ -15,7 +16,7 @@ export default function AccountPage() {
 }
 
 function AccountContent() {
-  const { user, logout } = useAuth();
+  const { user, logout, refreshUser } = useAuth();
   const [activeTab, setActiveTab] = useState<'profile' | 'addresses' | 'security'>('profile');
   const [addresses, setAddresses] = useState<any[]>([]);
 
@@ -43,7 +44,7 @@ function AccountContent() {
 
   const fetchAddresses = async () => {
     try {
-      const res = await fetch('/api/v1/orders/addresses', {
+      const res = await authFetch('/api/v1/orders/addresses', {
       });
       if (res.ok) {
         const data = await res.json();
@@ -60,7 +61,7 @@ function AccountContent() {
     }
     setProfileLoading(true);
     try {
-      const res = await fetch('/api/v1/auth/profile', {
+      const res = await authFetch('/api/v1/auth/profile', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: profileForm.name.trim(), email: profileForm.email || undefined }),
@@ -69,14 +70,7 @@ function AccountContent() {
         const err = await res.json();
         throw new Error(err.error || 'Update failed');
       }
-      const data = await res.json();
-      const updated = data.data || data;
-      // Update stored user so AuthContext reflects the new name/email
-      const stored = localStorage.getItem('user');
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        localStorage.setItem('user', JSON.stringify({ ...parsed, name: updated.name, email: updated.email }));
-      }
+      await refreshUser(); // Updates AuthContext state with fresh user data from backend
       toast.success('Profile updated successfully');
     } catch (err: any) {
       toast.error(err.message || 'Failed to update profile');
@@ -101,7 +95,7 @@ function AccountContent() {
     }
     setPasswordLoading(true);
     try {
-      const res = await fetch('/api/v1/auth/change-password', {
+      const res = await authFetch('/api/v1/auth/change-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -124,7 +118,7 @@ function AccountContent() {
 
   const handleDeleteAddress = async (addressId: string) => {
     try {
-      const res = await fetch(`/api/v1/orders/addresses/${addressId}`, {
+      const res = await authFetch(`/api/v1/orders/addresses/${addressId}`, {
         method: 'DELETE',
       });
       if (res.ok) {

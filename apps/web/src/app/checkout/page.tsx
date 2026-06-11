@@ -182,6 +182,7 @@ export default function CheckoutPage() {
       const response = await fetch(`/api/v1/orders/addresses`, {
         headers: {
         },
+        credentials: 'include',
       });
 
       if (response.ok) {
@@ -242,6 +243,7 @@ export default function CheckoutPage() {
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include',
         body: JSON.stringify(addressData),
       });
 
@@ -299,19 +301,23 @@ export default function CheckoutPage() {
       return;
     }
 
+    // Validate phone before setting the loading flag so an early return
+    // never leaves isCreatingOrder stuck at true.
+    let validatedPhone: string | null = null;
+    if (checkoutMode === 'guest') {
+      validatedPhone = validateGuestPhone(guestInfo.phone);
+      if (!validatedPhone) {
+        toast.error('Please enter a valid Pakistani phone number');
+        return;
+      }
+    }
+
     setIsCreatingOrder(true);
 
     try {
       let orderData;
 
       if (checkoutMode === 'guest') {
-        // Get validated phone number
-        const validatedPhone = validateGuestPhone(guestInfo.phone);
-        if (!validatedPhone) {
-          toast.error('Please enter a valid Pakistani phone number');
-          return;
-        }
-
         // Guest order data
         orderData = {
           guestInfo: {
@@ -347,6 +353,7 @@ export default function CheckoutPage() {
           headers: {
             'Content-Type': 'application/json',
           },
+          credentials: 'include',
           body: JSON.stringify(orderData),
         });
 
@@ -386,6 +393,7 @@ export default function CheckoutPage() {
           headers: {
             'Content-Type': 'application/json',
           },
+          credentials: 'include',
           body: JSON.stringify(orderData),
         });
 

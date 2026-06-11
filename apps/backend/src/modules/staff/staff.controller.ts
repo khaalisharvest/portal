@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Patch, Delete, Body, Param, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Body, Param, Query, UseGuards, BadRequestException, ParseUUIDPipe } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { IsString, IsNotEmpty, IsPhoneNumber, MinLength, IsOptional, IsEmail } from 'class-validator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -69,7 +69,12 @@ export class StaffController {
 
   @Patch(':id')
   @ApiOperation({ summary: 'Update staff member details' })
-  async updateStaff(@Param('id') id: string, @Body() dto: UpdateStaffDto) {
+  async updateStaff(@Param('id', new ParseUUIDPipe()) id: string, @Body() dto: UpdateStaffDto) {
+    // Ensure target is a staff member — prevents editing other super_admins
+    const target = await this.usersService.findById(id);
+    if (!target || target.role !== 'staff') {
+      throw new BadRequestException('User is not a staff member');
+    }
     const updates: any = {};
     if (dto.name) updates.name = dto.name;
     if (dto.phone) updates.phone = dto.phone;
@@ -85,7 +90,12 @@ export class StaffController {
 
   @Delete(':id')
   @ApiOperation({ summary: 'Delete a staff member permanently' })
-  async deleteStaff(@Param('id') id: string) {
+  async deleteStaff(@Param('id', new ParseUUIDPipe()) id: string) {
+    // Ensure target is a staff member — prevents deleting other super_admins
+    const target = await this.usersService.findById(id);
+    if (!target || target.role !== 'staff') {
+      throw new BadRequestException('User is not a staff member');
+    }
     await this.usersService.remove(id);
     return { message: 'Staff member deleted' };
   }
@@ -95,7 +105,7 @@ export class StaffController {
   @ApiQuery({ name: 'page', required: false, type: Number })
   @ApiQuery({ name: 'limit', required: false, type: Number })
   async getAllActivity(@Query('page') page = 1, @Query('limit') limit = 30) {
-    return this.activityService.getAll(Number(page), Number(limit));
+    return this.activityService.getAll(Number(page), Math.min(Number(limit), 100));
   }
 
   @Get(':id/activity')

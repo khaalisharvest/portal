@@ -18,9 +18,9 @@ export class OrderItem {
   @Column({ nullable: true })
   productId: string;
 
-  // @ManyToOne(() => Product, { onDelete: 'SET NULL', nullable: true })
-  // @JoinColumn({ name: 'productId' })
-  // product?: Product;
+  @ManyToOne(() => Product, { onDelete: 'SET NULL', nullable: true })
+  @JoinColumn({ name: 'productId' })
+  product?: Product;
 
   // Snapshot fields
   @Column({ nullable: true })

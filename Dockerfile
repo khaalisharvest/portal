@@ -8,7 +8,8 @@
 # - Both apps run in single container for simplicity
 # ============================================================================
 
-FROM node:18-slim
+FROM --platform=${TARGETPLATFORM:-linux/arm64} node:18-slim
+ARG TARGETPLATFORM
 
 # Install build dependencies (needed for native modules like sharp, bcrypt)
 RUN apt-get update && apt-get install -y python3 make g++ wget && rm -rf /var/lib/apt/lists/*
@@ -79,9 +80,9 @@ COPY packages/shared/package.json ./packages/shared/
 # Yarn workspaces hoist common dependencies to root node_modules
 # We need devDependencies (like @nestjs/cli) for building
 # Note: --production=false ensures devDependencies are installed
-# Temporarily removed --frozen-lockfile to allow lockfile update
+# --frozen-lockfile ensures deterministic, reproducible builds
 # ============================================================================
-RUN yarn install --production=false
+RUN yarn install --production=false --frozen-lockfile
 
 # ============================================================================
 # Step 3: Copy source code

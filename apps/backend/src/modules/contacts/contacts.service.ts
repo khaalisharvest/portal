@@ -24,8 +24,8 @@ export class ContactsService {
     search?: string;
   }): Promise<{ contacts: Contact[]; total: number; page: number; limit: number; totalPages: number }> {
     const page = filters.page || 1;
-    const limit = filters.limit || 20;
-    const skip = (page - 1) * limit;
+    const cappedLimit = Math.min(Number(filters.limit) || 20, 100);
+    const skip = (page - 1) * cappedLimit;
 
     const queryBuilder = this.contactRepository.createQueryBuilder('contact');
 
@@ -42,14 +42,14 @@ export class ContactsService {
 
     queryBuilder.orderBy('contact.createdAt', 'DESC');
 
-    const [contacts, total] = await queryBuilder.skip(skip).take(limit).getManyAndCount();
+    const [contacts, total] = await queryBuilder.skip(skip).take(cappedLimit).getManyAndCount();
 
     return {
       contacts,
       total,
       page,
-      limit,
-      totalPages: Math.ceil(total / limit),
+      limit: cappedLimit,
+      totalPages: Math.ceil(total / cappedLimit),
     };
   }
 

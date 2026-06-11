@@ -23,6 +23,7 @@ interface AuthContextType {
   hasRole: (role: string) => boolean;
   hasAnyRole: (roles: string[]) => boolean;
   refreshBackendToken: () => Promise<string | null>;
+  refreshUser: () => Promise<void>;
 }
 
 interface RegisterData {
@@ -49,6 +50,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Listen for storage changes (logout from other tabs)
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === 'user' && !e.newValue) {
+        // Clear HttpOnly cookies by calling BFF logout, then clear React state
+        fetch('/api/auth/logout', { method: 'POST', credentials: 'include' }).catch(() => {});
         setUser(null);
       }
     };
@@ -150,6 +153,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const refreshUser = async (): Promise<void> => {
+    const response = await authFetch('/api/auth/me');
+    if (response.ok) {
+      const userData = await response.json();
+      setUser(userData);
+      localStorage.setItem('user', JSON.stringify(userData));
+    }
+  };
+
   const refreshBackendToken = async (): Promise<string | null> => {
     try {
       const res = await fetch('/api/auth/refresh', {
@@ -186,6 +198,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     hasRole,
     hasAnyRole,
     refreshBackendToken,
+    refreshUser,
   };
 
   return (

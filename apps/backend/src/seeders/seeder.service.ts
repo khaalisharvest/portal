@@ -28,7 +28,7 @@ export class SeederService {
   }
 
   private async seedSuperAdmin() {
-    const existing = await this.userRepository.findOne({ where: { role: 'super_admin' } });
+    const existing = await this.userRepository.findOne({ where: { phone: process.env.SUPER_ADMIN_PHONE } });
     if (existing) {
       this.logger.log('Super admin already exists, skipping');
       return;
@@ -50,6 +50,6 @@ export class SeederService {
         },
       }),
     );
-    this.logger.log(`Super admin created — email: ${process.env.SUPER_ADMIN_EMAIL}`);
+    this.logger.log('Super admin created successfully');
   }
 }

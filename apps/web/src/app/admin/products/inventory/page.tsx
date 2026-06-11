@@ -40,6 +40,7 @@ function InventoryContent() {
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [savingId, setSavingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({ quantity: 0, minimumStock: 0, location: '', batchNumber: '', expiryDate: '' });
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -68,6 +69,7 @@ function InventoryContent() {
   useEffect(() => { fetchProducts(1); }, [fetchProducts]);
 
   const handleUpdateInventory = async (productId: string) => {
+    setSavingId(productId);
     try {
       const res = await fetch(`/api/v1/products/${productId}/inventory`, {
         method: 'POST',
@@ -87,6 +89,8 @@ function InventoryContent() {
       fetchProducts(currentPage);
     } catch {
       toast.error('Failed to update inventory');
+    } finally {
+      setSavingId(null);
     }
   };
 
@@ -207,9 +211,10 @@ function InventoryContent() {
                       <div className="flex gap-2 justify-end">
                         <button
                           onClick={() => handleUpdateInventory(product.id)}
-                          className="text-xs px-3 py-1.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
+                          disabled={savingId === product.id}
+                          className="text-xs px-3 py-1.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                          Save
+                          {savingId === product.id ? 'Saving...' : 'Save'}
                         </button>
                         <button
                           onClick={() => setEditingId(null)}

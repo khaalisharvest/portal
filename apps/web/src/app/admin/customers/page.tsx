@@ -6,7 +6,6 @@ import AdminLayout from '@/components/layout/AdminLayout';
 import Icon from '@/components/ui/Icon';
 import ConfirmationDialog from '@/components/ui/ConfirmationDialog';
 import toast from 'react-hot-toast';
-import { API_URL } from '@/config/env';
 
 interface Customer {
   id: string;
@@ -105,10 +104,9 @@ export default function AdminCustomersPage() {
           hasPrevPage: data.hasPrevPage || false
         });
       } else {
-        const errorText = await response.text();
         toast.error(`Failed to fetch customers: ${response.status}`);
       }
-    } catch (error) {
+    } catch {
       toast.error('Error fetching customers');
     } finally {
       setLoading(false);
@@ -208,18 +206,6 @@ export default function AdminCustomersPage() {
     }
   };
 
-  if (loading) {
-    return (
-      <ProtectedRoute requiredRoles={['super_admin']}>
-        <AdminLayout>
-          <div className="flex items-center justify-center h-64">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div>
-          </div>
-        </AdminLayout>
-      </ProtectedRoute>
-    );
-  }
-
   return (
     <ProtectedRoute requiredRoles={['super_admin']}>
       <AdminLayout>
@@ -258,8 +244,12 @@ export default function AdminCustomersPage() {
                 Page {pagination.currentPage} of {pagination.totalPages}
               </div>
             </div>
-            
-            {!customers || customers.length === 0 ? (
+
+            {loading ? (
+              <div className="flex items-center justify-center h-64">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div>
+              </div>
+            ) : !customers || customers.length === 0 ? (
               <div className="text-center py-12">
                 <Icon name="user" className="w-12 h-12 text-gray-400 mx-auto mb-4" />
                 <p className="text-gray-500">No customers found</p>

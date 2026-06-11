@@ -66,6 +66,10 @@ export async function proxy(
     } catch {
       return NextResponse.json({ message: 'Forbidden' }, { status: 403 });
     }
+    // requireRole implies requireAuth — ensure we have a backend token too
+    if (!resolvedAuth) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
   }
 
   // --- URL ---
@@ -103,8 +107,9 @@ export async function proxy(
   try {
     response = await fetch(url, { method, headers, body });
   } catch (err) {
+    console.error('[proxy] backend connectivity error:', err instanceof Error ? err.message : err);
     return NextResponse.json(
-      { error: err instanceof Error ? err.message : 'Backend unreachable' },
+      { error: 'Service temporarily unavailable' },
       { status: 503 },
     );
   }

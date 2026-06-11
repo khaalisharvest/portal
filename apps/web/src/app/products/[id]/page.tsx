@@ -617,7 +617,7 @@ export default function ProductDetailsPage() {
         </div>
 
         {/* ── Specifications ────────────────────────────────────────────────── */}
-        {product.specifications && Object.keys(product.specifications).length > 0 && (
+        {product.specifications && typeof product.specifications === 'object' && !Array.isArray(product.specifications) && Object.keys(product.specifications).length > 0 && (
           <motion.div
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}

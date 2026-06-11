@@ -7,4 +7,4 @@ export const POST = (req: NextRequest) =>
 
 // Protected: admin list (super_admin)
 export const GET = (req: NextRequest) =>
-  proxy(req, { path: '/api/v1/contacts', passQuery: true, requireAuth: true });
+  proxy(req, { path: '/api/v1/contacts', passQuery: true, requireAuth: true, requireRole: ['super_admin', 'staff'] });

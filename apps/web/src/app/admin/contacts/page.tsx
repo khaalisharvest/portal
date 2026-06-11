@@ -59,12 +59,12 @@ export default function AdminContactsPage() {
     limit: 20,
   });
 
-  const fetchContacts = useCallback(async () => {
+  const fetchContacts = useCallback(async (page = 1, limit = 20) => {
     try {
       setLoading(true);
       const params = new URLSearchParams({
-        page: pagination.currentPage.toString(),
-        limit: pagination.limit.toString(),
+        page: page.toString(),
+        limit: limit.toString(),
         ...(filterStatus && { status: filterStatus }),
         ...(searchTerm && { search: searchTerm }),
       });
@@ -79,21 +79,21 @@ export default function AdminContactsPage() {
         // Handle wrapped response from backend interceptor
         const data = responseData.data || responseData;
         setContacts(data.contacts || []);
-        setPagination({
-          ...pagination,
+        setPagination(prev => ({
+          ...prev,
+          currentPage: page,
           totalPages: data.totalPages || 1,
           total: data.total || 0,
-        });
+        }));
       } else {
         toast.error('Failed to fetch contacts');
       }
-    } catch (error) {
-      console.error('Error fetching contacts:', error);
+    } catch {
       toast.error('Error fetching contacts');
     } finally {
       setLoading(false);
     }
-  }, [pagination.currentPage, filterStatus, searchTerm]);
+  }, [filterStatus, searchTerm]);
 
   const fetchStats = useCallback(async () => {
     try {
@@ -108,19 +108,19 @@ export default function AdminContactsPage() {
         const data = responseData.data || responseData;
         setStats(data);
       }
-    } catch (error) {
-      console.error('Error fetching stats:', error);
+    } catch {
+      // non-critical — stats are supplementary
     }
   }, []);
 
   useEffect(() => {
-    fetchContacts();
+    fetchContacts(pagination.currentPage);
     fetchStats();
   }, [fetchContacts, fetchStats]);
 
   const handleStatusChange = (value: string | string[]) => {
     setFilterStatus(Array.isArray(value) ? value[0] : value);
-    setPagination({ ...pagination, currentPage: 1 });
+    setPagination(prev => ({ ...prev, currentPage: 1 }));
   };
 
   const handleViewDetails = (contact: Contact) => {
@@ -349,7 +349,7 @@ export default function AdminContactsPage() {
                   value={searchTerm}
                   onChange={(e) => {
                     setSearchTerm(e.target.value);
-                    setPagination({ ...pagination, currentPage: 1 });
+                    setPagination(prev => ({ ...prev, currentPage: 1 }));
                   }}
                   placeholder="Search by name, email, subject..."
                   className="input-field w-full"
@@ -420,7 +420,7 @@ export default function AdminContactsPage() {
                         <td className="px-6 py-4">
                           <div className="text-sm text-gray-900">{contact.subject}</div>
                           <div className="text-sm text-gray-500 truncate max-w-xs">
-                            {contact.message.substring(0, 50)}...
+                            {contact.message.length > 50 ? contact.message.substring(0, 50) + '...' : contact.message}
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
@@ -474,14 +474,14 @@ export default function AdminContactsPage() {
                 </div>
                 <div className="flex space-x-2">
                   <button
-                    onClick={() => setPagination({ ...pagination, currentPage: pagination.currentPage - 1 })}
+                    onClick={() => fetchContacts(pagination.currentPage - 1)}
                     disabled={pagination.currentPage === 1}
                     className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     Previous
                   </button>
                   <button
-                    onClick={() => setPagination({ ...pagination, currentPage: pagination.currentPage + 1 })}
+                    onClick={() => fetchContacts(pagination.currentPage + 1)}
                     disabled={pagination.currentPage >= pagination.totalPages}
                     className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                   >

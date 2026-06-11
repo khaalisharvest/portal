@@ -26,11 +26,11 @@ export class Product {
   description: string;
 
   @ApiProperty()
-  @Column({ type: 'decimal', precision: 10, scale: 2 })
+  @Column({ type: 'decimal', precision: 10, scale: 2, transformer: { to: v => v, from: v => v != null ? parseFloat(v) : v } })
   price: number;
 
   @ApiProperty()
-  @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
+  @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true, transformer: { to: v => v, from: v => v != null ? parseFloat(v) : v } })
   originalPrice?: number;
 
   @ApiProperty()

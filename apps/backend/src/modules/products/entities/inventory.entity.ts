@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn, Index } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn, Index, AfterLoad, AfterInsert, AfterUpdate } from 'typeorm';
 import { ApiProperty } from '@nestjs/swagger';
 import { Product } from './product.entity';
 
@@ -62,4 +62,11 @@ export class Inventory {
 
   @UpdateDateColumn()
   updatedAt: Date;
+
+  @AfterLoad()
+  @AfterInsert()
+  @AfterUpdate()
+  computeAvailable() {
+    this.availableQuantity = Math.max(0, this.quantity - this.reservedQuantity);
+  }
 }

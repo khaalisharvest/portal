@@ -15,6 +15,7 @@ export class CreateContactDto {
   @ApiProperty({ description: 'Contact phone number', required: false })
   @IsOptional()
   @IsString()
+  @MaxLength(20)
   phone?: string;
 
   @ApiProperty({ description: 'Message subject' })

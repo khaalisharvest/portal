@@ -65,6 +65,42 @@ sudo iptables -I INPUT -p tcp --dport 443 -j ACCEPT
 sudo iptables-save | sudo tee /etc/iptables/rules.v4
 ```
 
+### 6b. Bootstrap SSL certificate (CRITICAL — do before docker-compose up with HTTPS config)
+
+On the first deploy, nginx needs the SSL cert but certbot needs nginx to be running. Use the temporary HTTP config to break the deadlock:
+
+```bash
+# Step 1: Use the temporary HTTP config for initial startup
+cp nginx/nginx-http-duckdns-temp.conf /tmp/nginx-temp.conf
+
+# Step 2: Start services with temporary HTTP nginx (no SSL yet)
+docker-compose up -d postgres redis
+docker-compose run --rm -v /tmp/nginx-temp.conf:/etc/nginx/nginx.conf:ro nginx nginx &
+
+# Simpler: edit docker-compose.yml temporarily to mount nginx-http-duckdns-temp.conf
+# Change this line in docker-compose.yml:
+#   - ./nginx/nginx-https-duckdns.conf:/etc/nginx/nginx.conf:ro
+# To:
+#   - ./nginx/nginx-http-duckdns-temp.conf:/etc/nginx/nginx.conf:ro
+
+# Step 3: Start everything
+docker-compose up -d
+
+# Step 4: Obtain the SSL certificate
+docker-compose run --rm certbot certonly --webroot \
+  --webroot-path=/var/www/certbot \
+  --email YOUR_EMAIL \
+  --agree-tos \
+  --no-eff-email \
+  -d khaalisharvest.duckdns.org
+
+# Step 5: Switch back to the HTTPS config in docker-compose.yml:
+#   - ./nginx/nginx-https-duckdns.conf:/etc/nginx/nginx.conf:ro
+
+# Step 6: Reload nginx with the HTTPS config
+docker-compose up -d --force-recreate nginx
+```
+
 ### 7. Deploy
 ```bash
 docker-compose up -d --build

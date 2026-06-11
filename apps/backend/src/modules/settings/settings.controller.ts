@@ -1,6 +1,6 @@
 import { Controller, Get, Body, UseGuards, Patch, UseInterceptors } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
-import { IsNumber, IsBoolean, IsString, Min, Max, MaxLength, IsArray, ValidateNested, IsOptional } from 'class-validator';
+import { IsNumber, IsBoolean, IsString, Min, Max, MaxLength, IsArray, ValidateNested, IsOptional, IsEmail, IsUrl } from 'class-validator';
 import { Type } from 'class-transformer';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard, Roles } from '../../common/guards/roles.guard';
@@ -44,14 +44,14 @@ export class UpdatePaymentSettingsDto {
 }
 
 export class UpdateContactSettingsDto {
-  @IsString() adminEmail: string;
+  @IsEmail() adminEmail: string;
   @IsString() adminWhatsapp: string;
 }
 
 export class UpdateSocialSettingsDto {
-  @IsString() @IsOptional() instagramUrl: string;
-  @IsString() @IsOptional() facebookUrl: string;
-  @IsString() @IsOptional() tiktokUrl: string;
+  @IsUrl({ require_tld: false }) @IsOptional() instagramUrl: string;
+  @IsUrl({ require_tld: false }) @IsOptional() facebookUrl: string;
+  @IsUrl({ require_tld: false }) @IsOptional() tiktokUrl: string;
 }
 
 export class UpdateStoreSettingsDto {

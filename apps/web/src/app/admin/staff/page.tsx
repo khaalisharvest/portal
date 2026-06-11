@@ -81,20 +81,17 @@ export default function StaffManagementPage() {
   const [deletingMember, setDeletingMember] = useState<StaffMember | null>(null);
   const [deleting, setDeleting] = useState(false);
 
-  // backend_token is sent automatically via HttpOnly cookie — no manual header needed
-  const authHeader = useCallback(() => '', []);
-
   const fetchStaff = useCallback(async () => {
     setLoading(true);
     try {
-      const r = await fetch('/api/v1/admin/staff', { headers: { Authorization: authHeader() } });
+      const r = await fetch('/api/v1/admin/staff');
       if (r.ok) {
         const json = await r.json();
         setStaff(Array.isArray(json) ? json : (json.data ?? []));
       }
     } catch { toast.error('Failed to load staff'); }
     finally { setLoading(false); }
-  }, [authHeader]);
+  }, []);
 
   const fetchActivity = useCallback(async (staffId?: string) => {
     setActivityLoading(true);
@@ -102,7 +99,7 @@ export default function StaffManagementPage() {
       const url = staffId
         ? `/api/v1/admin/staff/${staffId}/activity`
         : '/api/v1/admin/staff/activity';
-      const r = await fetch(url, { headers: { Authorization: authHeader() } });
+      const r = await fetch(url);
       if (r.ok) {
         const json = await r.json();
         const payload = json.data ?? json;
@@ -110,7 +107,7 @@ export default function StaffManagementPage() {
       }
     } catch { /* non-critical */ }
     finally { setActivityLoading(false); }
-  }, [authHeader]);
+  }, []);
 
   useEffect(() => { fetchStaff(); fetchActivity(); }, [fetchStaff, fetchActivity]);
 
@@ -128,7 +125,7 @@ export default function StaffManagementPage() {
     try {
       const r = await fetch('/api/v1/admin/staff', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: authHeader() },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form),
       });
       if (r.ok) {
@@ -143,11 +140,13 @@ export default function StaffManagementPage() {
     finally { setSaving(false); }
   };
 
-  const toggleStatus = async (id: string, isActive: boolean) => {
+  const toggleStatus = async (id: string, isActive: boolean, name: string) => {
+    const action = isActive ? 'activate' : 'deactivate';
+    if (!confirm(`Are you sure you want to ${action} ${name}?`)) return;
     try {
       const r = await fetch(`/api/v1/admin/staff/${id}/status`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', Authorization: authHeader() },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ isActive }),
       });
       if (r.ok) {
@@ -177,7 +176,7 @@ export default function StaffManagementPage() {
       if (editForm.password) body.password = editForm.password;
       const r = await fetch(`/api/v1/admin/staff/${editingMember.id}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', Authorization: authHeader() },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       });
       if (r.ok) {
@@ -199,7 +198,6 @@ export default function StaffManagementPage() {
     try {
       const r = await fetch(`/api/v1/admin/staff/${deletingMember.id}`, {
         method: 'DELETE',
-        headers: { Authorization: authHeader() },
       });
       if (r.ok) {
         toast.success('Staff member deleted');
@@ -288,7 +286,7 @@ export default function StaffManagementPage() {
                         Delete
                       </button>
                       <button
-                        onClick={e => { e.stopPropagation(); toggleStatus(member.id, !member.isActive); }}
+                        onClick={e => { e.stopPropagation(); toggleStatus(member.id, !member.isActive, member.name); }}
                         className={`text-xs px-3 py-1 rounded-full border transition-colors ${member.isActive ? 'border-red-300 text-red-600 hover:bg-red-50' : 'border-green-300 text-green-600 hover:bg-green-50'}`}
                       >
                         {member.isActive ? 'Deactivate' : 'Activate'}

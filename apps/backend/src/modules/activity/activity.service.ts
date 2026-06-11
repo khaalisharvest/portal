@@ -34,20 +34,22 @@ export class ActivityService {
   }
 
   async getAll(page = 1, limit = 20): Promise<{ logs: ActivityLog[]; total: number }> {
+    const cappedLimit = Math.min(limit, 100);
     const [logs, total] = await this.activityRepository.findAndCount({
       order: { createdAt: 'DESC' },
-      skip: (page - 1) * limit,
-      take: limit,
+      skip: (page - 1) * cappedLimit,
+      take: cappedLimit,
     });
     return { logs, total };
   }
 
   async getByStaff(staffId: string, page = 1, limit = 20): Promise<{ logs: ActivityLog[]; total: number }> {
+    const cappedLimit = Math.min(limit, 100);
     const [logs, total] = await this.activityRepository.findAndCount({
       where: { staffId },
       order: { createdAt: 'DESC' },
-      skip: (page - 1) * limit,
-      take: limit,
+      skip: (page - 1) * cappedLimit,
+      take: cappedLimit,
     });
     return { logs, total };
   }

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { BACKEND_URL } from '@/config/env.server';
+import jwt from 'jsonwebtoken';
 
 export async function POST(request: NextRequest) {
   try {
@@ -32,8 +33,23 @@ export async function POST(request: NextRequest) {
 
     const res = NextResponse.json({ message: 'Token refreshed' });
 
-    // Refresh the backend_token cookie (used by all BFF proxy routes)
+    // Re-mint auth_token to extend its lifetime alongside the backend token
     if (newAccessToken) {
+      try {
+        const jwtSecret = process.env.JWT_SECRET;
+        if (jwtSecret) {
+          // Decode the new access token to get user info, then re-mint auth_token
+          const decoded = jwt.decode(newAccessToken) as any;
+          if (decoded?.sub && decoded?.role) {
+            const newAuthToken = jwt.sign(
+              { userId: decoded.sub, role: decoded.role, type: 'access' },
+              jwtSecret,
+              { expiresIn: '7d' }
+            );
+            res.cookies.set('auth_token', newAuthToken, { ...cookieOpts, maxAge: 60 * 60 * 24 * 7 });
+          }
+        }
+      } catch { /* if re-mint fails, existing auth_token remains */ }
       res.cookies.set('backend_token', newAccessToken, { ...cookieOpts, maxAge: 60 * 60 * 24 * 7 });
     }
     if (newRefreshToken) {

@@ -23,7 +23,7 @@ export class CreateUserDto {
   password: string;
 
   @ApiProperty()
-  @IsEnum(['customer', 'staff', 'super_admin'], { message: 'Role must be customer, staff, or super_admin' })
+  @IsEnum(['customer', 'staff'], { message: 'Role must be customer or staff' })
   role: string;
 
   @ApiProperty({ required: false })
