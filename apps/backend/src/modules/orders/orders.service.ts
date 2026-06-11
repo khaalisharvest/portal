@@ -206,7 +206,7 @@ export class OrdersService {
     };
   }
 
-  async findOne(id: string, userId: string): Promise<Order> {
+  async findOne(id: string, userId: string, isAdmin = false): Promise<Order> {
     const order = await this.orderRepository.findOne({
       where: { id },
       relations: ['address', 'items', 'user']
@@ -216,9 +216,7 @@ export class OrdersService {
       throw new NotFoundException('Order not found');
     }
 
-    // Check if user owns the order or is admin
-    if (order.userId !== userId) {
-      // TODO: Add admin check here
+    if (!isAdmin && order.userId !== userId) {
       throw new ForbiddenException('Access denied');
     }
 

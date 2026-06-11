@@ -23,9 +23,13 @@ cd khaalis-harvest
 ```
 
 ### 4. Create required Docker volumes (CRITICAL — must do before first run)
+Docker Compose auto-prefixes volume names with the project directory name.
+With the repo cloned as `khaalis-harvest`, volumes will be named:
 ```bash
-docker volume create portal_postgres_data
-docker volume create portal_redis_data
+# These are created automatically by docker-compose up — no manual creation needed.
+# If you need to pre-create them (e.g. to restore a backup), use the exact names below:
+docker volume create khaalis-harvest_postgres_data
+docker volume create khaalis-harvest_redis_data
 ```
 
 ### 5. Configure environment
@@ -42,8 +46,10 @@ nano .env
 - `NEXT_PUBLIC_APP_URL` — set to `http://YOUR_ORACLE_IP`
 - `BACKEND_URL` — set to `http://YOUR_ORACLE_IP`
 - `ALLOWED_ORIGINS` — set to `http://YOUR_ORACLE_IP`
-- `NODE_OPTIONS_BACKEND=2048` — set this (already in template)
-- `NODE_OPTIONS_FRONTEND=3072` — set this for frontend
+- `NODE_OPTIONS_BACKEND=256` — heap limit for Oracle 1GB VM (already in template)
+- `NODE_OPTIONS_FRONTEND=384` — heap limit for Oracle 1GB VM (already in template)
+- `REDIS_PASSWORD` — use a strong password (required for Redis auth)
+- `NEXT_PUBLIC_BANK_NAME`, `NEXT_PUBLIC_BANK_ACCOUNT_NUMBER`, `NEXT_PUBLIC_BANK_IBAN` — your actual bank details
 
 ### 6. Open Oracle Cloud firewall ports
 In Oracle Cloud console → Networking → Virtual Cloud Networks → Security Lists → Add Ingress Rules:

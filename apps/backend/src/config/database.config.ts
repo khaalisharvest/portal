@@ -23,9 +23,10 @@ export class DatabaseConfig implements TypeOrmOptionsFactory {
       synchronize: nodeEnv === 'development',
       logging: nodeEnv === 'development' ? ['error', 'warn', 'migration'] : ['error'],
       ssl: nodeEnv === 'production' && !isLocalDatabase ? { rejectUnauthorized: false } : false,
-      // Connection pool — prevents single-connection bottleneck under load
+      // Connection pool — Oracle Cloud free tier allows ~20-50 total connections.
+      // With one app process: max:10 leaves headroom for migrations, admin tools, and a second deploy.
       extra: {
-        max: 20,
+        max: 10,
         min: 2,
         idleTimeoutMillis: 30000,
         connectionTimeoutMillis: 5000,

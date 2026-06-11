@@ -47,7 +47,7 @@ services:
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
         NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL}
         BACKEND_URL: ${BACKEND_URL}
-        JWT_SECRET: ${JWT_SECRET}
+        # JWT_SECRET intentionally omitted — injected at runtime via env_file only, never baked into image layers
         NEXT_PUBLIC_ADMIN_EMAIL: ${NEXT_PUBLIC_ADMIN_EMAIL}
         NEXT_PUBLIC_ADMIN_WHATSAPP: ${NEXT_PUBLIC_ADMIN_WHATSAPP}
         NEXT_PUBLIC_BANK_NAME: ${NEXT_PUBLIC_BANK_NAME}

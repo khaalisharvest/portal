@@ -172,6 +172,14 @@ export class AdminOrdersController {
     return this.ordersService.getAllOrders(page, limit, status, paymentStatus, search);
   }
 
+  @Get(':id')
+  @ApiOperation({ summary: 'Get single order by ID (Admin)' })
+  @ApiResponse({ status: 200, description: 'Order retrieved successfully' })
+  @ApiResponse({ status: 404, description: 'Order not found' })
+  getOrder(@Param('id') id: string) {
+    return this.ordersService.findOne(id, '', true);
+  }
+
   @Patch(':id/status')
   @ApiOperation({ summary: 'Update order status (Admin)' })
   @ApiResponse({ status: 200, description: 'Order status updated successfully' })
