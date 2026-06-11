@@ -78,7 +78,7 @@ export default function OrdersManagement() {
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [showOrderDetails, setShowOrderDetails] = useState(false);
-  const [isUpdating, setIsUpdating] = useState(false);
+  const [isUpdating, setIsUpdating] = useState<string | null>(null);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [pendingStatusUpdate, setPendingStatusUpdate] = useState<{orderId: string, status: string} | null>(null);
   const [pendingPaymentUpdate, setPendingPaymentUpdate] = useState<{orderId: string, paymentStatus: string} | null>(null);
@@ -92,6 +92,7 @@ export default function OrdersManagement() {
     { value: 'shipped', label: 'Shipped', color: 'indigo' },
     { value: 'delivered', label: 'Delivered', color: 'green' },
     { value: 'cancelled', label: 'Cancelled', color: 'red' },
+    { value: 'refunded', label: 'Refunded', color: 'gray' },
   ];
 
   // Payment status options for dropdown
@@ -155,7 +156,7 @@ export default function OrdersManagement() {
 
   const updateOrderStatus = async (orderId: string, status: string, additionalData: any = {}) => {
     try {
-      setIsUpdating(true);
+      setIsUpdating(orderId);
       const response = await fetch(`/api/v1/admin/orders/${orderId}/status`, {
         method: 'PATCH',
         headers: {
@@ -167,21 +168,19 @@ export default function OrdersManagement() {
       if (response.ok) {
         toast.success('Order status updated successfully');
         fetchOrders();
-        setShowOrderDetails(false);
-        setSelectedOrder(null);
       } else {
         throw new Error('Failed to update order status');
       }
     } catch {
       toast.error('Failed to update order status');
     } finally {
-      setIsUpdating(false);
+      setIsUpdating(null);
     }
   };
 
   const updatePaymentStatus = async (orderId: string, paymentStatus: string) => {
     try {
-      setIsUpdating(true);
+      setIsUpdating(orderId);
       const response = await fetch(`/api/v1/admin/orders/${orderId}/status`, {
         method: 'PATCH',
         headers: {
@@ -193,17 +192,28 @@ export default function OrdersManagement() {
       if (response.ok) {
         toast.success('Payment status updated successfully');
         fetchOrders();
-        setShowOrderDetails(false);
-        setSelectedOrder(null);
       } else {
         throw new Error('Failed to update payment status');
       }
     } catch {
       toast.error('Failed to update payment status');
     } finally {
-      setIsUpdating(false);
+      setIsUpdating(null);
     }
   };
+
+  function getValidNextStatuses(currentStatus: string): string[] {
+    const transitions: Record<string, string[]> = {
+      pending: ['confirmed', 'cancelled'],
+      confirmed: ['processing', 'cancelled'],
+      processing: ['shipped', 'cancelled'],
+      shipped: ['delivered', 'cancelled'],
+      delivered: ['refunded'],
+      cancelled: [],
+      refunded: [],
+    };
+    return transitions[currentStatus] ?? [];
+  }
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -257,9 +267,17 @@ export default function OrdersManagement() {
     setCurrentPage(1);
   };
 
-  const handleViewOrder = (order: Order) => {
-    setSelectedOrder(order);
+  const handleViewOrder = async (order: Order) => {
+    setSelectedOrder(order); // show immediately with current data
     setShowOrderDetails(true);
+    // Then fetch fresh data
+    try {
+      const res = await fetch(`/api/v1/admin/orders/${order.id}`, { credentials: 'include' });
+      if (res.ok) {
+        const data = await res.json();
+        setSelectedOrder(data.data || data);
+      }
+    } catch { /* keep stale data */ }
   };
 
   const handleStatusUpdate = async (orderId: string, newStatus: string) => {
@@ -446,7 +464,7 @@ export default function OrdersManagement() {
                       <div>
                         <div className="text-sm font-medium text-gray-900">#{order.orderNumber}</div>
                         <div className="text-sm text-gray-500">
-                          {new Date(order.createdAt).toLocaleDateString()}
+                          {new Date(order.createdAt).toLocaleDateString('en-PK', { year: 'numeric', month: 'short', day: 'numeric', timeZone: 'Asia/Karachi' })}
                         </div>
                       </div>
                     </td>
@@ -501,19 +519,25 @@ export default function OrdersManagement() {
                             'bg-yellow-500 ring-2 ring-yellow-200'
                           }`}></div>
                           <div className="w-40" style={{ overflow: 'visible' }}>
-                            <Dropdown
-                              options={statusOptions}
-                              value={order.status}
-                              onChange={(value) => handleStatusUpdate(order.id, value as string)}
-                              disabled={isUpdating}
-                              size="sm"
-                              variant="outline"
-                              showCheckmark={false}
-                              className="text-xs"
-                              align="right"
-                            />
+                            {getValidNextStatuses(order.status).length === 0 ? (
+                              <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(order.status)}`}>
+                                {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                              </span>
+                            ) : (
+                              <Dropdown
+                                options={getValidNextStatuses(order.status).map(s => ({ value: s, label: s.charAt(0).toUpperCase() + s.slice(1) }))}
+                                value={order.status}
+                                onChange={(value) => handleStatusUpdate(order.id, value as string)}
+                                disabled={isUpdating === order.id}
+                                size="sm"
+                                variant="outline"
+                                showCheckmark={false}
+                                className="text-xs"
+                                align="right"
+                              />
+                            )}
                           </div>
-                          {isUpdating && (
+                          {isUpdating === order.id && (
                             <div className="animate-spin rounded-full h-4 w-4 border border-orange-500 border-t-transparent"></div>
                           )}
                         </div>
@@ -875,9 +899,9 @@ export default function OrdersManagement() {
       <ConfirmationDialog
         isOpen={!!pendingPaymentUpdate}
         onClose={() => setPendingPaymentUpdate(null)}
-        onConfirm={() => {
+        onConfirm={async () => {
           if (pendingPaymentUpdate) {
-            updatePaymentStatus(pendingPaymentUpdate.orderId, pendingPaymentUpdate.paymentStatus);
+            await updatePaymentStatus(pendingPaymentUpdate.orderId, pendingPaymentUpdate.paymentStatus);
           }
           setPendingPaymentUpdate(null);
         }}

@@ -929,12 +929,23 @@ export class OrdersService {
 
       await queryRunner.commitTransaction();
 
+      // Bug B fix: load the user after commit since save() doesn't populate relations
+      let orderUser: any = null;
+      if (userId) {
+        try {
+          orderUser = await this.userRepository.findOne({ where: { id: userId } });
+        } catch { /* non-critical — email notification is best-effort */ }
+      }
+
       // Capture all notification data BEFORE setImmediate (avoid closure stale reference issues)
       const adminEmail = await this.settingsService.getSetting('admin_email', env.ADMIN_EMAIL);
       const notificationData = {
         orderNumber: savedOrder.orderNumber,
-        customerName: userId ? savedOrder.user?.name : orderData.address?.fullName || 'Customer',
-        customerEmail: userId ? savedOrder.user?.email : (orderData.address as any)?.email,
+        customerName: userId ? (orderUser?.name ?? 'Customer') : orderData.address?.fullName || 'Customer',
+        // Bug A fix: for guests, check guestInfo.email and guestEmail fallback in addition to address
+        customerEmail: userId
+          ? orderUser?.email
+          : (orderData as any)?.guestInfo?.email ?? (orderData as any)?.guestEmail ?? (orderData.address as any)?.email,
         customerPhone: address?.phone || 'N/A',
         totalAmount: savedOrder.totalAmount,
         paymentMethod: savedOrder.paymentMethod,
@@ -986,7 +997,16 @@ export class OrdersService {
         ).catch(err => this.logger.error(`Admin notification failed: ${err.message}`));
       });
 
-      return savedOrder;
+      // Bug C fix: re-fetch with relations so the API response includes items, address, user
+      try {
+        const fullOrder = await this.orderRepository.findOne({
+          where: { id: savedOrder.id },
+          relations: ['address', 'items', 'user'],
+        });
+        return fullOrder ?? savedOrder;
+      } catch {
+        return savedOrder;
+      }
     } catch (error) {
       await queryRunner.rollbackTransaction();
       throw error;

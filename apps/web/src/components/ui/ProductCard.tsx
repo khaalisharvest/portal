@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 import { HeartIcon, StarIcon } from '@heroicons/react/24/outline';
 import { HeartIcon as HeartSolidIcon } from '@heroicons/react/24/solid';
 import { useAuth } from '@/contexts/AuthContext';
@@ -26,6 +27,7 @@ interface ProductCardProps {
 }
 
 export default function ProductCard({ product }: ProductCardProps) {
+  const router = useRouter();
   const { user } = useAuth();
   const [isFavorited, setIsFavorited] = useState(false);
   const [wishlistLoading, setWishlistLoading] = useState(false);
@@ -54,7 +56,10 @@ export default function ProductCard({ product }: ProductCardProps) {
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-neutral-100 cursor-pointer w-full">
+    <div
+      className="bg-white rounded-xl shadow-sm border border-neutral-100 cursor-pointer w-full"
+      onClick={() => router.push(`/products/${product.id}`)}
+    >
       <div className="relative mb-2">
         <div className="aspect-w-1 aspect-h-1 bg-neutral-200 rounded-lg overflow-hidden">
           <Image
@@ -130,7 +135,10 @@ export default function ProductCard({ product }: ProductCardProps) {
           </div>
         </div>
 
-        <button className="w-full bg-secondary-500 hover:bg-secondary-600 text-white font-medium py-1.5 px-2 rounded-lg transition-colors duration-200 mt-1 text-xs">
+        <button
+          className="w-full bg-secondary-500 hover:bg-secondary-600 text-white font-medium py-1.5 px-2 rounded-lg transition-colors duration-200 mt-1 text-xs"
+          onClick={(e) => { e.stopPropagation(); router.push(`/products/${product.id}`); }}
+        >
           Add to Cart
         </button>
       </div>

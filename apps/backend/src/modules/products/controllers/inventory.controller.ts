@@ -14,6 +14,7 @@ class SetInventoryDto {
   @ApiProperty({ required: false }) @IsOptional() @IsString() location?: string;
   @ApiProperty({ required: false }) @IsOptional() @IsString() batchNumber?: string;
   @ApiProperty({ required: false }) @IsOptional() @IsString() expiryDate?: string;
+  @ApiProperty({ required: false }) @IsOptional() @IsString() productId?: string;
 }
 
 @ApiTags('Inventory')
@@ -43,13 +44,16 @@ export class InventoryController {
     const existing = await this.inventoryRepository.findOne({ where: { productId } });
 
     if (existing) {
-      await this.inventoryRepository.update(existing.id, {
-        quantity: dto.quantity,
-        minimumStock: dto.minimumStock ?? existing.minimumStock,
-        location: dto.location ?? existing.location,
-        batchNumber: dto.batchNumber ?? existing.batchNumber,
-        expiryDate: dto.expiryDate ? new Date(dto.expiryDate) : existing.expiryDate,
-      });
+      const inv = await this.inventoryRepository.findOne({ where: { id: existing.id } });
+      if (inv) {
+        inv.quantity = dto.quantity;
+        if (dto.minimumStock !== undefined) inv.minimumStock = dto.minimumStock;
+        if (dto.location !== undefined) inv.location = dto.location;
+        if (dto.batchNumber !== undefined) inv.batchNumber = dto.batchNumber;
+        if (dto.expiryDate !== undefined) inv.expiryDate = dto.expiryDate ? new Date(dto.expiryDate) : existing.expiryDate;
+        // availableQuantity is computed by @AfterUpdate hook
+        await this.inventoryRepository.save(inv);
+      }
       return this.inventoryRepository.findOne({ where: { productId } });
     }
 

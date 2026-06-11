@@ -95,6 +95,11 @@ function InventoryContent() {
   };
 
   const startEdit = (product: Product) => {
+    if (editingId && editingId !== product.id) {
+      if (!confirm('You have unsaved changes. Discard and edit this product instead?')) {
+        return;
+      }
+    }
     const inv = product.inventory?.[0];
     setEditingId(product.id);
     setEditForm({

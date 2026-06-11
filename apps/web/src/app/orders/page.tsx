@@ -88,14 +88,11 @@ interface Order {
 export default function OrdersPage() {
   const router = useRouter();
   const { user, isLoading, logout } = useAuth();
-  const [allOrders, setAllOrders] = useState<Order[]>([]);
-  const [filteredOrders, setFilteredOrders] = useState<Order[]>([]);
-  const [paginatedOrders, setPaginatedOrders] = useState<Order[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [selectedStatus, setSelectedStatus] = useState<string>('');
-  const itemsPerPage = 10;
 
   // Confirmation dialog states
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
@@ -114,30 +111,13 @@ export default function OrdersPage() {
     }
   }, [isLoading, user, router]);
 
-  // Filter orders locally when selectedStatus changes
-  useEffect(() => {
-    if (selectedStatus === '') {
-      setFilteredOrders(allOrders);
-    } else {
-      setFilteredOrders(allOrders.filter(order => order.status === selectedStatus));
-    }
-  }, [allOrders, selectedStatus]);
-
-  // Paginate filtered orders when they change
-  useEffect(() => {
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    const endIndex = startIndex + itemsPerPage;
-    setPaginatedOrders(filteredOrders.slice(startIndex, endIndex));
-    setTotalPages(Math.ceil(filteredOrders.length / itemsPerPage));
-  }, [filteredOrders, currentPage, itemsPerPage]);
-
-  const fetchOrders = async () => {
+  const fetchOrders = async (page = currentPage, status = selectedStatus) => {
     try {
       setLoading(true);
       const params = new URLSearchParams();
-      params.append('page', '1');
-      params.append('limit', '100'); // Fetch more orders to have enough for filtering
-
+      params.append('page', String(page));
+      params.append('limit', '20');
+      if (status) params.append('status', status);
 
       const response = await fetch(`/api/v1/orders?${params}`, {
         headers: {
@@ -147,7 +127,9 @@ export default function OrdersPage() {
       if (response.ok) {
         const data = await response.json();
         const fetchedOrders = data.data?.orders || data.orders || [];
-        setAllOrders(fetchedOrders);
+        const total = data.data?.totalPages || data.totalPages || 1;
+        setOrders(fetchedOrders);
+        setTotalPages(total);
       } else if (response.status === 401) {
         // Token expired or invalid - use logout to handle cleanup and redirect
         await logout();
@@ -189,11 +171,13 @@ export default function OrdersPage() {
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
+    fetchOrders(page, selectedStatus);
   };
 
   const handleStatusFilter = (status: string) => {
     setSelectedStatus(status);
-    setCurrentPage(1); // Reset to first page when filtering
+    setCurrentPage(1);
+    fetchOrders(1, status);
   };
 
   const handleConfirmCancel = async () => {
@@ -216,7 +200,7 @@ export default function OrdersPage() {
         toast.success(`Order #${pendingCancel.orderNumber} has been cancelled`);
         setCancellationReason('');
         // Refresh orders list
-        await fetchOrders();
+        await fetchOrders(currentPage, selectedStatus);
       } else if (response.status === 401) {
         await logout();
       } else {
@@ -305,7 +289,7 @@ export default function OrdersPage() {
               <p className="text-neutral-500 text-sm">Loading your orders…</p>
             </div>
           </div>
-        ) : paginatedOrders.length === 0 ? (
+        ) : orders.length === 0 ? (
           <div className="text-center py-16">
             <div className="h-24 w-24 relative mx-auto mb-6">
               <Image
@@ -333,7 +317,7 @@ export default function OrdersPage() {
           </div>
         ) : (
           <div className="space-y-6">
-            {paginatedOrders.map((order, index) => (
+            {orders.map((order, index) => (
               <motion.div
                 key={order.id}
                 initial={{ opacity: 0, y: 20 }}
@@ -349,7 +333,7 @@ export default function OrdersPage() {
                         Order #{order.orderNumber}
                       </h3>
                       <p className="text-xs sm:text-sm text-neutral-600">
-                        Placed on {new Date(order.createdAt).toLocaleDateString('en-PK', { day: 'numeric', month: 'short', year: 'numeric' })}
+                        Placed on {new Date(order.createdAt).toLocaleDateString('en-PK', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Asia/Karachi' })}
                       </p>
                     </div>
                     <div className="flex items-center justify-between sm:flex-col sm:items-end sm:text-right">
@@ -403,7 +387,7 @@ export default function OrdersPage() {
                     <div>
                       <h4 className="text-sm font-medium text-neutral-900 mb-1">Delivery Address</h4>
                       <p className="text-sm text-neutral-600">
-                        {order.address.fullName}, {order.address.city}
+                        {order.address?.fullName ?? 'Address not available'}{order.address?.city ? `, ${order.address.city}` : ''}
                       </p>
                     </div>
 
@@ -418,7 +402,7 @@ export default function OrdersPage() {
                       <div>
                         <h4 className="text-sm font-medium text-neutral-900 mb-1">Estimated Delivery</h4>
                         <p className="text-sm text-neutral-600">
-                          {new Date(order.estimatedDelivery).toLocaleDateString('en-PK', { day: 'numeric', month: 'short', year: 'numeric' })}
+                          {new Date(order.estimatedDelivery).toLocaleDateString('en-PK', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Asia/Karachi' })}
                         </p>
                       </div>
                     )}
@@ -435,7 +419,7 @@ export default function OrdersPage() {
                         <span>View Details</span>
                       </button>
 
-                      {order.status !== 'delivered' && order.status !== 'cancelled' && (
+                      {order.status !== 'delivered' && order.status !== 'cancelled' && order.status !== 'refunded' && (
                         <button
                           onClick={() => {
                             setPendingCancel({ id: order.id, orderNumber: order.orderNumber });

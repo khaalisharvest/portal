@@ -7,4 +7,4 @@ export const POST = (req: NextRequest) =>
 
 // Protected: delete image from Cloudinary by URL (?url=...)
 export const DELETE = (req: NextRequest) =>
-  proxy(req, { path: '/api/v1/upload/image', requireAuth: true });
+  proxy(req, { path: '/api/v1/upload/image', requireAuth: true, passQuery: true, requireRole: ['super_admin', 'staff'] });

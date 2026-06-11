@@ -75,9 +75,10 @@ export default function CartPage() {
   const handleQty = (productId: string, variant: string | undefined, next: number) => {
     if (next < 1) {
       removeFromCart(productId, variant);
+      toast.success('Item removed from basket');
       return;
     }
-    setIsUpdating(productId);
+    setIsUpdating(`${productId}-${variant ?? ''}`);
     try {
       updateQuantity(productId, variant, next);
     } finally {
@@ -98,7 +99,7 @@ export default function CartPage() {
   const confirmAction = () => {
     if (!pendingAction) return;
     if (pendingAction.type === 'remove' && pendingAction.productId) {
-      setIsUpdating(pendingAction.productId);
+      setIsUpdating(`${pendingAction.productId}-${pendingAction.selectedVariant ?? ''}`);
       removeFromCart(pendingAction.productId, pendingAction.selectedVariant);
       toast.success(`${pendingAction.productName} removed from basket`);
       setIsUpdating(null);
@@ -202,7 +203,7 @@ export default function CartPage() {
                   const origPrice = item.variantOriginalPrice ?? item.originalPrice;
                   const hasDiscount = origPrice != null && origPrice > item.price;
                   const lineTotal = item.price * item.quantity;
-                  const spinning = isUpdating === item.productId;
+                  const spinning = isUpdating === `${item.productId}-${item.selectedVariant ?? ''}`;
 
                   return (
                     <motion.div
@@ -355,7 +356,11 @@ export default function CartPage() {
                 <div className="border-t border-neutral-100 pt-3">
                   <div className="flex justify-between text-lg font-bold text-neutral-900">
                     <span>Total</span>
-                    <span>₨{fmt(grandTotal)}</span>
+                    {calcLoading ? (
+                      <span className="text-neutral-400 text-sm">Calculating...</span>
+                    ) : (
+                      <span>₨{fmt(grandTotal)}</span>
+                    )}
                   </div>
                   {totalSavings > 0 && (
                     <p className="text-xs text-primary-600 mt-1 text-right">

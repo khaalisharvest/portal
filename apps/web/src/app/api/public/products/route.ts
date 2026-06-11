@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(data);
   } catch (error) {
     return NextResponse.json(
-      { message: 'Failed to fetch fruits' },
+      { success: false, message: 'Failed to fetch products' },
       { status: 500 }
     );
   }

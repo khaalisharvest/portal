@@ -123,6 +123,7 @@ export default function ProductsSection({
     search: string,
     isInitial = false,
   ) => {
+    setError(null);
     try {
       if (isInitial) setLoading(true);
       else setFilterLoading(true);

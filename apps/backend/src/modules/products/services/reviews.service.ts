@@ -23,10 +23,15 @@ export class ReviewsService {
     return saved;
   }
 
-  async findByProduct(productId: string): Promise<{ reviews: Review[]; total: number; avgRating: number }> {
+  async findByProduct(productId: string, page = 1, limit = 20): Promise<{ reviews: Review[]; total: number; avgRating: number }> {
+    const take = Math.min(limit, 50);
+    const skip = (page - 1) * take;
     const [reviews, total] = await this.reviewRepository.findAndCount({
       where: { productId, isActive: true },
+      relations: ['user'],
       order: { createdAt: 'DESC' },
+      take,
+      skip,
     });
     const avgRating = total > 0 ? reviews.reduce((sum, r) => sum + r.rating, 0) / total : 0;
     return { reviews, total, avgRating: Math.round(avgRating * 10) / 10 };

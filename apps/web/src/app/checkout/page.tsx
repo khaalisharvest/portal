@@ -312,6 +312,12 @@ export default function CheckoutPage() {
       }
     }
 
+    // Check minimum order amount
+    if (deliveryCalculation !== null && cartState.totalPrice < (publicSettings.min_order_amount || 0)) {
+      toast.error(`Minimum order amount is ₨${publicSettings.min_order_amount || 0}`);
+      return;
+    }
+
     setIsCreatingOrder(true);
 
     try {
@@ -328,6 +334,7 @@ export default function CheckoutPage() {
           address: {
             fullName: guestInfo.name,
             phone: validatedPhone,
+            email: guestInfo.email,
             addressLine1: newAddress.addressLine1,
             addressLine2: newAddress.addressLine2,
             city: newAddress.city,
@@ -371,7 +378,7 @@ export default function CheckoutPage() {
           router.push(confirmUrl);
         } else {
           const error = await response.json();
-          throw new Error(error.message || 'Failed to place order');
+          throw new Error(error.error || error.message || 'Failed to place order');
         }
       } else {
         // Logged-in user order data
@@ -411,12 +418,13 @@ export default function CheckoutPage() {
           router.push(confirmUrl);
         } else {
           const error = await response.json();
-          throw new Error(error.message || 'Failed to place order');
+          throw new Error(error.error || error.message || 'Failed to place order');
         }
       }
     } catch (error) {
       console.error('Error placing order:', error);
-      toast.error('Failed to place order. Please try again.');
+      const msg = error instanceof Error ? error.message : 'Failed to place order. Please try again.';
+      toast.error(msg);
     } finally {
       setIsCreatingOrder(false);
     }

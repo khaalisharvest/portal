@@ -54,6 +54,7 @@ export default function ProductsManagement() {
   const [productTypes, setProductTypes] = useState<ProductType[]>([]);
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [togglingId, setTogglingId] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [viewMode, setViewMode] = useState<'list' | 'card'>('list');
@@ -210,6 +211,10 @@ export default function ProductsManagement() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isSaving) return;
+    if (!formData.categoryId) {
+      toast.error('Please select a category');
+      return;
+    }
     setIsSaving(true);
     try {
       // Upload any locally-staged files to Cloudinary now (on Save, not on select)
@@ -727,7 +732,9 @@ export default function ProductsManagement() {
                         <div className="flex items-center space-x-2">
                           <span className="text-sm text-gray-600">Quick Toggle:</span>
                           <button
+                            disabled={togglingId === product.id}
                             onClick={async () => {
+                              setTogglingId(product.id);
                               try {
                                 const response = await fetch(`/api/v1/products/${product.id}`, {
                                   method: 'PUT',
@@ -739,12 +746,19 @@ export default function ProductsManagement() {
 
                                 if (response.ok) {
                                   await fetchProducts();
+                                } else {
+                                  toast.error('Failed to update product availability. Please try again.');
+                                  fetchProducts(currentPage, searchTerm, selectedCategory, selectedProductTypeFilter);
                                 }
                               } catch (error) {
-                                // Error updating product availability
+                                toast.error('Failed to update product availability. Please try again.');
+                                // Refresh to show correct state
+                                fetchProducts(currentPage, searchTerm, selectedCategory, selectedProductTypeFilter);
+                              } finally {
+                                setTogglingId(null);
                               }
                             }}
-                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 ${
+                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed ${
                               product.isAvailable
                                 ? 'bg-gradient-to-r from-orange-500 to-green-500'
                                 : 'bg-gray-300'

@@ -269,19 +269,21 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   const refreshCart = () => {
     try {
-      const savedCart = localStorage.getItem('cart');
-      
-      if (savedCart) {
-        const cartItems = JSON.parse(savedCart);
-        if (Array.isArray(cartItems)) {
-          dispatch({ type: 'LOAD_CART', payload: cartItems });
-        } else {
-          localStorage.removeItem('cart');
-        }
+      const saved = localStorage.getItem('cart');
+      if (!saved) return;
+      const items = JSON.parse(saved);
+      if (Array.isArray(items)) {
+        const sanitized = items.map(item => ({
+          ...item,
+          price: Number(item.price) || 0,
+          originalPrice: item.originalPrice != null ? Number(item.originalPrice) : undefined,
+          quantity: Math.max(1, parseInt(item.quantity) || 1),
+          variantPrice: item.variantPrice != null ? Number(item.variantPrice) : undefined,
+          variantOriginalPrice: item.variantOriginalPrice != null ? Number(item.variantOriginalPrice) : undefined,
+        }));
+        dispatch({ type: 'LOAD_CART', payload: sanitized });
       }
-    } catch (error) {
-      // Silently handle localStorage errors
-    }
+    } catch { /* silent */ }
   };
 
   return (

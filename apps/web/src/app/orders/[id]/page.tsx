@@ -98,7 +98,7 @@ export default function OrderDetailsPage() {
     }
   }, [isLoading, user, params.id, router]);
 
-  const fetchOrderDetails = async (orderId: string) => {
+  const fetchOrderDetails = async (orderId: string, redirectOnError = true) => {
     try {
       setLoading(true);
       const response = await fetch(`/api/v1/orders/${orderId}`, {
@@ -115,7 +115,7 @@ export default function OrderDetailsPage() {
     } catch (error) {
       console.error('Error fetching order details:', error);
       toast.error('Failed to load order details');
-      router.push('/orders');
+      if (redirectOnError) router.push('/orders');
     } finally {
       setLoading(false);
     }
@@ -146,7 +146,12 @@ export default function OrderDetailsPage() {
       if (res.ok) {
         toast.success(`Order #${order.orderNumber} cancelled`);
         setCancellationReason('');
-        fetchOrderDetails(order.id);
+        // Refresh order details without redirect on failure — stay on page with stale data
+        try {
+          await fetchOrderDetails(order.id, false);
+        } catch {
+          // Stay on page, show stale data rather than redirect
+        }
       } else {
         const err = await res.json().catch(() => ({}));
         toast.error(err.error || 'Failed to cancel order');
@@ -237,7 +242,7 @@ export default function OrderDetailsPage() {
                   <div className="flex-1">
                     <h1 className="text-xl sm:text-2xl font-bold text-neutral-900">Order #{order.orderNumber}</h1>
                     <p className="text-sm sm:text-base text-neutral-600">
-                      Placed on {new Date(order.createdAt).toLocaleDateString('en-PK', { day: 'numeric', month: 'short', year: 'numeric' })}
+                      Placed on {new Date(order.createdAt).toLocaleDateString('en-PK', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Asia/Karachi' })}
                     </p>
                   </div>
                   <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs sm:text-sm font-semibold ${getStatusColor(order.status)} self-start sm:self-auto`}>
@@ -280,7 +285,7 @@ export default function OrderDetailsPage() {
                     <div>
                       <h3 className="text-xs sm:text-sm font-medium text-neutral-900 mb-2">Estimated Delivery</h3>
                       <p className="text-xs sm:text-sm text-neutral-600">
-                        {new Date(order.estimatedDelivery).toLocaleDateString('en-PK', { day: 'numeric', month: 'short', year: 'numeric' })}
+                        {new Date(order.estimatedDelivery).toLocaleDateString('en-PK', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Asia/Karachi' })}
                       </p>
                     </div>
                   )}
@@ -289,7 +294,7 @@ export default function OrderDetailsPage() {
                     <div>
                       <h3 className="text-xs sm:text-sm font-medium text-neutral-900 mb-2">Delivered On</h3>
                       <p className="text-xs sm:text-sm text-neutral-600">
-                        {new Date(order.deliveredAt).toLocaleDateString('en-PK', { day: 'numeric', month: 'short', year: 'numeric' })}
+                        {new Date(order.deliveredAt).toLocaleDateString('en-PK', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Asia/Karachi' })}
                       </p>
                     </div>
                   )}
@@ -372,17 +377,17 @@ export default function OrderDetailsPage() {
                 <div className="flex items-start space-x-3">
                   <Icon name="location" className="w-4 h-4 sm:w-5 sm:h-5 text-neutral-400 mt-1 flex-shrink-0" />
                   <div className="min-w-0">
-                    <h3 className="text-sm sm:text-base font-medium text-neutral-900">{order.address.fullName}</h3>
-                    <p className="text-xs sm:text-sm text-neutral-600">{order.address.phone}</p>
+                    <h3 className="text-sm sm:text-base font-medium text-neutral-900">{order.address?.fullName ?? 'Address not available'}</h3>
+                    <p className="text-xs sm:text-sm text-neutral-600">{order.address?.phone ?? '—'}</p>
                     <p className="text-xs sm:text-sm text-neutral-600 mt-1 break-words">
-                      {order.address.addressLine1}
-                      {order.address.addressLine2 && `, ${order.address.addressLine2}`}
+                      {order.address?.addressLine1 ?? '—'}
+                      {order.address?.addressLine2 && `, ${order.address.addressLine2}`}
                     </p>
                     <p className="text-xs sm:text-sm text-neutral-600">
-                      {order.address.city}, {order.address.state} {order.address.postalCode}
+                      {order.address?.city ?? '—'}{order.address?.state ? `, ${order.address.state}` : ''} {order.address?.postalCode ?? ''}
                     </p>
-                    <p className="text-xs sm:text-sm text-neutral-600">{order.address.country}</p>
-                    {order.address.instructions && (
+                    <p className="text-xs sm:text-sm text-neutral-600">{order.address?.country ?? ''}</p>
+                    {order.address?.instructions && (
                       <p className="text-xs sm:text-sm text-neutral-500 mt-2">
                         <strong>Instructions:</strong> {order.address.instructions}
                       </p>
@@ -416,7 +421,7 @@ export default function OrderDetailsPage() {
                     </p>
                     {order.cancelledAt && (
                       <p className="text-xs text-error-500 mt-1">
-                        Cancelled on {new Date(order.cancelledAt).toLocaleDateString('en-PK', { day: 'numeric', month: 'short', year: 'numeric' })}
+                        Cancelled on {new Date(order.cancelledAt).toLocaleDateString('en-PK', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Asia/Karachi' })}
                       </p>
                     )}
                   </div>
@@ -440,8 +445,8 @@ export default function OrderDetailsPage() {
 
                 <div className="flex justify-between text-xs sm:text-sm">
                   <span className="text-neutral-600">Delivery Fee</span>
-                  <span className={`font-medium ${order.deliveryFee === 0 ? 'text-primary-600' : ''}`}>
-                    {order.deliveryFee === 0 ? 'Free' : `₨${fmt(Number(order.deliveryFee))}`}
+                  <span className={`font-medium ${Number(order.deliveryFee) === 0 ? 'text-primary-600' : ''}`}>
+                    {Number(order.deliveryFee) === 0 ? 'Free' : `₨${fmt(Number(order.deliveryFee))}`}
                   </span>
                 </div>
 

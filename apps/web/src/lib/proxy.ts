@@ -128,7 +128,7 @@ export async function proxy(
       (Array.isArray(d?.message) ? d.message[0] : d?.message) ||
       d?.error ||
       `Request failed (${response.status})`;
-    return NextResponse.json({ error: msg }, { status: response.status });
+    return NextResponse.json({ error: msg, message: msg }, { status: response.status });
   }
 
   // --- Empty success (204 or no body) ---
