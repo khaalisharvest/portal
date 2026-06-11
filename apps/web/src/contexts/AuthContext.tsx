@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
+import { authFetch } from '@/lib/authFetch';
 
 interface User {
   id: string;
@@ -94,11 +95,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!token) return;
 
       // backend_token is sent automatically via HttpOnly cookie
-      const response = await fetch('/api/auth/me', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
+      const response = await authFetch('/api/auth/me');
 
       if (response.ok) {
         const userData = await response.json();

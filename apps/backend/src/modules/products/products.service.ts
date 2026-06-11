@@ -171,9 +171,15 @@ export class ProductsService {
     const categories = await this.categoryRepository
       .createQueryBuilder('category')
       .leftJoinAndSelect('category.productTypes', 'productType')
-      .innerJoin('products', 'p', 'p.categoryId = category.id AND p.isAvailable = true')
       .where('category.active = :active', { active: true })
-      .groupBy('category.id, productType.id')
+      .andWhere(qb => {
+        const sub = qb.subQuery()
+          .select('1')
+          .from('products', 'p')
+          .where('p."categoryId" = category.id AND p."isAvailable" = true')
+          .getQuery();
+        return `EXISTS (${sub})`;
+      })
       .orderBy('category.sortOrder', 'ASC')
       .addOrderBy('category.createdAt', 'DESC')
       .getMany();
@@ -198,9 +204,15 @@ export class ProductsService {
     const productTypes = await this.productTypeRepository
       .createQueryBuilder('productType')
       .leftJoinAndSelect('productType.category', 'category')
-      .innerJoin('products', 'p', 'p.productTypeId = productType.id AND p.isAvailable = true')
       .where('productType.isActive = :isActive', { isActive: true })
-      .groupBy('productType.id, category.id')
+      .andWhere(qb => {
+        const sub = qb.subQuery()
+          .select('1')
+          .from('products', 'p')
+          .where('p."productTypeId" = productType.id AND p."isAvailable" = true')
+          .getQuery();
+        return `EXISTS (${sub})`;
+      })
       .orderBy('productType.sortOrder', 'ASC')
       .addOrderBy('productType.createdAt', 'DESC')
       .getMany();

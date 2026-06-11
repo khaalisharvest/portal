@@ -1,6 +1,7 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToMany, Index, Check } from 'typeorm';
 import { ApiProperty } from '@nestjs/swagger';
 import { IsEmail, IsPhoneNumber, IsEnum, IsOptional, IsBoolean, IsString, MinLength, MaxLength, IsNumber, Min, Max } from 'class-validator';
+import { Exclude } from 'class-transformer';
 import { Order } from '../../orders/entities/order.entity';
 import { Address } from '../../orders/entities/address.entity';
 import { Review } from '../../products/entities/review.entity';
@@ -36,6 +37,7 @@ export class User {
   @IsEmail()
   email?: string;
 
+  @Exclude()
   @Column()
   password: string;
 

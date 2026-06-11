@@ -19,19 +19,18 @@ services:
       POSTGRES_DB: ${DB_NAME:-khaalis_harvest}
       POSTGRES_USER: ${DB_USERNAME:-postgres}
       POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD must be set in .env}
-    # Expose port for local development (doesn't hurt in production)
-    ports:
-      - "${DB_PORT:-5433}:5432"
+    # NO host port exposure — DB is only reachable inside Docker network.
+    # For local dev DB access, use docker-compose.dev.yml which adds ports.
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
       - khaalis-network
     restart: unless-stopped
-    # Memory optimization (set POSTGRES_COMMAND in .env for Azure)
-    # Default: standard postgres (for local dev)
-    # Example for Azure: postgres -c shared_buffers=128MB -c effective_cache_size=256MB -c max_connections=50
+    mem_limit: 1g
+    memswap_limit: 1g
+    # Memory optimization (set POSTGRES_COMMAND in .env for Oracle Cloud)
+    # Example: postgres -c shared_buffers=256MB -c effective_cache_size=512MB -c max_connections=50
     command: ${POSTGRES_COMMAND:-postgres}
-    # Health check for PostgreSQL
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-postgres} -d ${DB_NAME:-khaalis_harvest}"]
       interval: 10s
@@ -45,19 +44,18 @@ services:
   redis:
     image: redis:7-alpine
     container_name: khaalis-redis
-    # Expose port for local development (doesn't hurt in production)
-    ports:
-      - "${REDIS_PORT:-6379}:6379"
+    # NO host port exposure — Redis is only reachable inside Docker network (no auth by default).
+    # For local dev Redis access, use docker-compose.dev.yml which adds ports.
     volumes:
       - redis_data:/data
     networks:
       - khaalis-network
     restart: unless-stopped
-    # Memory optimization (set REDIS_COMMAND in .env for Azure)
-    # Default: standard redis-server (for local dev)
-    # Example for Azure: redis-server --maxmemory 128mb --maxmemory-policy allkeys-lru
+    mem_limit: 256m
+    memswap_limit: 256m
+    # Memory optimization (set REDIS_COMMAND in .env for Oracle Cloud)
+    # Example: redis-server --maxmemory 200mb --maxmemory-policy allkeys-lru
     command: ${REDIS_COMMAND:-redis-server}
-    # Health check for Redis
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -79,7 +77,7 @@ services:
         NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL}
         NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-}
         BACKEND_URL: ${BACKEND_URL}
-        JWT_SECRET: ${JWT_SECRET}
+        # JWT_SECRET intentionally absent from build args — injected at runtime via env_file only
         NEXT_PUBLIC_ADMIN_EMAIL: ${NEXT_PUBLIC_ADMIN_EMAIL}
         NEXT_PUBLIC_ADMIN_WHATSAPP: ${NEXT_PUBLIC_ADMIN_WHATSAPP}
         NEXT_PUBLIC_BANK_NAME: ${NEXT_PUBLIC_BANK_NAME}
@@ -111,8 +109,7 @@ services:
       NODE_OPTIONS_FRONTEND: ${NODE_OPTIONS_FRONTEND:-2048}
     volumes:
       - uploads_data:/app/uploads
-    # Ports are now only exposed internally (via Nginx)
-    # External access is through Nginx on ports 80/443
+    # Ports exposed internally only (Nginx handles external traffic on 80/443)
     expose:
       - "3000"  # Backend API (internal)
       - "3001"  # Frontend Web App (internal)
@@ -124,6 +121,16 @@ services:
     networks:
       - khaalis-network
     restart: unless-stopped
+    # Memory limits: backend (1.5GB heap) + frontend (2GB heap) + OS overhead
+    mem_limit: 4g
+    memswap_limit: 4g
+    # Health check: verifies backend is alive (frontend depends on backend)
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/api/v1/health/live"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
 
   # ==========================================================================
   # Nginx Reverse Proxy with HTTPS
@@ -144,6 +151,8 @@ services:
     networks:
       - khaalis-network
     restart: unless-stopped
+    mem_limit: 128m
+    memswap_limit: 128m
     command: "/bin/sh -c 'while :; do sleep 6h & wait $${!}; nginx -s reload; done & nginx -g \"daemon off;\"'"
 
   # ==========================================================================
@@ -152,6 +161,9 @@ services:
   certbot:
     image: certbot/certbot
     container_name: khaalis-certbot
+    restart: unless-stopped
+    mem_limit: 64m
+    memswap_limit: 64m
     volumes:
       - certbot-www:/var/www/certbot
       - certbot-conf:/etc/letsencrypt

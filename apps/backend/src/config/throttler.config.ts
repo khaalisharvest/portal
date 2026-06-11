@@ -6,6 +6,7 @@ import { env } from './env';
 
 @Injectable()
 export class ThrottlerConfig implements ThrottlerOptionsFactory, OnModuleDestroy {
+  static _fallback: Map<string, { hits: number; resetAt: number }> | null = null;
   private readonly logger = new Logger(ThrottlerConfig.name);
   private redis: Redis;
 
@@ -86,12 +87,22 @@ export class ThrottlerConfig implements ThrottlerOptionsFactory, OnModuleDestroy
             };
           } catch (error) {
             logger.error(`Throttler increment failed for key ${key}: ${error.message}`);
-            // Return non-blocking response on error to allow request through
+            // In-memory fallback: enforces a generous limit during Redis outage
+            // This prevents brute-force attacks while keeping the site available
+            if (!ThrottlerConfig._fallback) ThrottlerConfig._fallback = new Map();
+            const now = Date.now();
+            const entry = ThrottlerConfig._fallback.get(key) || { hits: 0, resetAt: now + ttl };
+            if (now > entry.resetAt) { entry.hits = 0; entry.resetAt = now + ttl; }
+            entry.hits++;
+            ThrottlerConfig._fallback.set(key, entry);
+            // Use 3x normal limit as fallback (generous but not unlimited)
+            const fallbackLimit = limit * 3;
+            const isBlocked = entry.hits >= fallbackLimit;
             return {
-              totalHits: 0,
-              timeToExpire: 0,
-              isBlocked: false,
-              timeToBlockExpire: 0,
+              totalHits: entry.hits,
+              timeToExpire: entry.resetAt - now,
+              isBlocked,
+              timeToBlockExpire: isBlocked ? entry.resetAt - now : 0,
             };
           }
         },

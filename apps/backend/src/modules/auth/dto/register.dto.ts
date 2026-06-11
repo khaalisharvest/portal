@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsNotEmpty, IsPhoneNumber, IsEmail, IsOptional, MinLength, IsEnum } from 'class-validator';
+import { IsString, IsNotEmpty, IsEmail, IsOptional, MinLength, IsEnum, Matches } from 'class-validator';
 
 export class RegisterDto {
   @ApiProperty({ example: 'John Doe' })
@@ -8,7 +8,7 @@ export class RegisterDto {
   name: string;
 
   @ApiProperty({ example: '+923001234567' })
-  @IsPhoneNumber('PK')
+  @Matches(/^(\+92|0)[0-9]{10}$/, { message: 'Phone must be a valid Pakistani mobile number (e.g. 03001234567 or +923001234567)' })
   @IsNotEmpty()
   phone: string;
 
@@ -17,10 +17,13 @@ export class RegisterDto {
   @IsOptional()
   email?: string;
 
-  @ApiProperty({ example: 'password123' })
+  @ApiProperty({ example: 'Password1' })
   @IsString()
   @IsNotEmpty()
-  @MinLength(6)
+  @MinLength(8)
+  @Matches(/(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])/, {
+    message: 'Password must contain at least one uppercase letter, one lowercase letter, and one number',
+  })
   password: string;
 
   @ApiProperty({

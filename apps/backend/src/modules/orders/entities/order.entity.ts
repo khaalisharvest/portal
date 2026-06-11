@@ -49,12 +49,12 @@ export class Order {
   @JoinColumn({ name: 'userId' })
   user: User | null;
 
-  @Column()
-  addressId: string;
+  @Column({ nullable: true })
+  addressId: string | null;
 
-  @ManyToOne(() => Address, { onDelete: 'CASCADE' })
+  @ManyToOne(() => Address, { onDelete: 'SET NULL', nullable: true })
   @JoinColumn({ name: 'addressId' })
-  address: Address;
+  address: Address | null;
 
   @OneToMany(() => OrderItem, item => item.order, { cascade: true })
   items: OrderItem[];

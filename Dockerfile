@@ -22,7 +22,8 @@ RUN apt-get update && apt-get install -y python3 make g++ wget && rm -rf /var/li
 ARG NEXT_PUBLIC_API_URL
 ARG NEXT_PUBLIC_APP_URL
 ARG BACKEND_URL
-ARG JWT_SECRET
+# JWT_SECRET is NOT a build arg — it must never be baked into image layers.
+# Pass it only at runtime via env_file in docker-compose.yml.
 # Optional build args (have defaults)
 ARG NEXT_PUBLIC_API_BASE_URL=
 ARG NEXT_PUBLIC_ADMIN_EMAIL
@@ -45,7 +46,7 @@ ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 ENV NEXT_PUBLIC_APP_URL=$NEXT_PUBLIC_APP_URL
 ENV NEXT_PUBLIC_API_BASE_URL=$NEXT_PUBLIC_API_BASE_URL
 ENV BACKEND_URL=$BACKEND_URL
-ENV JWT_SECRET=$JWT_SECRET
+# JWT_SECRET intentionally omitted — injected at runtime only (not baked into image)
 ENV NEXT_PUBLIC_ADMIN_EMAIL=$NEXT_PUBLIC_ADMIN_EMAIL
 ENV NEXT_PUBLIC_ADMIN_WHATSAPP=$NEXT_PUBLIC_ADMIN_WHATSAPP
 ENV NEXT_PUBLIC_BANK_NAME=$NEXT_PUBLIC_BANK_NAME
@@ -102,10 +103,11 @@ RUN cd apps/backend && yarn build
 #      Handle prerender errors gracefully (we use dynamic rendering anyway)
 # ============================================================================
 # Validate critical build-time env vars are set
-RUN if [ -z "$NEXT_PUBLIC_API_URL" ] || [ -z "$NEXT_PUBLIC_APP_URL" ] || [ -z "$BACKEND_URL" ] || [ -z "$JWT_SECRET" ]; then \
+RUN if [ -z "$NEXT_PUBLIC_API_URL" ] || [ -z "$NEXT_PUBLIC_APP_URL" ] || [ -z "$BACKEND_URL" ]; then \
       echo "❌ ERROR: Missing required build arguments!"; \
-      echo "Required: NEXT_PUBLIC_API_URL, NEXT_PUBLIC_APP_URL, BACKEND_URL, JWT_SECRET"; \
+      echo "Required: NEXT_PUBLIC_API_URL, NEXT_PUBLIC_APP_URL, BACKEND_URL"; \
       echo "These must be set in .env file and passed via docker-compose.yml build.args"; \
+      echo "Note: JWT_SECRET is injected at runtime only (never a build arg)"; \
       exit 1; \
     fi && \
     NEXT_TELEMETRY_DISABLED=1 yarn workspace @khaalis-harvest/web build || \

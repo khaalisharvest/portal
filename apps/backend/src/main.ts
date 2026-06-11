@@ -13,7 +13,9 @@ import { PORT, ALLOWED_ORIGINS } from './config/env';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
-    logger: ['error', 'warn', 'log', 'debug', 'verbose'],
+    logger: process.env.NODE_ENV === 'production'
+      ? ['error', 'warn', 'log']
+      : ['error', 'warn', 'log', 'debug', 'verbose'],
   });
   const logger = new Logger('Bootstrap');
 
@@ -54,20 +56,23 @@ async function bootstrap() {
   // API prefix
   app.setGlobalPrefix('api/v1');
 
-  // Swagger documentation
-  const config = new DocumentBuilder()
-    .setTitle('Khaalis Harvest API')
-    .setDescription("Pakistan's premier organic marketplace API")
-    .setVersion('1.0')
-    .addBearerAuth()
-    .build();
-
-  const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api/docs', app, document);
+  // Swagger documentation — disabled in production (exposes endpoint map to attackers)
+  if (process.env.NODE_ENV !== 'production') {
+    const config = new DocumentBuilder()
+      .setTitle('Khaalis Harvest API')
+      .setDescription("Pakistan's premier organic marketplace API")
+      .setVersion('1.0')
+      .addBearerAuth()
+      .build();
+    const document = SwaggerModule.createDocument(app, config);
+    SwaggerModule.setup('api/docs', app, document);
+  }
 
   await app.listen(PORT);
   logger.log(`API Server running on http://localhost:${PORT}`);
-  logger.log(`API Docs: http://localhost:${PORT}/api/docs`);
+  if (process.env.NODE_ENV !== 'production') {
+    logger.log(`API Docs: http://localhost:${PORT}/api/docs`);
+  }
   logger.log(`Environment: ${process.env.NODE_ENV}`);
 }
 

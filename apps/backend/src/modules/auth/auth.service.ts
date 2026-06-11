@@ -48,28 +48,34 @@ export class AuthService {
   }
 
   async login(loginDto: LoginDto) {
-    // Normalize phone number before validation
     const normalizedPhone = normalizePhoneForDatabase(loginDto.phone);
-    
-    // First check if user exists and is active
     const user = await this.usersService.findByPhone(normalizedPhone);
     if (!user) {
       throw new UnauthorizedException('Invalid credentials');
     }
-    
-    // Check if account is active before password validation
+
+    // Check account lockout
+    if (user.lockedUntil && user.lockedUntil > new Date()) {
+      const minutesLeft = Math.ceil((user.lockedUntil.getTime() - Date.now()) / 60000);
+      throw new UnauthorizedException(`Account locked. Try again in ${minutesLeft} minute(s).`);
+    }
+
     if (!user.isActive) {
       throw new UnauthorizedException('Your account has been deactivated. Please contact support for assistance.');
     }
-    
-    // Validate password
+
     const isPasswordValid = await bcrypt.compare(loginDto.password, user.password);
     if (!isPasswordValid) {
+      // Increment attempts and lock if >= 5
+      const attempts = (user.loginAttempts || 0) + 1;
+      const lockedUntil = attempts >= 5 ? new Date(Date.now() + 30 * 60 * 1000) : null;
+      await this.usersService.updateLoginAttempts(user.id, attempts, lockedUntil);
+      this.logger.warn(`Failed login attempt ${attempts}/5 for user ${user.id}`);
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    // Update last login timestamp
-    user.lastLoginAt = new Date();
+    // Success: reset attempts
+    await this.usersService.updateLoginAttempts(user.id, 0, null);
     await this.usersService.updateLastLogin(user.id);
 
     const tokens = await this.generateTokens(user.id, user.role);

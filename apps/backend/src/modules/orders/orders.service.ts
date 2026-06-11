@@ -253,14 +253,20 @@ export class OrdersService {
 
     // Release reserved inventory on cancellation
     const orderItems = await this.orderItemRepository.find({ where: { orderId: id } });
-    for (const item of orderItems) {
-      const inventory = await this.dataSource.manager.findOne(Inventory, {
-        where: { productId: item.productId }
+    if (orderItems.length > 0) {
+      const productIds = orderItems.map(item => item.productId);
+      const inventories = await this.dataSource.manager.find(Inventory, {
+        where: { productId: In(productIds) },
       });
-      if (inventory && inventory.reservedQuantity > 0) {
-        await this.dataSource.manager.update(Inventory, inventory.id, {
-          reservedQuantity: () => `GREATEST("reservedQuantity" - ${item.quantity}, 0)`
-        });
+      const inventoryMap = new Map(inventories.map(inv => [inv.productId, inv]));
+
+      for (const item of orderItems) {
+        const inventory = inventoryMap.get(item.productId);
+        if (inventory && inventory.reservedQuantity > 0) {
+          await this.dataSource.manager.update(Inventory, inventory.id, {
+            reservedQuantity: () => `GREATEST("reservedQuantity" - ${item.quantity}, 0)`
+          });
+        }
       }
     }
 
@@ -722,10 +728,12 @@ export class OrdersService {
         const product = products.find(p => p.id === item.productId);
         if (!product) continue;
 
-        // Load inventory if it exists
-        const inventory = await queryRunner.manager.findOne(Inventory, {
-          where: { productId: item.productId }
-        });
+        // Load inventory with pessimistic write lock to prevent overselling race conditions
+        const inventory = await queryRunner.manager
+          .createQueryBuilder(Inventory, 'inv')
+          .setLock('pessimistic_write')
+          .where('inv.productId = :productId', { productId: item.productId })
+          .getOne();
 
         if (inventory) {
           const available = inventory.quantity - inventory.reservedQuantity;

@@ -227,6 +227,10 @@ export class UsersService {
     await this.usersRepository.update(id, { lastLoginAt: new Date() });
   }
 
+  async updateLoginAttempts(userId: string, attempts: number, lockedUntil: Date | null): Promise<void> {
+    await this.usersRepository.update(userId, { loginAttempts: attempts, lockedUntil } as any);
+  }
+
   async updatePassword(id: string, hashedPassword: string): Promise<void> {
     await this.usersRepository.update(id, { password: hashedPassword, resetToken: null, resetTokenExpiry: null } as any);
   }

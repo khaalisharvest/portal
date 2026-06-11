@@ -1,6 +1,6 @@
 import { Injectable, Inject, Optional, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Cache } from 'cache-manager';
 import { Setting, SettingType } from '../entities/setting.entity';
@@ -102,13 +102,12 @@ export class SettingsService {
       'notification_bar_enabled', 'notification_bar_text',
       'notification_bar_bg_color', 'notification_bar_text_color', 'notification_bar_speed',
     ];
+    const rows = await this.settingsRepository.find({
+      where: { key: In(publicKeys), isActive: true },
+    });
     const result: Record<string, any> = {};
-    for (const key of publicKeys) {
-      try {
-        result[key] = await this.getSetting(key);
-      } catch {
-        // setting not in DB yet — skip
-      }
+    for (const row of rows) {
+      result[row.key] = this.parseValue(row);
     }
     return result;
   }
