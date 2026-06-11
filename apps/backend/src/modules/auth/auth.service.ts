@@ -154,6 +154,28 @@ export class AuthService {
     return { message: 'If an account exists, a reset link has been sent.' };
   }
 
+  async updateProfile(userId: string, updates: { name?: string; email?: string }) {
+    const allowed: any = {};
+    if (updates.name?.trim()) allowed.name = updates.name.trim();
+    if (updates.email !== undefined) allowed.email = updates.email || null;
+    const user = await this.usersService.update(userId, allowed);
+    const { password, ...result } = user as any;
+    return result;
+  }
+
+  async changePassword(userId: string, currentPassword: string, newPassword: string): Promise<{ message: string }> {
+    if (!newPassword || newPassword.length < 8) {
+      throw new UnauthorizedException('New password must be at least 8 characters.');
+    }
+    const user = await this.usersService.findById(userId);
+    const full = await this.usersService.findByPhone(user.phone);
+    const valid = await bcrypt.compare(currentPassword, full.password);
+    if (!valid) throw new UnauthorizedException('Current password is incorrect.');
+    const hashed = await bcrypt.hash(newPassword, 10);
+    await this.usersService.updatePassword(userId, hashed);
+    return { message: 'Password changed successfully.' };
+  }
+
   async resetPassword(token: string, newPassword: string): Promise<{ message: string }> {
     const user = await this.usersService.findByResetToken(token);
     if (!user || !user.resetTokenExpiry || user.resetTokenExpiry < new Date()) {

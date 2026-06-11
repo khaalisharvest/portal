@@ -21,6 +21,7 @@ interface AuthContextType {
   logout: () => void;
   hasRole: (role: string) => boolean;
   hasAnyRole: (roles: string[]) => boolean;
+  refreshBackendToken: () => Promise<string | null>;
 }
 
 interface RegisterData {
@@ -146,6 +147,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Store token and user data
         localStorage.setItem('auth_token', data.token);
         localStorage.setItem('backend_token', data.backendToken);
+        if (data.refreshToken) {
+          localStorage.setItem('refresh_token', data.refreshToken);
+        }
         localStorage.setItem('user', JSON.stringify(data.user));
         setUser(data.user);
 
@@ -193,9 +197,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const refreshBackendToken = async (): Promise<string | null> => {
+    try {
+      const storedRefreshToken = localStorage.getItem('refresh_token');
+      const res = await fetch('/api/auth/refresh', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refreshToken: storedRefreshToken }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.backendToken) {
+          localStorage.setItem('backend_token', data.backendToken);
+          return data.backendToken;
+        }
+      }
+      return null;
+    } catch {
+      return null;
+    }
+  };
+
   const logout = () => {
     localStorage.removeItem('auth_token');
     localStorage.removeItem('backend_token');
+    localStorage.removeItem('refresh_token');
     localStorage.removeItem('user');
     fetch('/api/auth/logout', { method: 'POST' }).catch(() => {});
     setUser(null);
@@ -218,6 +244,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     logout,
     hasRole,
     hasAnyRole,
+    refreshBackendToken,
   };
 
   return (

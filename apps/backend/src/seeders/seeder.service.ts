@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from '../modules/users/entities/user.entity';
@@ -7,6 +7,8 @@ import * as bcrypt from 'bcryptjs';
 
 @Injectable()
 export class SeederService {
+  private readonly logger = new Logger(SeederService.name);
+
   constructor(
     @InjectRepository(User)
     private userRepository: Repository<User>,
@@ -14,13 +16,13 @@ export class SeederService {
   ) {}
 
   async seed() {
-    console.log('Starting database seeding...');
+    this.logger.log('Starting database seeding...');
     try {
       await this.seedSuperAdmin();
       await this.settingsService.initializeDefaultSettings();
-      console.log('Database seeding completed successfully!');
+      this.logger.log('Database seeding completed successfully');
     } catch (error) {
-      console.error('Database seeding failed:', error);
+      this.logger.error('Database seeding failed', error instanceof Error ? error.stack : String(error));
       throw error;
     }
   }
@@ -28,15 +30,15 @@ export class SeederService {
   private async seedSuperAdmin() {
     const existing = await this.userRepository.findOne({ where: { role: 'super_admin' } });
     if (existing) {
-      console.log('Super admin already exists, skipping...');
+      this.logger.log('Super admin already exists, skipping');
       return;
     }
 
-    const hashedPassword = await bcrypt.hash(process.env.SUPER_ADMIN_PASSWORD, 10);
+    const hashedPassword = await bcrypt.hash(process.env.SUPER_ADMIN_PASSWORD!, 10);
     await this.userRepository.save(
       this.userRepository.create({
         name: 'Super Admin',
-        phone: process.env.SUPER_ADMIN_PHONE,
+        phone: process.env.SUPER_ADMIN_PHONE!,
         email: process.env.SUPER_ADMIN_EMAIL,
         password: hashedPassword,
         role: 'super_admin',
@@ -48,6 +50,6 @@ export class SeederService {
         },
       }),
     );
-    console.log('Super admin created — email:', process.env.SUPER_ADMIN_EMAIL);
+    this.logger.log(`Super admin created — email: ${process.env.SUPER_ADMIN_EMAIL}`);
   }
 }

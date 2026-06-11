@@ -40,7 +40,7 @@ export class UsersService {
   }
 
   async findByPhone(phone: string): Promise<User> {
-    return this.usersRepository.findOne({ where: { phone } });
+    return this.usersRepository.findOne({ where: { phone } }) as Promise<User>;
   }
 
   async update(id: string, updateUserDto: UpdateUserDto): Promise<User> {
@@ -149,8 +149,9 @@ export class UsersService {
         .getMany();
 
       for (const o of recent) {
+        if (!o.userId) continue;
         if (!recentOrdersMap.has(o.userId)) recentOrdersMap.set(o.userId, []);
-        const list = recentOrdersMap.get(o.userId);
+        const list = recentOrdersMap.get(o.userId)!;
         if (list.length < 5) list.push(o);
       }
     }
@@ -230,11 +231,11 @@ export class UsersService {
     await this.usersRepository.update(id, { password: hashedPassword, resetToken: null, resetTokenExpiry: null } as any);
   }
 
-  async findByEmail(email: string): Promise<User | undefined> {
+  async findByEmail(email: string): Promise<User | null> {
     return this.usersRepository.findOne({ where: { email } });
   }
 
-  async findByResetToken(token: string): Promise<User | undefined> {
+  async findByResetToken(token: string): Promise<User | null> {
     return this.usersRepository
       .createQueryBuilder('user')
       .addSelect('user.resetToken')

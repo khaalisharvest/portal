@@ -313,7 +313,7 @@ export class SettingsService {
             sortOrder: item.sortOrder,
             isActive: true,
             isRequired: false,
-            validation: item.validation ? JSON.stringify(item.validation) : null,
+            validation: item.validation ? JSON.stringify(item.validation) : undefined,
           }),
         );
       }

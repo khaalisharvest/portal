@@ -7,23 +7,31 @@ export class DatabaseConfig implements TypeOrmOptionsFactory {
   constructor(private configService: ConfigService) {}
 
   createTypeOrmOptions(): TypeOrmModuleOptions {
-    const dbHost = this.configService.get('DB_HOST')!;
-    const isLocalDatabase = dbHost === 'postgres' || dbHost === 'localhost' || dbHost === '127.0.0.1';
-    const nodeEnv = this.configService.get('NODE_ENV');
+    const dbHost = this.configService.get<string>('DB_HOST')!;
+    const isLocalDatabase = ['postgres', 'localhost', '127.0.0.1'].includes(dbHost);
+    const nodeEnv = this.configService.get<string>('NODE_ENV');
     
     return {
       type: 'postgres',
       host: dbHost,
-      port: this.configService.get('DB_PORT')!,
-      username: this.configService.get('DB_USERNAME')!,
-      password: this.configService.get('DB_PASSWORD')!,
-      database: this.configService.get('DB_NAME')!,
+      port: this.configService.get<number>('DB_PORT')!,
+      username: this.configService.get<string>('DB_USERNAME')!,
+      password: this.configService.get<string>('DB_PASSWORD')!,
+      database: this.configService.get<string>('DB_NAME')!,
       entities: [__dirname + '/../**/*.entity{.ts,.js}'],
       migrations: [__dirname + '/../migrations/*{.ts,.js}'],
-      synchronize: process.env.NODE_ENV === 'development', // Only auto-sync in development; use migrations in production
-      logging: nodeEnv === 'development',
-      // Only use SSL for remote databases, not local Docker containers
+      synchronize: nodeEnv === 'development',
+      logging: nodeEnv === 'development' ? ['error', 'warn', 'migration'] : ['error'],
       ssl: nodeEnv === 'production' && !isLocalDatabase ? { rejectUnauthorized: false } : false,
+      // Connection pool — prevents single-connection bottleneck under load
+      extra: {
+        max: 20,
+        min: 2,
+        idleTimeoutMillis: 30000,
+        connectionTimeoutMillis: 5000,
+      },
+      retryAttempts: 3,
+      retryDelay: 3000,
     };
   }
 }

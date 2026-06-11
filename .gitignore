@@ -105,3 +105,7 @@ ios/build/
 
 # Turbo
 .turbo
+
+# npm lock file (project uses yarn)
+package-lock.json
+package-lock.json

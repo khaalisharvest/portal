@@ -36,7 +36,7 @@ export class ProductsService {
 
     if (performedBy && this.activityService) {
       setImmediate(() => {
-        this.activityService.log({
+        this.activityService!.log({
           staffId: performedBy.id,
           staffName: performedBy.name,
           action: 'product_created',
@@ -247,7 +247,7 @@ export class ProductsService {
 
     if (performedBy && this.activityService) {
       setImmediate(() => {
-        this.activityService.log({
+        this.activityService!.log({
           staffId: performedBy.id,
           staffName: performedBy.name,
           action: 'product_updated',
@@ -278,7 +278,7 @@ export class ProductsService {
 
     if (performedBy && this.activityService) {
       setImmediate(() => {
-        this.activityService.log({
+        this.activityService!.log({
           staffId: performedBy.id,
           staffName: performedBy.name,
           action: 'product_deleted',

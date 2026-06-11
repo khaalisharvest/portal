@@ -36,11 +36,11 @@ const missingVars = Object.entries(requiredEnvVars)
   .map(([key]) => key);
 
 if (missingVars.length > 0) {
-  const errorMessage = `❌ Missing required environment variables: ${missingVars.join(', ')}`;
-  console.error(errorMessage);
-  console.error('Please create a .env file with all required variables.');
+  const errorMessage = `Missing required environment variables: ${missingVars.join(', ')}`;
+  process.stderr.write(`${errorMessage}\n`);
+  process.stderr.write('Please create a .env file with all required variables.\n');
   if (process.env.NODE_ENV === 'development') {
-    console.error('See env.template for configuration details.');
+    process.stderr.write('See env.template for configuration details.\n');
   } else {
     throw new Error(errorMessage);
   }

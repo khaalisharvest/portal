@@ -38,6 +38,7 @@ export async function POST(request: NextRequest) {
       // Backend returns { success: true, data: { user, accessToken, refreshToken } }
       const user = backendData.data?.user;
       const accessToken = backendData.data?.accessToken;
+      const refreshToken = backendData.data?.refreshToken;
       
       
       // Check if user exists in response
@@ -63,6 +64,7 @@ export async function POST(request: NextRequest) {
         user,
         token,
         backendToken: accessToken,
+        refreshToken,
       });
       res.cookies.set('auth_token', token, {
         httpOnly: true,
@@ -71,6 +73,15 @@ export async function POST(request: NextRequest) {
         maxAge: 60 * 60 * 24 * 7,
         path: '/',
       });
+      if (refreshToken) {
+        res.cookies.set('refresh_token', refreshToken, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'lax',
+          maxAge: 60 * 60 * 24 * 30,
+          path: '/',
+        });
+      }
       return res;
     } else {
       const errorData = await response.json();

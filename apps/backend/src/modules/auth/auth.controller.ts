@@ -1,4 +1,4 @@
-import { Controller, Post, Body, UseGuards, Get, Request } from '@nestjs/common';
+import { Controller, Post, Patch, Body, UseGuards, Get, Request } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
@@ -50,6 +50,34 @@ export class AuthController {
   @ApiOperation({ summary: 'Reset password using token from email' })
   resetPassword(@Body() dto: ResetPasswordDto) {
     return this.authService.resetPassword(dto.token, dto.newPassword);
+  }
+
+  @Post('refresh')
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
+  @ApiOperation({ summary: 'Refresh access token using refresh token' })
+  async refresh(@Body() body: { refreshToken: string }) {
+    return this.authService.refreshToken(body.refreshToken);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Patch('profile')
+  @ApiOperation({ summary: 'Update own profile (name and email only)' })
+  async updateProfile(
+    @Request() req,
+    @Body() body: { name?: string; email?: string },
+  ) {
+    return this.authService.updateProfile(req.user.id, body);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('change-password')
+  @Throttle({ default: { limit: 5, ttl: 300000 } })
+  @ApiOperation({ summary: 'Change password (requires current password)' })
+  async changePassword(
+    @Request() req,
+    @Body() body: { currentPassword: string; newPassword: string },
+  ) {
+    return this.authService.changePassword(req.user.id, body.currentPassword, body.newPassword);
   }
 
 }

@@ -485,7 +485,7 @@ export class OrdersService {
 
     if (performedBy && this.activityService) {
       setImmediate(() => {
-        this.activityService.log({
+        this.activityService!.log({
           staffId: performedBy.id,
           staffName: performedBy.name,
           action: 'order_status_updated',
@@ -629,7 +629,7 @@ export class OrdersService {
         relations: ['address', 'items', 'user']
       });
 
-      return orderWithRelations;
+      return orderWithRelations!;
     } catch (error) {
       await queryRunner.rollbackTransaction();
       throw error;
@@ -661,18 +661,19 @@ export class OrdersService {
 
       if (userId) {
         // Logged-in user: use existing address
-        address = await queryRunner.manager.findOne(Address, {
+        const foundAddress = await queryRunner.manager.findOne(Address, {
           where: { id: orderData.addressId, userId },
           relations: ['user']
         });
 
-        if (!address) {
+        if (!foundAddress) {
           throw new NotFoundException('Address not found or does not belong to user');
         }
-        finalUserId = userId;
+        address = foundAddress;
+        finalUserId = userId!;
       } else {
         // Guest user: create new address with null userId
-        finalUserId = null;
+        finalUserId = null as unknown as string;
 
         // Check if address data exists for guest users
         if (!orderData.address) {

@@ -20,7 +20,7 @@ This is a monorepo containing:
 ### 1. Clone and Setup
 ```bash
 git clone <repository-url>
-cd livestock-app
+cd khaalis-harvest
 yarn install
 ```
 
@@ -56,7 +56,7 @@ yarn web       # Web app (port 3001)
 
 ### Phase 1 (MVP) ✅
 - **Fresh Meat & Dairy Marketplace** - Browse and order fresh products
-- **Consumer Mobile/Web App** - Cross-platform applications
+- **Consumer Web App** - Progressive web application
 - **Seller Management** - Seller onboarding and product management
 - **Order Management** - Complete order lifecycle
 - **Payment Integration** - JazzCash, EasyPaisa, COD support
@@ -70,14 +70,13 @@ yarn web       # Web app (port 3001)
 
 ### Phase 3 (Advanced) 🔮
 - **Export Facilitation** - Connect with international buyers
-- **AI Health Monitoring** - Livestock health tracking
+- **AI Quality Monitoring** - Product quality and supply chain tracking
 - **Farmer Finance** - Micro-financing and insurance
 
 ## 🛠️ Tech Stack
 
 ### Frontend
-- **React Native** - Mobile app with offline support
-- **Next.js** - Web application with SSR/SSG
+- **Next.js** - Web application with SSR/SSG and PWA capabilities
 - **TypeScript** - Type-safe development
 - **Redux Toolkit** - State management
 - **React Query** - Server state management
@@ -88,13 +87,6 @@ yarn web       # Web app (port 3001)
 - **PostgreSQL** - Primary database
 - **Redis** - Caching and session storage
 - **JWT** - Authentication
-
-### Mobile Features
-- **Offline Support** - Redux Persist + AsyncStorage
-- **Push Notifications** - Real-time updates
-- **Camera Integration** - Product photos
-- **Location Services** - Delivery tracking
-- **Biometric Auth** - Secure login
 
 ## 🗄️ Database Schema
 
@@ -157,7 +149,7 @@ DB_HOST=localhost
 DB_PORT=5432
 DB_USERNAME=postgres
 DB_PASSWORD=password
-DB_NAME=livestock_ecosystem
+DB_NAME=khaalis_harvest
 REDIS_HOST=localhost
 REDIS_PORT=6379
 JWT_SECRET=your-secret-key
@@ -168,15 +160,7 @@ JWT_SECRET=your-secret-key
 NEXT_PUBLIC_API_BASE_URL=http://localhost:3000/api/v1
 ```
 
-### Mobile (.env)
-```env
-API_BASE_URL=http://localhost:3000/api/v1
-```
-
 ## 🚀 Deployment
-
-### Azure Production Deployment
-For complete step-by-step Azure deployment instructions, see **[AZURE_DEPLOYMENT.md](./AZURE_DEPLOYMENT.md)**
 
 ### Local Docker Deployment
 ```bash
@@ -199,7 +183,7 @@ docker-compose down
 ## 🌟 Key Features
 
 - **🔄 Offline Support** - Works in rural areas with poor connectivity
-- **📱 Cross-Platform** - Mobile and web applications
+- **📱 PWA** - Progressive web app for mobile and desktop
 - **🔐 Secure** - JWT authentication, data encryption
 - **🌍 Localized** - Urdu/English support
 - **💳 Payment Ready** - JazzCash, EasyPaisa integration

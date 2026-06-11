@@ -17,60 +17,123 @@ export default function AccountPage() {
 function AccountContent() {
   const { user, logout } = useAuth();
   const [activeTab, setActiveTab] = useState<'profile' | 'addresses' | 'security'>('profile');
-  const [isLoading, setIsLoading] = useState(false);
   const [addresses, setAddresses] = useState<any[]>([]);
 
-  const [profileForm, setProfileForm] = useState({
-    name: user?.name || '',
-    email: user?.email || '',
-  });
+  // Profile form
+  const [profileForm, setProfileForm] = useState({ name: user?.name || '', email: user?.email || '' });
+  const [profileLoading, setProfileLoading] = useState(false);
+
+  // Password form
+  const [passwordForm, setPasswordForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
+  const [passwordLoading, setPasswordLoading] = useState(false);
+  const [showPasswords, setShowPasswords] = useState({ current: false, new: false, confirm: false });
 
   useEffect(() => {
     fetchAddresses();
   }, []);
 
+  // Keep profile form in sync when user loads
+  useEffect(() => {
+    if (user) {
+      setProfileForm({ name: user.name || '', email: user.email || '' });
+    }
+  }, [user]);
+
+  const token = () => localStorage.getItem('backend_token') || '';
+
   const fetchAddresses = async () => {
-    const token = localStorage.getItem('auth_token');
     try {
       const res = await fetch('/api/v1/orders/addresses', {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { Authorization: `Bearer ${token()}` },
       });
       if (res.ok) {
         const data = await res.json();
-        setAddresses(Array.isArray(data) ? data : data.data || []);
+        setAddresses(Array.isArray(data) ? data : (data.data || []));
       }
     } catch {}
   };
 
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
-    const token = localStorage.getItem('auth_token');
+    if (!profileForm.name.trim()) {
+      toast.error('Name is required');
+      return;
+    }
+    setProfileLoading(true);
     try {
-      const res = await fetch(`/api/v1/users/${user?.id}`, {
+      const res = await fetch('/api/v1/auth/profile', {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify(profileForm),
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token()}` },
+        body: JSON.stringify({ name: profileForm.name.trim(), email: profileForm.email || undefined }),
       });
-      if (!res.ok) throw new Error('Update failed');
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Update failed');
+      }
+      const data = await res.json();
+      const updated = data.data || data;
+      // Update stored user so AuthContext reflects the new name/email
+      const stored = localStorage.getItem('user');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        localStorage.setItem('user', JSON.stringify({ ...parsed, name: updated.name, email: updated.email }));
+      }
       toast.success('Profile updated successfully');
     } catch (err: any) {
       toast.error(err.message || 'Failed to update profile');
     } finally {
-      setIsLoading(false);
+      setProfileLoading(false);
+    }
+  };
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!passwordForm.currentPassword || !passwordForm.newPassword || !passwordForm.confirmPassword) {
+      toast.error('All password fields are required');
+      return;
+    }
+    if (passwordForm.newPassword.length < 8) {
+      toast.error('New password must be at least 8 characters');
+      return;
+    }
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      toast.error('New passwords do not match');
+      return;
+    }
+    setPasswordLoading(true);
+    try {
+      const res = await fetch('/api/v1/auth/change-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token()}` },
+        body: JSON.stringify({
+          currentPassword: passwordForm.currentPassword,
+          newPassword: passwordForm.newPassword,
+        }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Failed to change password');
+      }
+      toast.success('Password changed successfully');
+      setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to change password');
+    } finally {
+      setPasswordLoading(false);
     }
   };
 
   const handleDeleteAddress = async (addressId: string) => {
-    const token = localStorage.getItem('auth_token');
     try {
       const res = await fetch(`/api/v1/orders/addresses/${addressId}`, {
         method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { Authorization: `Bearer ${token()}` },
       });
       if (res.ok) {
         setAddresses(prev => prev.filter((a: any) => a.id !== addressId));
         toast.success('Address removed');
+      } else {
+        toast.error('Failed to remove address');
       }
     } catch {
       toast.error('Failed to remove address');
@@ -158,27 +221,31 @@ function AccountContent() {
           </div>
 
           {/* Main Content */}
-          <div className="lg:col-span-3">
+          <div className="lg:col-span-3 space-y-4">
             {activeTab === 'profile' && (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="bg-white rounded-2xl shadow-sm p-6">
                 <h2 className="text-xl font-bold text-neutral-900 mb-6">Personal Information</h2>
                 <form onSubmit={handleUpdateProfile} className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-neutral-700 mb-1">Full Name</label>
+                    <label className="block text-sm font-medium text-neutral-700 mb-1">Full Name <span className="text-red-500">*</span></label>
                     <input
                       type="text"
                       value={profileForm.name}
                       onChange={e => setProfileForm(p => ({ ...p, name: e.target.value }))}
                       className="w-full px-4 py-3 border border-neutral-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      placeholder="Your full name"
+                      minLength={2}
+                      required
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-neutral-700 mb-1">Email (optional)</label>
+                    <label className="block text-sm font-medium text-neutral-700 mb-1">Email <span className="text-neutral-400 font-normal">(optional)</span></label>
                     <input
                       type="email"
                       value={profileForm.email}
                       onChange={e => setProfileForm(p => ({ ...p, email: e.target.value }))}
                       className="w-full px-4 py-3 border border-neutral-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      placeholder="your@email.com"
                     />
                   </div>
                   <div>
@@ -191,8 +258,8 @@ function AccountContent() {
                     />
                     <p className="text-xs text-neutral-400 mt-1">Phone number cannot be changed</p>
                   </div>
-                  <button type="submit" disabled={isLoading} className="btn-primary disabled:opacity-50">
-                    {isLoading ? 'Saving...' : 'Save Changes'}
+                  <button type="submit" disabled={profileLoading} className="btn-primary disabled:opacity-50">
+                    {profileLoading ? 'Saving...' : 'Save Changes'}
                   </button>
                 </form>
               </motion.div>
@@ -241,17 +308,99 @@ function AccountContent() {
             {activeTab === 'security' && (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="bg-white rounded-2xl shadow-sm p-6">
                 <h2 className="text-xl font-bold text-neutral-900 mb-6">Security Settings</h2>
-                <div className="space-y-4">
-                  <div className="border border-neutral-200 rounded-xl p-4 flex justify-between items-center">
-                    <div>
-                      <h3 className="font-medium text-neutral-900">Password</h3>
-                      <p className="text-sm text-neutral-500">Change your account password</p>
+                <form onSubmit={handleChangePassword} className="space-y-4">
+                  <h3 className="font-medium text-neutral-900">Change Password</h3>
+                  <div>
+                    <label className="block text-sm font-medium text-neutral-700 mb-1">Current Password</label>
+                    <div className="relative">
+                      <input
+                        type={showPasswords.current ? 'text' : 'password'}
+                        value={passwordForm.currentPassword}
+                        onChange={e => setPasswordForm(p => ({ ...p, currentPassword: e.target.value }))}
+                        className="w-full px-4 py-3 border border-neutral-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 pr-12"
+                        placeholder="Enter current password"
+                        required
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPasswords(s => ({ ...s, current: !s.current }))}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600"
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          {showPasswords.current
+                            ? <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88" />
+                            : <><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></>
+                          }
+                        </svg>
+                      </button>
                     </div>
-                    <Link href="/auth/forgot-password" className="btn-secondary text-sm">
-                      Change Password
-                    </Link>
                   </div>
-                </div>
+                  <div>
+                    <label className="block text-sm font-medium text-neutral-700 mb-1">New Password</label>
+                    <div className="relative">
+                      <input
+                        type={showPasswords.new ? 'text' : 'password'}
+                        value={passwordForm.newPassword}
+                        onChange={e => setPasswordForm(p => ({ ...p, newPassword: e.target.value }))}
+                        className="w-full px-4 py-3 border border-neutral-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 pr-12"
+                        placeholder="Min. 8 characters"
+                        minLength={8}
+                        required
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPasswords(s => ({ ...s, new: !s.new }))}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600"
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          {showPasswords.new
+                            ? <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88" />
+                            : <><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></>
+                          }
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-neutral-700 mb-1">Confirm New Password</label>
+                    <div className="relative">
+                      <input
+                        type={showPasswords.confirm ? 'text' : 'password'}
+                        value={passwordForm.confirmPassword}
+                        onChange={e => setPasswordForm(p => ({ ...p, confirmPassword: e.target.value }))}
+                        className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 pr-12 ${
+                          passwordForm.confirmPassword && passwordForm.confirmPassword !== passwordForm.newPassword
+                            ? 'border-red-400'
+                            : 'border-neutral-300'
+                        }`}
+                        placeholder="Repeat new password"
+                        required
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPasswords(s => ({ ...s, confirm: !s.confirm }))}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600"
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          {showPasswords.confirm
+                            ? <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88" />
+                            : <><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></>
+                          }
+                        </svg>
+                      </button>
+                    </div>
+                    {passwordForm.confirmPassword && passwordForm.confirmPassword !== passwordForm.newPassword && (
+                      <p className="text-xs text-red-500 mt-1">Passwords do not match</p>
+                    )}
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={passwordLoading || (!!passwordForm.confirmPassword && passwordForm.confirmPassword !== passwordForm.newPassword)}
+                    className="btn-primary disabled:opacity-50"
+                  >
+                    {passwordLoading ? 'Updating...' : 'Update Password'}
+                  </button>
+                </form>
               </motion.div>
             )}
           </div>
