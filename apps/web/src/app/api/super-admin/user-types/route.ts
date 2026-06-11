@@ -1,57 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { BACKEND_URL } from '@/config/env.server';
+import { NextRequest } from 'next/server';
+import { proxy } from '@/lib/proxy';
 
-export async function GET(request: NextRequest) {
-  try {
-    const authHeader = request.headers.get('Authorization');
-    
-    const response = await fetch(`${BACKEND_URL}/api/v1/super-admin/user-types`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(authHeader && { 'Authorization': authHeader }),
-      },
-    });
+export const GET = (req: NextRequest) =>
+  proxy(req, { path: '/api/v1/super-admin/user-types', requireAuth: true });
 
-    if (!response.ok) {
-      throw new Error(`Backend responded with status: ${response.status}`);
-    }
-
-    const data = await response.json();
-    return NextResponse.json(data);
-  } catch (error) {
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to fetch user types' },
-      { status: 500 }
-    );
-  }
-}
-
-export async function POST(request: NextRequest) {
-  try {
-    const body = await request.json();
-    const authHeader = request.headers.get('Authorization');
-    
-    const response = await fetch(`${BACKEND_URL}/api/v1/super-admin/user-types`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(authHeader && { 'Authorization': authHeader }),
-      },
-      body: JSON.stringify(body),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(`Backend responded with status: ${response.status} - ${errorData.message || 'Unknown error'}`);
-    }
-
-    const data = await response.json();
-    return NextResponse.json(data, { status: 201 });
-  } catch (error) {
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to create user type' },
-      { status: 500 }
-    );
-  }
-}
+export const POST = (req: NextRequest) =>
+  proxy(req, { path: '/api/v1/super-admin/user-types', requireAuth: true });

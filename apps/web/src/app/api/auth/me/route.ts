@@ -27,8 +27,10 @@ export async function GET(request: NextRequest) {
     try {
       const decoded = jwt.verify(frontendToken, getJwtSecret()) as any;
       
-      // Get the backend access token from the request headers
-      const backendToken = request.headers.get('x-backend-token');
+      // Get backend token — prefer HttpOnly cookie, fall back to X-Backend-Token header
+      const backendToken =
+        request.cookies.get('backend_token')?.value ||
+        request.headers.get('x-backend-token');
       if (!backendToken) {
         return NextResponse.json(
           { message: 'Backend token not provided' },

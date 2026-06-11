@@ -78,20 +78,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      // Get backend token for profile request
-      const backendToken = localStorage.getItem('backend_token');
-      if (!backendToken) {
-        localStorage.removeItem('auth_token');
-        localStorage.removeItem('user');
-        setIsLoading(false);
-        return;
-      }
-
-      // Verify token with backend
+      // Verify token with backend (backend_token read from HttpOnly cookie server-side)
       await verifyWithBackend();
     } catch (error) {
       localStorage.removeItem('auth_token');
-      localStorage.removeItem('backend_token');
       localStorage.removeItem('user');
       setUser(null);
       setIsLoading(false);
@@ -101,16 +91,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const verifyWithBackend = async () => {
     try {
       const token = localStorage.getItem('auth_token');
-      const backendToken = localStorage.getItem('backend_token');
-      
-      if (!token || !backendToken) {
-        return;
-      }
+      if (!token) return;
 
+      // backend_token is sent automatically via HttpOnly cookie
       const response = await fetch('/api/auth/me', {
         headers: {
           'Authorization': `Bearer ${token}`,
-          'X-Backend-Token': backendToken,
         },
       });
 
@@ -119,9 +105,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(userData);
         localStorage.setItem('user', JSON.stringify(userData));
       } else {
-        // Token is invalid, clear it
         localStorage.removeItem('auth_token');
-        localStorage.removeItem('backend_token');
         localStorage.removeItem('user');
         setUser(null);
       }

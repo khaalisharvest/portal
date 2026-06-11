@@ -7,7 +7,8 @@ import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { SeederService } from './seeders/seeder.service';
 import helmet from 'helmet';
-import * as compression from 'compression';
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const compression = require('compression');
 import { PORT, ALLOWED_ORIGINS } from './config/env';
 
 async function bootstrap() {
