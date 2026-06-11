@@ -25,16 +25,21 @@ export async function POST(request: NextRequest) {
     const newAccessToken = data.data?.accessToken || data.accessToken;
     const newRefreshToken = data.data?.refreshToken || data.refreshToken;
 
-    const res = NextResponse.json({ backendToken: newAccessToken });
+    const cookieOpts = {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax' as const,
+      path: '/',
+    };
 
+    const res = NextResponse.json({ message: 'Token refreshed' });
+
+    // Refresh the backend_token cookie (used by all BFF proxy routes)
+    if (newAccessToken) {
+      res.cookies.set('backend_token', newAccessToken, { ...cookieOpts, maxAge: 60 * 60 * 24 * 7 });
+    }
     if (newRefreshToken) {
-      res.cookies.set('refresh_token', newRefreshToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        maxAge: 60 * 60 * 24 * 30,
-        path: '/',
-      });
+      res.cookies.set('refresh_token', newRefreshToken, { ...cookieOpts, maxAge: 60 * 60 * 24 * 30 });
     }
 
     return res;

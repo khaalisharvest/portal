@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsNotEmpty, Matches, IsEmail, IsOptional, IsBoolean } from 'class-validator';
+import { IsString, IsNotEmpty, Matches, IsEmail, IsOptional, IsBoolean, IsEnum } from 'class-validator';
 
 export class CreateUserDto {
   @ApiProperty()
@@ -23,8 +23,7 @@ export class CreateUserDto {
   password: string;
 
   @ApiProperty()
-  @IsString()
-  @IsNotEmpty()
+  @IsEnum(['customer', 'staff', 'super_admin'], { message: 'Role must be customer, staff, or super_admin' })
   role: string;
 
   @ApiProperty({ required: false })

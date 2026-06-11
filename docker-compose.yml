@@ -55,7 +55,7 @@ services:
     memswap_limit: 256m
     # Memory optimization (set REDIS_COMMAND in .env for Oracle Cloud)
     # Example: redis-server --maxmemory 200mb --maxmemory-policy allkeys-lru
-    command: ${REDIS_COMMAND:-redis-server}
+    command: ${REDIS_COMMAND:-redis-server --maxmemory 200mb --maxmemory-policy allkeys-lru}
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -147,7 +147,8 @@ services:
       - certbot-www:/var/www/certbot:ro
       - certbot-conf:/etc/letsencrypt:ro
     depends_on:
-      - app
+      app:
+        condition: service_healthy
     networks:
       - khaalis-network
     restart: unless-stopped
@@ -177,15 +178,16 @@ services:
 # ============================================================================
 volumes:
   postgres_data:
-    # Using existing portal_postgres_data volume (contains all production data)
-    external: true
-    name: portal_postgres_data
+    # Docker-managed volume — created automatically on first deploy.
+    # To migrate data from portal_postgres_data, run:
+    #   docker volume create khaalis-harvest_postgres_data
+    #   docker run --rm -v portal_postgres_data:/from -v khaalis-harvest_postgres_data:/to alpine sh -c "cd /from && cp -av . /to"
+    driver: local
   redis_data:
-    # Using existing portal_redis_data volume
-    external: true
-    name: portal_redis_data
+    driver: local
   uploads_data:
     # Persistent storage for user-uploaded product images and files
+    driver: local
   certbot-www:
     # Certbot webroot for ACME challenges
   certbot-conf:

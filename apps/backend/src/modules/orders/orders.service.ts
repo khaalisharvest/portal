@@ -461,6 +461,27 @@ export class OrdersService {
 
     const newStatus = updateOrderDto.status;
     const previousStatus = order.status;
+
+    // Validate state machine transitions
+    const validTransitions: Partial<Record<OrderStatus, OrderStatus[]>> = {
+      [OrderStatus.PENDING]: [OrderStatus.CONFIRMED, OrderStatus.CANCELLED],
+      [OrderStatus.CONFIRMED]: [OrderStatus.PROCESSING, OrderStatus.CANCELLED],
+      [OrderStatus.PROCESSING]: [OrderStatus.SHIPPED, OrderStatus.CANCELLED],
+      [OrderStatus.SHIPPED]: [OrderStatus.DELIVERED, OrderStatus.CANCELLED],
+      [OrderStatus.DELIVERED]: [OrderStatus.REFUNDED],
+      [OrderStatus.CANCELLED]: [],
+      [OrderStatus.REFUNDED]: [],
+    };
+
+    if (newStatus && newStatus !== previousStatus) {
+      const allowed = validTransitions[previousStatus] ?? [];
+      if (!allowed.includes(newStatus)) {
+        throw new BadRequestException(
+          `Invalid status transition: ${previousStatus} → ${newStatus}. Allowed: ${allowed.join(', ') || 'none'}`
+        );
+      }
+    }
+
     Object.assign(order, updateOrderDto);
     await this.orderRepository.save(order);
 
@@ -530,6 +551,35 @@ export class OrdersService {
         if (!product.isAvailable) {
           throw new BadRequestException(`Product ${product.name} is not available`);
         }
+      }
+
+      // Check inventory for each item (same as createUnifiedOrder)
+      for (const item of createGuestOrderDto.items) {
+        const inventory = await queryRunner.manager
+          .createQueryBuilder(Inventory, 'inv')
+          .setLock('pessimistic_write')
+          .where('inv.productId = :productId', { productId: item.productId })
+          .getOne();
+
+        if (!inventory) {
+          const product = products.find(p => p.id === item.productId);
+          throw new BadRequestException(
+            `No inventory record for "${product?.name ?? item.productId}". Please contact support.`
+          );
+        }
+
+        const available = inventory.quantity - inventory.reservedQuantity;
+        if (available < item.quantity) {
+          const product = products.find(p => p.id === item.productId);
+          throw new BadRequestException(
+            `Insufficient stock for "${product?.name ?? item.productId}". Available: ${available}, Requested: ${item.quantity}`
+          );
+        }
+
+        // Reserve the stock
+        await queryRunner.manager.update(Inventory, inventory.id, {
+          reservedQuantity: () => `"reservedQuantity" + ${item.quantity}`,
+        });
       }
 
       // Generate order number
@@ -735,18 +785,23 @@ export class OrdersService {
           .where('inv.productId = :productId', { productId: item.productId })
           .getOne();
 
-        if (inventory) {
-          const available = inventory.quantity - inventory.reservedQuantity;
-          if (available < item.quantity) {
-            throw new BadRequestException(
-              `Insufficient stock for "${product.name}". Available: ${available}, Requested: ${item.quantity}`
-            );
-          }
-          // Reserve the stock
-          await queryRunner.manager.update(Inventory, inventory.id, {
-            reservedQuantity: () => `"reservedQuantity" + ${item.quantity}`
-          });
+        if (!inventory) {
+          const prod = products.find(p => p.id === item.productId);
+          throw new BadRequestException(
+            `No inventory record for "${prod?.name ?? item.productId}". Please contact support.`
+          );
         }
+
+        const available = inventory.quantity - inventory.reservedQuantity;
+        if (available < item.quantity) {
+          throw new BadRequestException(
+            `Insufficient stock for "${product.name}". Available: ${available}, Requested: ${item.quantity}`
+          );
+        }
+        // Reserve the stock
+        await queryRunner.manager.update(Inventory, inventory.id, {
+          reservedQuantity: () => `"reservedQuantity" + ${item.quantity}`
+        });
       }
 
       // Generate order number

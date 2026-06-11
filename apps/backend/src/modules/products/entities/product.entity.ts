@@ -5,6 +5,7 @@ import { ProductType } from '../../product-types/entities/product-type.entity';
 import { Inventory } from './inventory.entity';
 import { Review } from './review.entity';
 import { Wishlist } from './wishlist.entity';
+import { User } from '../../users/entities/user.entity';
 
 @Entity('products')
 @Index(['categoryId', 'isAvailable'])
@@ -49,8 +50,12 @@ export class Product {
   status: 'draft' | 'active' | 'archived';
 
   @ApiProperty()
-  @Column()
-  adminId: string;
+  @Column({ nullable: true })
+  adminId: string | null;
+
+  @ManyToOne(() => User, { onDelete: 'SET NULL', nullable: true })
+  @JoinColumn({ name: 'adminId' })
+  admin?: User;
 
   @ApiProperty()
   @Column()

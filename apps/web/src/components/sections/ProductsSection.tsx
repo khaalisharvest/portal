@@ -87,6 +87,7 @@ export default function ProductsSection({
   const [totalProducts, setTotalProducts] = useState(0);
   const [searchTerm, setSearchTerm] = useState('');
   const [hasSearched, setHasSearched] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // Selected filter state (drives CategoryTabs highlighting + fetches)
   const [activeCategoryIds, setActiveCategoryIds] = useState<string[]>([]);
@@ -146,7 +147,7 @@ export default function ProductsSection({
         setTotalProducts(total);
       }
     } catch {
-      // silent
+      setError('Failed to load products');
     } finally {
       if (isInitial) setLoading(false);
       else setFilterLoading(false);
@@ -203,6 +204,14 @@ export default function ProductsSection({
     return (
       <div className={`flex justify-center items-center h-64 ${className}`}>
         <ProductLoader size="lg" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className={`flex justify-center items-center h-64 ${className}`}>
+        <p className="text-error-500 text-sm">{error} Please refresh the page.</p>
       </div>
     );
   }

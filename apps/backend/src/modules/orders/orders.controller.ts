@@ -20,6 +20,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { OptionalJwtAuthGuard } from '../auth/guards/optional-jwt-auth.guard';
 import { RolesGuard, Roles } from '../../common/guards/roles.guard';
 import { OrderStatus, PaymentStatus } from './entities/order.entity';
+import { Throttle } from '@nestjs/throttler';
 
 @ApiTags('Orders')
 @Controller('orders')
@@ -27,6 +28,7 @@ export class OrdersController {
   constructor(private readonly ordersService: OrdersService) {}
 
   @Post()
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   @UseGuards(OptionalJwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Create a new order (works for both logged-in and guest users)' })

@@ -58,13 +58,25 @@ export async function POST(request: NextRequest) {
           { expiresIn: '7d' }
         );
 
-        return NextResponse.json({
+        const res = NextResponse.json({
           user: registeredUser,
           token,
-          accessToken,
-          refreshToken,
-          message: 'Account created successfully'
+          message: 'Account created successfully',
         });
+        const cookieOpts = {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'lax' as const,
+          path: '/',
+        };
+        res.cookies.set('auth_token', token, { ...cookieOpts, maxAge: 60 * 60 * 24 * 7 });
+        if (accessToken) {
+          res.cookies.set('backend_token', accessToken, { ...cookieOpts, maxAge: 60 * 60 * 24 * 7 });
+        }
+        if (refreshToken) {
+          res.cookies.set('refresh_token', refreshToken, { ...cookieOpts, maxAge: 60 * 60 * 24 * 30 });
+        }
+        return res;
       } else {
         const errorData = await response.json();
         return NextResponse.json(
@@ -72,8 +84,7 @@ export async function POST(request: NextRequest) {
           { status: 400 }
         );
       }
-    } catch (backendError) {
-      console.error('Backend registration error:', backendError);
+    } catch {
       return NextResponse.json(
         { message: 'Registration service is currently unavailable. Please try again later.' },
         { status: 503 }

@@ -141,7 +141,8 @@ EXPOSE 3000 3001
 # Start applications using concurrently (already in package.json dependencies)
 # Memory limits configurable via NODE_OPTIONS_BACKEND/FRONTEND env vars
 # concurrently handles process management, signal forwarding, and logging
-CMD npx concurrently \
+# Using 'exec' ensures concurrently is PID 1 and SIGTERM is properly forwarded
+CMD exec npx concurrently \
   --names "backend,frontend" \
   --prefix-colors "blue,green" \
   "cd apps/backend && NODE_OPTIONS=\"--max-old-space-size=\${NODE_OPTIONS_BACKEND:-1536}\" PORT=\${PORT:-3000} yarn start:prod" \

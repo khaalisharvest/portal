@@ -21,7 +21,12 @@ async function bootstrap() {
 
   // Run database seeder
   const seederService = app.get(SeederService);
-  await seederService.seed();
+  try {
+    await seederService.seed();
+  } catch (error) {
+    logger.error('Seeder failed — app will continue but some defaults may be missing', error instanceof Error ? error.message : String(error));
+    // Don't re-throw: a running app with missing settings is better than no app
+  }
 
   // Security middleware
   app.use(helmet());

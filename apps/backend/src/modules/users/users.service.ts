@@ -39,8 +39,16 @@ export class UsersService {
     return user;
   }
 
-  async findByPhone(phone: string): Promise<User> {
-    return this.usersRepository.findOne({ where: { phone } }) as Promise<User>;
+  async findByPhone(phone: string): Promise<User | null> {
+    return this.usersRepository.findOne({ where: { phone } });
+  }
+
+  async findByPhoneWithPassword(phone: string): Promise<User | null> {
+    return this.usersRepository
+      .createQueryBuilder('user')
+      .addSelect('user.password')
+      .where('user.phone = :phone', { phone })
+      .getOne();
   }
 
   async update(id: string, updateUserDto: UpdateUserDto): Promise<User> {

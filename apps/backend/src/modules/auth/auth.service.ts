@@ -49,7 +49,7 @@ export class AuthService {
 
   async login(loginDto: LoginDto) {
     const normalizedPhone = normalizePhoneForDatabase(loginDto.phone);
-    const user = await this.usersService.findByPhone(normalizedPhone);
+    const user = await this.usersService.findByPhoneWithPassword(normalizedPhone);
     if (!user) {
       throw new UnauthorizedException('Invalid credentials');
     }
@@ -84,7 +84,7 @@ export class AuthService {
   }
 
   async validateUser(phone: string, password: string): Promise<any> {
-    const user = await this.usersService.findByPhone(phone);
+    const user = await this.usersService.findByPhoneWithPassword(phone);
     
     if (user) {
       // Check if user account is active
@@ -176,7 +176,8 @@ export class AuthService {
       throw new UnauthorizedException('New password must be at least 8 characters.');
     }
     const user = await this.usersService.findById(userId);
-    const full = await this.usersService.findByPhone(user.phone);
+    const full = await this.usersService.findByPhoneWithPassword(user.phone);
+    if (!full) throw new UnauthorizedException('User not found.');
     const valid = await bcrypt.compare(currentPassword, full.password);
     if (!valid) throw new UnauthorizedException('Current password is incorrect.');
     const hashed = await bcrypt.hash(newPassword, 10);

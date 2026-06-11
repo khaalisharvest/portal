@@ -53,11 +53,16 @@ export class SettingsService {
     const setting = await this.settingsRepository.findOne({ where: { key } });
 
     if (!setting) {
+      let inferredType = SettingType.STRING;
+      if (typeof value === 'number') inferredType = SettingType.NUMBER;
+      else if (typeof value === 'boolean') inferredType = SettingType.BOOLEAN;
+      else if (typeof value === 'object' && value !== null) inferredType = SettingType.JSON;
+
       const newSetting = this.settingsRepository.create({
         key,
         name: key.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase()),
-        value: String(value),
-        type: SettingType.STRING,
+        value: this.serializeValue(inferredType, value),
+        type: inferredType,
         category: 'system',
         isActive: true,
       });
