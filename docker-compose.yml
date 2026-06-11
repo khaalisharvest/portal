@@ -18,7 +18,7 @@ services:
     environment:
       POSTGRES_DB: ${DB_NAME:-khaalis_harvest}
       POSTGRES_USER: ${DB_USERNAME:-postgres}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-password}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD must be set in .env}
     # Expose port for local development (doesn't hurt in production)
     ports:
       - "${DB_PORT:-5433}:5432"

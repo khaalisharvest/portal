@@ -106,11 +106,9 @@ export default function AdminCustomersPage() {
         });
       } else {
         const errorText = await response.text();
-        console.error('❌ API Error Response:', errorText);
         toast.error(`Failed to fetch customers: ${response.status}`);
       }
     } catch (error) {
-      console.error('❌ Error fetching customers:', error);
       toast.error('Error fetching customers');
     } finally {
       setLoading(false);
@@ -170,8 +168,7 @@ export default function AdminCustomersPage() {
       } else {
         toast.error('Failed to update customer status');
       }
-    } catch (error) {
-      console.error('Error updating customer status:', error);
+    } catch {
       toast.error('Error updating customer status');
     } finally {
       setUpdating(null);
