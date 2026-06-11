@@ -80,7 +80,8 @@ export class ProductsService {
 
       const baseQuery = this.productRepository.createQueryBuilder('product')
         .leftJoinAndSelect('product.category', 'category')
-        .leftJoinAndSelect('product.productType', 'productType');
+        .leftJoinAndSelect('product.productType', 'productType')
+        .leftJoinAndSelect('product.inventory', 'inventory', 'inventory.isActive = :active', { active: true });
 
       const conditions: string[] = [];
       const params: Record<string, any> = {};

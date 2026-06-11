@@ -1,15 +1,13 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import AdminLayout from '@/components/layout/AdminLayout';
 import toast from 'react-hot-toast';
 
-interface InventoryItem {
+interface InventoryRecord {
   id?: string;
   productId: string;
-  productName: string;
-  productImage?: string;
   quantity: number;
   reservedQuantity: number;
   availableQuantity: number;
@@ -25,7 +23,7 @@ interface Product {
   images: string[];
   price: number;
   unit: string;
-  inventory?: InventoryItem;
+  inventory: InventoryRecord[];
 }
 
 export default function InventoryPage() {
@@ -43,59 +41,67 @@ function InventoryContent() {
   const [isLoading, setIsLoading] = useState(true);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({ quantity: 0, minimumStock: 0, location: '', batchNumber: '', expiryDate: '' });
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalProducts, setTotalProducts] = useState(0);
+  const LIMIT = 20;
 
-  useEffect(() => { fetchProducts(); }, []);
-
-  const fetchProducts = async () => {
+  const fetchProducts = useCallback(async (page = 1) => {
     const token = localStorage.getItem('backend_token');
     try {
-      const res = await fetch('/api/v1/products?limit=100&page=1', {
+      setIsLoading(true);
+      const res = await fetch(`/api/v1/products/admin?includeAll=true&limit=${LIMIT}&page=${page}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
+      if (!res.ok) throw new Error('Failed to load');
       const data = await res.json();
-      setProducts(data.data?.products || data.products || []);
+      const payload = data.data || data;
+      setProducts(payload.products || []);
+      setTotalPages(payload.totalPages || 1);
+      setTotalProducts(payload.total || 0);
+      setCurrentPage(page);
     } catch {
       toast.error('Failed to load products');
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => { fetchProducts(1); }, [fetchProducts]);
 
   const handleUpdateInventory = async (productId: string) => {
     const token = localStorage.getItem('backend_token');
     try {
-      const payload = {
-        productId,
-        quantity: editForm.quantity,
-        minimumStock: editForm.minimumStock,
-        location: editForm.location || undefined,
-        batchNumber: editForm.batchNumber || undefined,
-        expiryDate: editForm.expiryDate || undefined,
-      };
-
       const res = await fetch(`/api/v1/products/${productId}/inventory`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({
+          productId,
+          quantity: editForm.quantity,
+          minimumStock: editForm.minimumStock,
+          location: editForm.location || undefined,
+          batchNumber: editForm.batchNumber || undefined,
+          expiryDate: editForm.expiryDate || undefined,
+        }),
       });
-
-      if (!res.ok) throw new Error('Failed to update inventory');
+      if (!res.ok) throw new Error('Failed');
       toast.success('Inventory updated');
       setEditingId(null);
-      fetchProducts();
+      fetchProducts(currentPage);
     } catch {
       toast.error('Failed to update inventory');
     }
   };
 
   const startEdit = (product: Product) => {
+    const inv = product.inventory?.[0];
     setEditingId(product.id);
     setEditForm({
-      quantity: product.inventory?.quantity || 0,
-      minimumStock: product.inventory?.minimumStock || 10,
-      location: product.inventory?.location || '',
-      batchNumber: product.inventory?.batchNumber || '',
-      expiryDate: product.inventory?.expiryDate ? product.inventory.expiryDate.split('T')[0] : '',
+      quantity: inv?.quantity ?? 0,
+      minimumStock: inv?.minimumStock ?? 10,
+      location: inv?.location ?? '',
+      batchNumber: inv?.batchNumber ?? '',
+      expiryDate: inv?.expiryDate ? inv.expiryDate.split('T')[0] : '',
     });
   };
 
@@ -109,9 +115,11 @@ function InventoryContent() {
 
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-neutral-800">Inventory Management</h1>
-        <p className="text-neutral-600 mt-1">Set stock levels for each product</p>
+      <div className="mb-6 flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-neutral-800">Inventory Management</h1>
+          <p className="text-neutral-600 mt-1">Set stock levels for each product ({totalProducts} total)</p>
+        </div>
       </div>
 
       <div className="bg-white rounded-2xl shadow-soft overflow-hidden">
@@ -128,7 +136,7 @@ function InventoryContent() {
           </thead>
           <tbody>
             {products.map((product, idx) => {
-              const inv = product.inventory;
+              const inv = product.inventory?.[0];
               const available = inv ? (inv.quantity - (inv.reservedQuantity || 0)) : null;
               const isLow = inv && available !== null && available <= (inv.minimumStock || 10);
               const isEditing = editingId === product.id;
@@ -171,7 +179,7 @@ function InventoryContent() {
                     )}
                   </td>
                   <td className="px-4 py-4 text-center text-neutral-500 text-sm">
-                    {inv?.reservedQuantity || 0}
+                    {inv?.reservedQuantity ?? 0}
                   </td>
                   <td className="px-4 py-4 text-center">
                     {isEditing ? (
@@ -183,7 +191,7 @@ function InventoryContent() {
                         className="w-20 text-center border border-neutral-300 rounded-lg px-2 py-1 text-sm"
                       />
                     ) : (
-                      <span className="text-neutral-500 text-sm">{inv?.minimumStock || 10}</span>
+                      <span className="text-neutral-500 text-sm">{inv?.minimumStock ?? 10}</span>
                     )}
                   </td>
                   <td className="px-4 py-4 text-center">
@@ -232,6 +240,30 @@ function InventoryContent() {
           <div className="text-center py-12 text-neutral-500">
             <p className="text-4xl mb-3">📦</p>
             <p>No products found. Add products first.</p>
+          </div>
+        )}
+
+        {totalPages > 1 && (
+          <div className="border-t border-neutral-200 px-6 py-4 flex items-center justify-between">
+            <p className="text-sm text-neutral-500">
+              Page {currentPage} of {totalPages}
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => fetchProducts(currentPage - 1)}
+                disabled={currentPage === 1}
+                className="px-3 py-1.5 text-sm border border-neutral-300 rounded-lg disabled:opacity-40"
+              >
+                Previous
+              </button>
+              <button
+                onClick={() => fetchProducts(currentPage + 1)}
+                disabled={currentPage >= totalPages}
+                className="px-3 py-1.5 text-sm border border-neutral-300 rounded-lg disabled:opacity-40"
+              >
+                Next
+              </button>
+            </div>
           </div>
         )}
       </div>
