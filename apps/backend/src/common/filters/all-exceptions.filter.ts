@@ -38,7 +38,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
         status = HttpStatus.BAD_REQUEST;
         message = 'Database error';
       }
-      this.logger.error(`DB [${dbError.code}]: ${exception.message}`);
+      this.logger.error(`DB error [code: ${dbError.code}]`);
     } else if (exception instanceof Error) {
       this.logger.error(`Unhandled: ${exception.message}`, exception.stack);
     } else {

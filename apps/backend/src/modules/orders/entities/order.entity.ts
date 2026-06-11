@@ -45,7 +45,7 @@ export class Order {
   @Column({ nullable: true })
   userId: string | null;
 
-  @ManyToOne(() => User, { onDelete: 'CASCADE', nullable: true })
+  @ManyToOne(() => User, { onDelete: 'SET NULL', nullable: true })
   @JoinColumn({ name: 'userId' })
   user: User | null;
 

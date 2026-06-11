@@ -27,6 +27,8 @@ export interface ProxyOptions {
   passQuery?: boolean;
   /** Require auth token. Returns 401 if neither header nor cookie present. */
   requireAuth?: boolean;
+  /** Restrict to specific roles. Reads the auth_token cookie and returns 403 if role not included. */
+  requireRole?: string[];
 }
 
 export async function proxy(
@@ -43,6 +45,27 @@ export async function proxy(
 
   if (requireAuth && !resolvedAuth) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  // --- Role check: verify role from auth_token cookie ---
+  if (options.requireRole) {
+    const authToken = request.cookies.get('auth_token')?.value;
+    if (!authToken) {
+      return NextResponse.json({ message: 'Forbidden' }, { status: 403 });
+    }
+    try {
+      const jwtSecret = process.env.JWT_SECRET;
+      if (!jwtSecret) return NextResponse.json({ message: 'Forbidden' }, { status: 403 });
+      const { jwtVerify } = await import('jose');
+      const secret = new TextEncoder().encode(jwtSecret);
+      const { payload } = await jwtVerify(authToken, secret);
+      const role = payload.role as string;
+      if (!options.requireRole.includes(role)) {
+        return NextResponse.json({ message: 'Forbidden' }, { status: 403 });
+      }
+    } catch {
+      return NextResponse.json({ message: 'Forbidden' }, { status: 403 });
+    }
   }
 
   // --- URL ---

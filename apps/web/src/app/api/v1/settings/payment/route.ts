@@ -1,9 +1,9 @@
 import { NextRequest } from 'next/server';
 import { proxy } from '@/lib/proxy';
 
-// Protected: only admins should read payment credentials
+// Protected: only super_admin should read/write payment credentials
 export const GET = (req: NextRequest) =>
-  proxy(req, { path: '/api/v1/settings/payment', requireAuth: true });
+  proxy(req, { path: '/api/v1/settings/payment', requireAuth: true, requireRole: ['super_admin'] });
 
 export const PATCH = (req: NextRequest) =>
-  proxy(req, { path: '/api/v1/settings/payment', requireAuth: true });
+  proxy(req, { path: '/api/v1/settings/payment', requireAuth: true, requireRole: ['super_admin'] });

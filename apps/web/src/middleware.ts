@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { jwtVerify } from 'jose';
 
 const ADMIN_ROLES = ['super_admin', 'staff'];
+const SUPER_ADMIN_ONLY_PATHS = ['/admin/staff', '/admin/settings', '/admin/customers'];
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -11,7 +12,6 @@ export async function middleware(request: NextRequest) {
   }
 
   const token = request.cookies.get('auth_token')?.value;
-
   if (!token) {
     const loginUrl = new URL('/auth/login', request.url);
     loginUrl.searchParams.set('redirect', pathname);
@@ -31,6 +31,12 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(new URL('/orders', request.url));
     }
 
+    // Super-admin-only paths: staff, settings, customers
+    const isSuperAdminOnly = SUPER_ADMIN_ONLY_PATHS.some(p => pathname.startsWith(p));
+    if (isSuperAdminOnly && role !== 'super_admin') {
+      return NextResponse.redirect(new URL('/admin/dashboard', request.url));
+    }
+
     return NextResponse.next();
   } catch {
     const loginUrl = new URL('/auth/login', request.url);
@@ -42,5 +48,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/admin/:path*'],
+  matcher: ['/admin', '/admin/:path*'],
 };

@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import * as nodemailer from 'nodemailer';
+import * as Sentry from '@sentry/nestjs';
 import { env } from '../../config/env';
 
 @Injectable()
@@ -24,14 +25,15 @@ export class EmailService {
   async send(to: string, subject: string, html: string): Promise<void> {
     if (!to) return;
     if (!this.transporter) {
-      this.logger.log(`[EMAIL] To: ${to} | Subject: ${subject}`);
+      this.logger.log(`[EMAIL DEV] To: ${to.replace(/(.{2}).*@/, '$1***@')} | Subject: ${subject}`);
       return;
     }
     try {
       await this.transporter.sendMail({ from: `"Khaalis Harvest" <${env.SMTP_FROM}>`, to, subject, html });
       this.logger.log(`Email sent → ${to}`);
     } catch (err) {
-      this.logger.error(`Email failed → ${to}: ${err.message}`);
+      this.logger.error(`Email failed → ${to.replace(/(.{2}).*@/, '$1***@')}: ${err.message}`);
+      Sentry.captureException(err, { extra: { recipient: to.replace(/(.{2}).*@/, '$1***@'), subject } });
     }
   }
 }

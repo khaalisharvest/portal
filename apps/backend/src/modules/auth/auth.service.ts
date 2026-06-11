@@ -54,14 +54,14 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
+    if (!user.isActive) {
+      throw new UnauthorizedException('Your account has been deactivated. Please contact support for assistance.');
+    }
+
     // Check account lockout
     if (user.lockedUntil && user.lockedUntil > new Date()) {
       const minutesLeft = Math.ceil((user.lockedUntil.getTime() - Date.now()) / 60000);
       throw new UnauthorizedException(`Account locked. Try again in ${minutesLeft} minute(s).`);
-    }
-
-    if (!user.isActive) {
-      throw new UnauthorizedException('Your account has been deactivated. Please contact support for assistance.');
     }
 
     const isPasswordValid = await bcrypt.compare(loginDto.password, user.password);
@@ -115,8 +115,11 @@ export class AuthService {
   async refreshToken(refreshToken: string) {
     try {
       const payload = this.jwtService.verify(refreshToken);
+      if (payload.type !== 'refresh') {
+        throw new UnauthorizedException('Invalid token type');
+      }
       const user = await this.usersService.findById(payload.sub);
-      if (!user) {
+      if (!user || !user.isActive) {
         throw new UnauthorizedException();
       }
       return this.generateTokens(user.id, user.role);
@@ -196,10 +199,11 @@ export class AuthService {
   }
 
   private async generateTokens(userId: string, role: string) {
-    const payload = { sub: userId, role };
+    const accessPayload = { sub: userId, role, type: 'access' };
+    const refreshPayload = { sub: userId, role, type: 'refresh' };
     return {
-      accessToken: this.jwtService.sign(payload),
-      refreshToken: this.jwtService.sign(payload, { expiresIn: '30d' }),
+      accessToken: this.jwtService.sign(accessPayload),
+      refreshToken: this.jwtService.sign(refreshPayload, { expiresIn: '30d' }),
     };
   }
 }

@@ -97,6 +97,9 @@ temp/
 *.sqlite
 *.db
 
+# SSH / TLS private keys — never commit
+*.pem
+
 # Mobile
 android/app/build/
 ios/build/

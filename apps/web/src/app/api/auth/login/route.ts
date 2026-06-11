@@ -60,12 +60,7 @@ export async function POST(request: NextRequest) {
         { expiresIn: '7d' }
       );
 
-      const res = NextResponse.json({
-        user,
-        token,
-        backendToken: accessToken,
-        refreshToken,
-      });
+      const res = NextResponse.json({ user });
       const cookieOpts = {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
@@ -88,9 +83,9 @@ export async function POST(request: NextRequest) {
         { status: response.status }
       );
     }
-  } catch (error) {
+  } catch {
     return NextResponse.json(
-      { message: `Internal server error: ${error instanceof Error ? error.message : 'Unknown error'}` },
+      { message: 'Internal server error' },
       { status: 500 }
     );
   }

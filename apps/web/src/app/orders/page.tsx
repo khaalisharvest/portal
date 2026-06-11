@@ -87,7 +87,7 @@ interface Order {
 
 export default function OrdersPage() {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, isLoading, logout } = useAuth();
   const [allOrders, setAllOrders] = useState<Order[]>([]);
   const [filteredOrders, setFilteredOrders] = useState<Order[]>([]);
   const [paginatedOrders, setPaginatedOrders] = useState<Order[]>([]);
@@ -104,13 +104,15 @@ export default function OrdersPage() {
   const [isCancelling, setIsCancelling] = useState(false);
 
   useEffect(() => {
-    if (!user) {
+    if (!isLoading && !user) {
       router.push('/auth/login');
       return;
     }
 
-    fetchOrders();
-  }, [user, router]);
+    if (user) {
+      fetchOrders();
+    }
+  }, [isLoading, user, router]);
 
   // Filter orders locally when selectedStatus changes
   useEffect(() => {
@@ -147,11 +149,8 @@ export default function OrdersPage() {
         const fetchedOrders = data.data?.orders || data.orders || [];
         setAllOrders(fetchedOrders);
       } else if (response.status === 401) {
-        // Token expired or invalid - redirect to login
-        localStorage.removeItem('auth_token');
-        localStorage.removeItem('backend_token');
-        localStorage.removeItem('user');
-        router.push('/auth/login');
+        // Token expired or invalid - use logout to handle cleanup and redirect
+        await logout();
       } else {
         const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.error || 'Failed to fetch orders');
@@ -219,10 +218,7 @@ export default function OrdersPage() {
         // Refresh orders list
         await fetchOrders();
       } else if (response.status === 401) {
-        localStorage.removeItem('auth_token');
-        localStorage.removeItem('backend_token');
-        localStorage.removeItem('user');
-        router.push('/auth/login');
+        await logout();
       } else {
         const errorData = await response.json().catch(() => ({}));
         toast.error(errorData.error || 'Failed to cancel order');
@@ -243,8 +239,8 @@ export default function OrdersPage() {
     setCancellationReason('');
   };
 
-  if (!user) {
-    return null; // Will redirect
+  if (isLoading || !user) {
+    return null; // Will redirect once auth resolves
   }
 
   return (

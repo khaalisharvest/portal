@@ -33,7 +33,7 @@ const rootReducer = combineReducers({
 const persistConfig = {
   key: 'root',
   storage,
-  whitelist: ['auth'], // Only persist auth; cart is managed by CartContext
+  whitelist: [], // Auth is managed by AuthContext (HttpOnly cookies), not Redux
 };
 
 const persistedReducer = persistReducer(persistConfig, rootReducer);

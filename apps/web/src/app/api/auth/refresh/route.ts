@@ -3,9 +3,7 @@ import { BACKEND_URL } from '@/config/env.server';
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json().catch(() => ({} as Record<string, string>));
-    const refreshToken =
-      request.cookies.get('refresh_token')?.value || body.refreshToken;
+    const refreshToken = request.cookies.get('refresh_token')?.value;
 
     if (!refreshToken) {
       return NextResponse.json({ message: 'No refresh token' }, { status: 401 });

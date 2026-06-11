@@ -1,6 +1,6 @@
 'use client';
-import { Suspense } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { Suspense, useEffect, useState } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import ProductLoader from '@/components/ui/ProductLoader';
@@ -10,8 +10,26 @@ function fmt(n: number) {
 }
 
 function ConfirmationContent() {
+  const router = useRouter();
   const searchParams = useSearchParams();
+  const [verified, setVerified] = useState(false);
+
   const orderNumber = searchParams.get('orderNumber');
+
+  useEffect(() => {
+    const stored = sessionStorage.getItem('pending_confirmation');
+    if (!stored && !orderNumber) {
+      router.replace('/');
+      return;
+    }
+    if (stored) {
+      sessionStorage.removeItem('pending_confirmation');
+    }
+    setVerified(true);
+  }, [orderNumber, router]);
+
+  if (!verified) return null;
+
   const total = searchParams.get('total');
   const paymentMethod = searchParams.get('paymentMethod');
   const isGuest = searchParams.get('guest') === 'true';

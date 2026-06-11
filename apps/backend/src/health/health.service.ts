@@ -23,9 +23,6 @@ export class HealthService {
       database: dbStatus,
       redis: redisStatus,
       timestamp: new Date().toISOString(),
-      uptime: process.uptime(),
-      memory: process.memoryUsage(),
-      version: process.env.npm_package_version || '1.0.0',
     };
   }
 
@@ -44,11 +41,7 @@ export class HealthService {
   }
 
   async live() {
-    return {
-      status: 'alive',
-      timestamp: new Date().toISOString(),
-      uptime: process.uptime(),
-    };
+    return { status: 'alive', timestamp: new Date().toISOString() };
   }
 
   private async checkDatabase(): Promise<'up' | 'down'> {

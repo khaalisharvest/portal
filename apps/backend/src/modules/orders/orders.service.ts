@@ -1,3 +1,4 @@
+import { randomBytes } from 'crypto';
 import { Injectable, NotFoundException, BadRequestException, ForbiddenException, Logger, Optional } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource, In } from 'typeorm';
@@ -227,14 +228,17 @@ export class OrdersService {
   async updateOrder(id: string, updateOrderDto: UpdateOrderDto, userId: string): Promise<Order> {
     const order = await this.findOne(id, userId);
 
-    // Only allow certain updates based on current status
     if (order.status === OrderStatus.DELIVERED || order.status === OrderStatus.CANCELLED) {
       throw new BadRequestException('Cannot update completed or cancelled order');
     }
 
-    Object.assign(order, updateOrderDto);
-    await this.orderRepository.save(order);
+    // Only allow users to update non-status fields
+    const allowedUpdates: Partial<Order> = {};
+    if (updateOrderDto.notes !== undefined) allowedUpdates.notes = updateOrderDto.notes as any;
+    if (updateOrderDto.cancellationReason !== undefined) allowedUpdates.cancellationReason = updateOrderDto.cancellationReason;
 
+    Object.assign(order, allowedUpdates);
+    await this.orderRepository.save(order);
     return this.findOne(id, userId);
   }
 
@@ -245,32 +249,33 @@ export class OrdersService {
       throw new BadRequestException('Cannot cancel completed or already cancelled order');
     }
 
-    order.status = OrderStatus.CANCELLED;
-    order.cancelledAt = new Date();
-    order.cancellationReason = reason;
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
 
-    await this.orderRepository.save(order);
+    try {
+      order.status = OrderStatus.CANCELLED;
+      order.cancelledAt = new Date();
+      order.cancellationReason = reason;
+      await queryRunner.manager.save(Order, order);
 
-    // Release reserved inventory on cancellation
-    const orderItems = await this.orderItemRepository.find({ where: { orderId: id } });
-    if (orderItems.length > 0) {
-      const productIds = orderItems.map(item => item.productId);
-      const inventories = await this.dataSource.manager.find(Inventory, {
-        where: { productId: In(productIds) },
-      });
-      const inventoryMap = new Map(inventories.map(inv => [inv.productId, inv]));
-
+      const orderItems = await queryRunner.manager.find(OrderItem, { where: { orderId: id } });
       for (const item of orderItems) {
-        const inventory = inventoryMap.get(item.productId);
-        if (inventory && inventory.reservedQuantity > 0) {
-          await this.dataSource.manager.update(Inventory, inventory.id, {
-            reservedQuantity: () => `GREATEST("reservedQuantity" - ${item.quantity}, 0)`
-          });
-        }
+        const qty = Math.floor(Number(item.quantity));
+        await queryRunner.manager.query(
+          `UPDATE inventory SET "reservedQuantity" = GREATEST("reservedQuantity" - $1, 0) WHERE "productId" = $2`,
+          [qty, item.productId]
+        );
       }
-    }
 
-    return this.findOne(id, userId);
+      await queryRunner.commitTransaction();
+      return this.findOne(id, userId);
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      throw error;
+    } finally {
+      await queryRunner.release();
+    }
   }
 
   // Address management
@@ -482,8 +487,32 @@ export class OrdersService {
       }
     }
 
-    Object.assign(order, updateOrderDto);
-    await this.orderRepository.save(order);
+    if (newStatus === OrderStatus.CANCELLED && previousStatus !== OrderStatus.CANCELLED) {
+      const queryRunner = this.dataSource.createQueryRunner();
+      await queryRunner.connect();
+      await queryRunner.startTransaction();
+      try {
+        Object.assign(order, updateOrderDto);
+        await queryRunner.manager.save(Order, order);
+        const orderItems = await queryRunner.manager.find(OrderItem, { where: { orderId: id } });
+        for (const item of orderItems) {
+          const qty = Math.floor(Number(item.quantity));
+          await queryRunner.manager.query(
+            `UPDATE inventory SET "reservedQuantity" = GREATEST("reservedQuantity" - $1, 0) WHERE "productId" = $2`,
+            [qty, item.productId]
+          );
+        }
+        await queryRunner.commitTransaction();
+      } catch (error) {
+        await queryRunner.rollbackTransaction();
+        throw error;
+      } finally {
+        await queryRunner.release();
+      }
+    } else {
+      Object.assign(order, updateOrderDto);
+      await this.orderRepository.save(order);
+    }
 
     // Fire-and-forget status notification email
     if (newStatus && newStatus !== 'pending') {
@@ -554,7 +583,9 @@ export class OrdersService {
       }
 
       // Check inventory for each item (same as createUnifiedOrder)
-      for (const item of createGuestOrderDto.items) {
+      // Sort items by productId to prevent deadlocks on concurrent orders
+      const sortedItems = [...createGuestOrderDto.items].sort((a, b) => a.productId.localeCompare(b.productId));
+      for (const item of sortedItems) {
         const inventory = await queryRunner.manager
           .createQueryBuilder(Inventory, 'inv')
           .setLock('pessimistic_write')
@@ -577,13 +608,15 @@ export class OrdersService {
         }
 
         // Reserve the stock
-        await queryRunner.manager.update(Inventory, inventory.id, {
-          reservedQuantity: () => `"reservedQuantity" + ${item.quantity}`,
-        });
+        const qty = Math.floor(Number(item.quantity));
+        await queryRunner.manager.query(
+          `UPDATE inventory SET "reservedQuantity" = "reservedQuantity" + $1 WHERE id = $2`,
+          [qty, inventory.id]
+        );
       }
 
       // Generate order number
-      const orderNumber = await this.generateOrderNumber();
+      const orderNumber = this.generateOrderNumber();
 
       // Guest addresses don't have a userId (null)
       // Create guest address
@@ -774,7 +807,9 @@ export class OrdersService {
       }
 
       // Check inventory for each item (within transaction)
-      for (const item of orderData.items) {
+      // Sort items by productId to prevent deadlocks on concurrent orders
+      const sortedItems = [...orderData.items].sort((a, b) => a.productId.localeCompare(b.productId));
+      for (const item of sortedItems) {
         const product = products.find(p => p.id === item.productId);
         if (!product) continue;
 
@@ -799,13 +834,15 @@ export class OrdersService {
           );
         }
         // Reserve the stock
-        await queryRunner.manager.update(Inventory, inventory.id, {
-          reservedQuantity: () => `"reservedQuantity" + ${item.quantity}`
-        });
+        const qty = Math.floor(Number(item.quantity));
+        await queryRunner.manager.query(
+          `UPDATE inventory SET "reservedQuantity" = "reservedQuantity" + $1 WHERE id = $2`,
+          [qty, inventory.id]
+        );
       }
 
       // Generate order number
-      const orderNumber = await this.generateOrderNumber();
+      const orderNumber = this.generateOrderNumber();
 
       // Calculate totals
       let subtotal = 0;
@@ -960,10 +997,9 @@ export class OrdersService {
     }
   }
 
-  private async generateOrderNumber(): Promise<string> {
-    const today = new Date();
-    const dateStr = today.toISOString().slice(0, 10).replace(/-/g, '');
-    const randomNum = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
-    return `ORD-${dateStr}-${randomNum}`;
+  private generateOrderNumber(): string {
+    const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+    const suffix = randomBytes(3).toString('hex').toUpperCase();
+    return `ORD-${dateStr}-${suffix}`;
   }
 }

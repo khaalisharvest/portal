@@ -48,7 +48,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     // Listen for storage changes (logout from other tabs)
     const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'auth_token' && !e.newValue) {
+      if (e.key === 'user' && !e.newValue) {
         setUser(null);
       }
     };
@@ -61,29 +61,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const checkAuthStatus = async () => {
     try {
-      // First, try to restore user from localStorage (faster)
-      const storedUser = localStorage.getItem('user');
-      if (storedUser) {
-        const userData = JSON.parse(storedUser);
-        setUser(userData);
-        setIsLoading(false);
-        
-        // Then verify with backend in background
-        verifyWithBackend();
-        return;
-      }
-
-      const token = localStorage.getItem('auth_token');
-      if (!token) {
-        setIsLoading(false);
-        return;
-      }
-
-      // Verify token with backend (backend_token read from HttpOnly cookie server-side)
       await verifyWithBackend();
-    } catch (error) {
-      localStorage.removeItem('auth_token');
-      localStorage.removeItem('user');
+    } catch {
       setUser(null);
       setIsLoading(false);
     }
@@ -91,23 +70,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const verifyWithBackend = async () => {
     try {
-      const token = localStorage.getItem('auth_token');
-      if (!token) return;
-
-      // backend_token is sent automatically via HttpOnly cookie
       const response = await authFetch('/api/auth/me');
-
       if (response.ok) {
         const userData = await response.json();
         setUser(userData);
-        localStorage.setItem('user', JSON.stringify(userData));
       } else {
-        localStorage.removeItem('auth_token');
-        localStorage.removeItem('user');
         setUser(null);
+        // Clear any stale localStorage data
+        localStorage.removeItem('user');
       }
-    } catch (error) {
-      // Don't clear user data on network errors
+    } catch {
+      // Network error — don't clear user (may be offline), but don't persist stale state
+      setUser(null);
+      localStorage.removeItem('user');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -125,12 +102,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const data = await response.json();
 
       if (response.ok) {
-        // Store token and user data
-        localStorage.setItem('auth_token', data.token);
-        // backend_token is stored as HttpOnly cookie by the login BFF route — no localStorage
-        if (data.refreshToken) {
-          localStorage.setItem('refresh_token', data.refreshToken);
-        }
+        // backend_token and refresh_token are stored as HttpOnly cookies by the login BFF route — no localStorage
         localStorage.setItem('user', JSON.stringify(data.user));
         setUser(data.user);
 
@@ -180,32 +152,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const refreshBackendToken = async (): Promise<string | null> => {
     try {
-      const storedRefreshToken = localStorage.getItem('refresh_token');
       const res = await fetch('/api/auth/refresh', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ refreshToken: storedRefreshToken }),
+        credentials: 'include',
       });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.backendToken) {
-          // backend_token is refreshed as HttpOnly cookie by the refresh BFF route
-          return data.backendToken;
-        }
-      }
-      return null;
+      return res.ok ? 'refreshed' : null;
     } catch {
       return null;
     }
   };
 
   const logout = () => {
-    localStorage.removeItem('auth_token');
-    localStorage.removeItem('backend_token');
-    localStorage.removeItem('refresh_token');
     localStorage.removeItem('user');
-    fetch('/api/auth/logout', { method: 'POST' }).catch(() => {});
     setUser(null);
+    fetch('/api/auth/logout', { method: 'POST', credentials: 'include' }).catch(() => {});
     router.push('/');
   };
 

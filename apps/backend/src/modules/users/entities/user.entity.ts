@@ -11,7 +11,6 @@ import { ROLES } from '../../../common/constants/roles';
 @Entity('users')
 @Index(['role', 'isActive']) // Composite index for user filtering
 @Index(['phone']) // Index for phone lookups
-@Index(['email']) // Index for email lookups
 @Index(['lastLoginAt']) // Index for login tracking
 @Check(`"loginAttempts" >= 0 AND "loginAttempts" <= 10`) // Login attempts constraint
 @Check(`"role" IN ('customer', 'staff', 'super_admin')`) // Role constraint

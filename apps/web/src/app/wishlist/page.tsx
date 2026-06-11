@@ -40,10 +40,9 @@ export default function WishlistPage() {
   }, [user, authLoading]);
 
   const fetchWishlist = async () => {
-    const token = localStorage.getItem('auth_token');
     try {
       const res = await fetch('/api/v1/wishlist', {
-        headers: { Authorization: `Bearer ${token}` },
+        credentials: 'include',
       });
       const data = await res.json();
       setWishlist(Array.isArray(data) ? data : []);
@@ -55,11 +54,10 @@ export default function WishlistPage() {
   };
 
   const removeFromWishlist = async (productId: string) => {
-    const token = localStorage.getItem('auth_token');
     try {
       await fetch(`/api/v1/wishlist/${productId}`, {
         method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
+        credentials: 'include',
       });
       setWishlist(prev => prev.filter(item => item.productId !== productId));
       toast.success('Removed from wishlist');

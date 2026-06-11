@@ -178,10 +178,9 @@ export default function ProductDetailsPage() {
   };
 
   const fetchWishlistStatus = async (id: string) => {
-    const token = localStorage.getItem('auth_token');
     try {
       const res = await fetch(`/api/v1/wishlist/${id}`, {
-        headers: { Authorization: `Bearer ${token}` },
+        credentials: 'include',
       });
       if (res.ok) {
         const json = await res.json();
@@ -256,11 +255,10 @@ export default function ProductDetailsPage() {
     if (!user) { router.push('/auth/login'); return; }
     if (!product) return;
     setWishlistLoading(true);
-    const token = localStorage.getItem('auth_token');
     try {
       await fetch(`/api/v1/wishlist/${product.id}`, {
         method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
+        credentials: 'include',
       });
       setIsWishlisted(prev => !prev);
       toast.success(isWishlisted ? 'Removed from wishlist' : 'Added to wishlist');
@@ -275,11 +273,11 @@ export default function ProductDetailsPage() {
     e.preventDefault();
     if (!reviewForm.comment.trim()) { toast.error('Please write a review comment'); return; }
     setSubmittingReview(true);
-    const token = localStorage.getItem('auth_token');
     try {
       const res = await fetch(`/api/v1/reviews?productId=${params.id}`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ ...reviewForm, productId: params.id }),
       });
       if (!res.ok) throw new Error('Failed to submit review');

@@ -62,6 +62,10 @@ ENV NODE_ENV=$NODE_ENV
 # Set working directory
 WORKDIR /app
 
+# Create non-root user for security
+RUN addgroup --system --gid 1001 nodejs && \
+    adduser --system --uid 1001 --ingroup nodejs appuser
+
 # ============================================================================
 # Step 1: Copy package files first (for better Docker layer caching)
 # ============================================================================
@@ -138,6 +142,10 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
 # Expose ports
 EXPOSE 3000 3001
 
+# Switch to non-root user
+RUN chown -R appuser:nodejs /app
+USER appuser
+
 # Start applications using concurrently (already in package.json dependencies)
 # Memory limits configurable via NODE_OPTIONS_BACKEND/FRONTEND env vars
 # concurrently handles process management, signal forwarding, and logging
@@ -145,5 +153,5 @@ EXPOSE 3000 3001
 CMD exec npx concurrently \
   --names "backend,frontend" \
   --prefix-colors "blue,green" \
-  "cd apps/backend && NODE_OPTIONS=\"--max-old-space-size=\${NODE_OPTIONS_BACKEND:-1536}\" PORT=\${PORT:-3000} yarn start:prod" \
-  "cd apps/web && NODE_OPTIONS=\"--max-old-space-size=\${NODE_OPTIONS_FRONTEND:-2048}\" PORT=\${FRONTEND_PORT:-3001} yarn start"
+  "cd apps/backend && NODE_OPTIONS=\"--max-old-space-size=\${NODE_OPTIONS_BACKEND:-256}\" PORT=\${PORT:-3000} yarn start:prod" \
+  "cd apps/web && NODE_OPTIONS=\"--max-old-space-size=\${NODE_OPTIONS_FRONTEND:-384}\" PORT=\${FRONTEND_PORT:-3001} yarn start"

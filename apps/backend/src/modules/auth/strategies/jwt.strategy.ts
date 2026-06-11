@@ -22,6 +22,9 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     if (!user) {
       throw new UnauthorizedException();
     }
+    if (payload.type !== 'access') {
+      throw new UnauthorizedException('Invalid token type');
+    }
     
     // Check if user account is active
     if (!user.isActive) {

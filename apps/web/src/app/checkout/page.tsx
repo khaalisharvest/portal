@@ -359,6 +359,7 @@ export default function CheckoutPage() {
           orderPlacedSuccessfully.current = true;
           clearCart();
           toast.success('Order placed successfully!');
+          sessionStorage.setItem('pending_confirmation', '1');
           const confirmUrl = `/orders/confirmation?orderNumber=${encodeURIComponent(orderNumber)}&total=${totalAmount}&paymentMethod=${encodeURIComponent(orderData.paymentMethod || 'cash_on_delivery')}&guest=true`;
           router.push(confirmUrl);
         } else {
@@ -397,6 +398,7 @@ export default function CheckoutPage() {
           orderPlacedSuccessfully.current = true;
           clearCart();
           toast.success('Order placed successfully!');
+          sessionStorage.setItem('pending_confirmation', '1');
           const confirmUrl = `/orders/confirmation?orderNumber=${encodeURIComponent(orderNumber)}&total=${totalAmount}&paymentMethod=${encodeURIComponent(orderData.paymentMethod || 'cash_on_delivery')}&guest=false`;
           router.push(confirmUrl);
         } else {

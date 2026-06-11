@@ -29,11 +29,20 @@ const requiredEnvVars = {
   // Uploads
   UPLOAD_PATH: process.env.UPLOAD_PATH,
   MAX_FILE_SIZE_MB: process.env.MAX_FILE_SIZE_MB,
+  // Cloudinary
+  CLOUDINARY_CLOUD_NAME: process.env.CLOUDINARY_CLOUD_NAME,
+  CLOUDINARY_API_KEY: process.env.CLOUDINARY_API_KEY,
+  CLOUDINARY_API_SECRET: process.env.CLOUDINARY_API_SECRET,
 };
 
 const missingVars = Object.entries(requiredEnvVars)
   .filter(([_, value]) => !value)
   .map(([key]) => key);
+
+// JWT_SECRET must be set in ALL environments — undefined = trivially forgeable tokens
+if (!process.env.JWT_SECRET) {
+  throw new Error('JWT_SECRET must be set. Generate one with: openssl rand -base64 32');
+}
 
 if (missingVars.length > 0) {
   const errorMessage = `Missing required environment variables: ${missingVars.join(', ')}`;

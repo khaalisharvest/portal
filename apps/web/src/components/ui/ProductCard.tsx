@@ -39,11 +39,10 @@ export default function ProductCard({ product }: ProductCardProps) {
     }
     if (wishlistLoading) return;
     setWishlistLoading(true);
-    const token = localStorage.getItem('auth_token');
     try {
       await fetch(`/api/v1/wishlist/${product.id}`, {
         method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
+        credentials: 'include',
       });
       setIsFavorited(prev => !prev);
       toast.success(isFavorited ? 'Removed from wishlist' : 'Added to wishlist');

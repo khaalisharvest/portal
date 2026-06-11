@@ -55,7 +55,8 @@ services:
     memswap_limit: 256m
     # Memory optimization (set REDIS_COMMAND in .env for Oracle Cloud)
     # Example: redis-server --maxmemory 200mb --maxmemory-policy allkeys-lru
-    command: ${REDIS_COMMAND:-redis-server --maxmemory 200mb --maxmemory-policy allkeys-lru}
+    # REDIS_PASSWORD: set in .env for production auth. If empty, Redis runs without password (dev only).
+    command: ${REDIS_COMMAND:-redis-server --maxmemory 200mb --maxmemory-policy allkeys-lru --requirepass ${REDIS_PASSWORD:-}}
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -105,8 +106,8 @@ services:
       # Memory optimization (set NODE_OPTIONS_BACKEND/FRONTEND in .env for Azure)
       # Defaults: Higher memory for local dev, can be reduced for Azure
       # Format: MB value (e.g., 1536 = 1.5GB)
-      NODE_OPTIONS_BACKEND: ${NODE_OPTIONS_BACKEND:-1536}
-      NODE_OPTIONS_FRONTEND: ${NODE_OPTIONS_FRONTEND:-2048}
+      NODE_OPTIONS_BACKEND: ${NODE_OPTIONS_BACKEND:-256}
+      NODE_OPTIONS_FRONTEND: ${NODE_OPTIONS_FRONTEND:-384}
     volumes:
       - uploads_data:/app/uploads
     # Ports exposed internally only (Nginx handles external traffic on 80/443)
@@ -121,9 +122,9 @@ services:
     networks:
       - khaalis-network
     restart: unless-stopped
-    # Memory limits: backend (1.5GB heap) + frontend (2GB heap) + OS overhead
-    mem_limit: 4g
-    memswap_limit: 4g
+    # Memory limits: sized for Oracle Cloud 1GB VM (leaves room for postgres 256m + redis 256m + OS)
+    mem_limit: 768m
+    memswap_limit: 768m
     # Health check: verifies backend is alive (frontend depends on backend)
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/api/v1/health/live"]
@@ -155,6 +156,12 @@ services:
     mem_limit: 128m
     memswap_limit: 128m
     command: "/bin/sh -c 'while :; do sleep 6h & wait $${!}; nginx -s reload; done & nginx -g \"daemon off;\"'"
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
 
   # ==========================================================================
   # Certbot for Let's Encrypt SSL Certificates

@@ -35,11 +35,12 @@ export class RedisConfig implements CacheOptionsFactory {
         connectTimeout: 10000, // 10 second connection timeout
         keepAlive: 30000, // Keep connection alive for 30 seconds
         reconnectStrategy: (retries: number) => {
-          if (retries > 3) {
-            this.logger.error(`Redis cache connection failed after ${retries} retries`);
-            return new Error('Redis connection failed');
+          if (retries > 20) {
+            this.logger.error(`Redis reconnect failed after ${retries} attempts — giving up`);
+            return new Error('Redis connection failed permanently');
           }
-          const delay = Math.min(retries * 50, 2000);
+          const delay = Math.min(retries * 200, 5000);
+          this.logger.warn(`Redis reconnecting in ${delay}ms (attempt ${retries})`);
           return delay;
         },
       },

@@ -80,7 +80,7 @@ interface Order {
 export default function OrderDetailsPage() {
   const params = useParams();
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, isLoading } = useAuth();
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
   const [showCancelDialog, setShowCancelDialog] = useState(false);
@@ -88,15 +88,15 @@ export default function OrderDetailsPage() {
   const [isCancelling, setIsCancelling] = useState(false);
 
   useEffect(() => {
-    if (!user) {
+    if (!isLoading && !user) {
       router.push('/auth/login');
       return;
     }
 
-    if (params.id) {
+    if (user && params.id) {
       fetchOrderDetails(params.id as string);
     }
-  }, [user, params.id, router]);
+  }, [isLoading, user, params.id, router]);
 
   const fetchOrderDetails = async (orderId: string) => {
     try {
