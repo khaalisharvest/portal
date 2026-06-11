@@ -6,8 +6,9 @@
  *   export const POST = (req) => proxy(req, { path: '/api/v1/products', requireAuth: true });
  *
  * Rules:
- *  - requireAuth: true  → returns 401 immediately if Authorization header is missing
- *  - requireAuth: false → passes the header if present, skips it if absent (public/optional-auth routes)
+ *  - requireAuth: true  → returns 401 if neither Authorization header nor backend_token cookie present
+ *  - requireAuth: false → passes token if present (header or cookie), skips if absent
+ *  - Auth priority: Authorization header > backend_token HttpOnly cookie
  *  - All backend errors propagate their real HTTP status code (no silent 500 wrapping)
  *  - Empty bodies (204 or 200/201 with no content) are handled gracefully
  *  - Multipart file uploads are forwarded as-is (FormData, no Content-Type override)
@@ -24,7 +25,7 @@ export interface ProxyOptions {
   method?: string;
   /** Forward the incoming request's query string to the backend */
   passQuery?: boolean;
-  /** Require Authorization header. Returns 401 immediately if absent. */
+  /** Require auth token. Returns 401 if neither header nor cookie present. */
   requireAuth?: boolean;
 }
 
@@ -35,9 +36,12 @@ export async function proxy(
 ): Promise<NextResponse> {
   const { path, method = request.method.toUpperCase(), passQuery = false, requireAuth = false } = options;
 
-  // --- Auth ---
+  // --- Auth: header takes priority, cookie is secure fallback ---
   const authHeader = request.headers.get('Authorization');
-  if (requireAuth && !authHeader) {
+  const cookieToken = request.cookies.get('backend_token')?.value;
+  const resolvedAuth = authHeader || (cookieToken ? `Bearer ${cookieToken}` : null);
+
+  if (requireAuth && !resolvedAuth) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
@@ -50,7 +54,7 @@ export async function proxy(
 
   // --- Headers ---
   const headers: Record<string, string> = {};
-  if (authHeader) headers['Authorization'] = authHeader;
+  if (resolvedAuth) headers['Authorization'] = resolvedAuth;
 
   // --- Body ---
   let body: BodyInit | undefined;

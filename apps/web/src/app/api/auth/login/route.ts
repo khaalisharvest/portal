@@ -66,21 +66,19 @@ export async function POST(request: NextRequest) {
         backendToken: accessToken,
         refreshToken,
       });
-      res.cookies.set('auth_token', token, {
+      const cookieOpts = {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        maxAge: 60 * 60 * 24 * 7,
+        sameSite: 'lax' as const,
         path: '/',
-      });
+      };
+      res.cookies.set('auth_token', token, { ...cookieOpts, maxAge: 60 * 60 * 24 * 7 });
+      // backend_token as HttpOnly cookie so it's never accessible to JS
+      if (accessToken) {
+        res.cookies.set('backend_token', accessToken, { ...cookieOpts, maxAge: 60 * 60 * 24 * 7 });
+      }
       if (refreshToken) {
-        res.cookies.set('refresh_token', refreshToken, {
-          httpOnly: true,
-          secure: process.env.NODE_ENV === 'production',
-          sameSite: 'lax',
-          maxAge: 60 * 60 * 24 * 30,
-          path: '/',
-        });
+        res.cookies.set('refresh_token', refreshToken, { ...cookieOpts, maxAge: 60 * 60 * 24 * 30 });
       }
       return res;
     } else {
