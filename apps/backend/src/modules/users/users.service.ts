@@ -95,71 +95,92 @@ export class UsersService {
   }
 
   async findCustomersWithPagination(page: number = 1, limit: number = 10, search?: string) {
-    const queryBuilder = this.usersRepository
+    // Count query for pagination
+    const countQb = this.usersRepository
       .createQueryBuilder('user')
-      .select(['user.id', 'user.name', 'user.phone', 'user.email', 'user.role', 'user.isActive', 'user.lastLoginAt', 'user.createdAt'])
+      .where('user.role = :role', { role: 'customer' });
+    if (search) {
+      countQb.andWhere(
+        '(user.name ILIKE :search OR user.phone ILIKE :search OR user.email ILIKE :search)',
+        { search: `%${search}%` },
+      );
+    }
+    const total = await countQb.getCount();
+
+    // Single aggregate query — replaces 4 queries per user
+    const aggQb = this.usersRepository
+      .createQueryBuilder('user')
+      .select('user.id', 'id')
+      .addSelect('user.name', 'name')
+      .addSelect('user.phone', 'phone')
+      .addSelect('user.email', 'email')
+      .addSelect('user.role', 'role')
+      .addSelect('user.isActive', 'isActive')
+      .addSelect('user.lastLoginAt', 'lastLoginAt')
+      .addSelect('user.createdAt', 'createdAt')
+      .addSelect('COUNT(DISTINCT o.id)', 'totalOrders')
+      .addSelect(`COUNT(DISTINCT CASE WHEN o.status = '${OrderStatus.DELIVERED}' THEN o.id END)`, 'completedOrders')
+      .addSelect(`COALESCE(SUM(CASE WHEN o.status = '${OrderStatus.DELIVERED}' THEN o."totalAmount" ELSE 0 END), 0)`, 'totalSpent')
+      .leftJoin('orders', 'o', 'o."userId" = user.id')
       .where('user.role = :role', { role: 'customer' })
-      .orderBy('user.createdAt', 'DESC');
+      .groupBy('user.id, user.name, user.phone, user.email, user.role, user.isActive, user.lastLoginAt, user.createdAt')
+      .orderBy('user.createdAt', 'DESC')
+      .skip((page - 1) * limit)
+      .take(limit);
 
     if (search) {
-      queryBuilder.andWhere(
+      aggQb.andWhere(
         '(user.name ILIKE :search OR user.phone ILIKE :search OR user.email ILIKE :search)',
-        { search: `%${search}%` }
+        { search: `%${search}%` },
       );
     }
 
-    const [users, total] = await queryBuilder
-      .skip((page - 1) * limit)
-      .take(limit)
-      .getManyAndCount();
+    const rawRows = await aggQb.getRawMany();
 
-    // Get order statistics for each customer
-    const usersWithStats = await Promise.all(
-      users.map(async (user) => {
-        // Get order statistics
-        const totalOrders = await this.orderRepository.count({
-          where: { userId: user.id }
-        });
+    // Fetch last 5 orders per user in one query
+    const userIds = rawRows.map(r => r.id);
+    const recentOrdersMap = new Map<string, any[]>();
+    if (userIds.length > 0) {
+      const recent = await this.orderRepository
+        .createQueryBuilder('order')
+        .select(['order.id', 'order.orderNumber', 'order.status', 'order.totalAmount', 'order.createdAt', 'order.userId'])
+        .where('order.userId IN (:...userIds)', { userIds })
+        .orderBy('order.createdAt', 'DESC')
+        .getMany();
 
-        const completedOrders = await this.orderRepository.count({
-          where: { userId: user.id, status: OrderStatus.DELIVERED }
-        });
+      for (const o of recent) {
+        if (!recentOrdersMap.has(o.userId)) recentOrdersMap.set(o.userId, []);
+        const list = recentOrdersMap.get(o.userId);
+        if (list.length < 5) list.push(o);
+      }
+    }
 
-        const totalSpent = await this.orderRepository
-          .createQueryBuilder('order')
-          .select('SUM(order.totalAmount)', 'total')
-          .where('order.userId = :userId', { userId: user.id })
-          .andWhere('order.status = :status', { status: OrderStatus.DELIVERED })
-          .getRawOne();
-
-        const averageOrderValue = totalSpent.total && completedOrders > 0 
-          ? parseFloat(totalSpent.total) / completedOrders 
-          : 0;
-
-        // Get recent orders (last 5 for the modal)
-        const recentOrders = await this.orderRepository.find({
-          where: { userId: user.id },
-          order: { createdAt: 'DESC' },
-          take: 5,
-          select: ['id', 'orderNumber', 'status', 'totalAmount', 'createdAt']
-        });
-
-        return {
-          ...user,
-          orderStats: {
-            totalOrders,
-            completedOrders,
-            totalSpent: totalSpent.total ? parseFloat(totalSpent.total) : 0,
-            averageOrderValue,
-            pendingOrders: totalOrders - completedOrders
-          },
-          recentOrders
-        };
-      })
-    );
+    const users = rawRows.map(r => {
+      const totalOrders = parseInt(r.totalOrders, 10) || 0;
+      const completedOrders = parseInt(r.completedOrders, 10) || 0;
+      const totalSpent = parseFloat(r.totalSpent) || 0;
+      return {
+        id: r.id,
+        name: r.name,
+        phone: r.phone,
+        email: r.email,
+        role: r.role,
+        isActive: r.isActive,
+        lastLoginAt: r.lastLoginAt,
+        createdAt: r.createdAt,
+        orderStats: {
+          totalOrders,
+          completedOrders,
+          totalSpent,
+          averageOrderValue: completedOrders > 0 ? totalSpent / completedOrders : 0,
+          pendingOrders: totalOrders - completedOrders,
+        },
+        recentOrders: recentOrdersMap.get(r.id) || [],
+      };
+    });
 
     return {
-      users: usersWithStats,
+      users,
       total,
       totalPages: Math.ceil(total / limit),
       currentPage: page,

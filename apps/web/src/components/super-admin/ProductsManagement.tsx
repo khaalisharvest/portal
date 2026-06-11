@@ -228,8 +228,9 @@ export default function ProductsManagement() {
             });
             if (!res.ok) throw new Error('Image upload failed');
             const data = await res.json();
-            if (!data.url || typeof data.url !== 'string') throw new Error('Upload returned invalid URL');
-            uploadedUrls.push(data.url);
+            const imageUrl = data.data?.url || data.url;
+            if (!imageUrl || typeof imageUrl !== 'string') throw new Error('Upload returned invalid URL');
+            uploadedUrls.push(imageUrl);
           }
         } catch (err) {
           // Delete any images already uploaded in this batch before surfacing the error

@@ -30,6 +30,7 @@ import { HealthModule } from './health/health.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { StaffModule } from './modules/staff/staff.module';
 import { ActivityModule } from './modules/activity/activity.module';
+import { UserTypesModule } from './modules/user-types/user-types.module';
 import { SeederService } from './seeders/seeder.service';
 import { User } from './modules/users/entities/user.entity';
 
@@ -95,6 +96,7 @@ import { User } from './modules/users/entities/user.entity';
     NotificationsModule,
     ActivityModule,
     StaffModule,
+    UserTypesModule,
   ],
   providers: [
     SeederService,

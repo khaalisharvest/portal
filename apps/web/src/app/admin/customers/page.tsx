@@ -63,7 +63,6 @@ export default function AdminCustomersPage() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterRole, setFilterRole] = useState('');
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [customerStats, setCustomerStats] = useState<CustomerStats | null>(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
@@ -84,7 +83,6 @@ export default function AdminCustomersPage() {
       const params = new URLSearchParams({
         page: (pagination.currentPage || 1).toString(),
         limit: '10',
-        ...(filterRole && { role: filterRole }),
         ...(searchTerm && { search: searchTerm })
       });
 
@@ -118,7 +116,7 @@ export default function AdminCustomersPage() {
     } finally {
       setLoading(false);
     }
-  }, [pagination.currentPage, filterRole, searchTerm]);
+  }, [pagination.currentPage, searchTerm]);
 
   useEffect(() => {
     fetchCustomers();
@@ -238,7 +236,7 @@ export default function AdminCustomersPage() {
 
           {/* Filters */}
           <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Search</label>
                 <div className="relative">
@@ -251,19 +249,6 @@ export default function AdminCustomersPage() {
                     className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
                   />
                 </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Filter by Role</label>
-                <select
-                  value={filterRole}
-                  onChange={(e) => setFilterRole(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                >
-                  <option value="">All Roles</option>
-                  <option value="customer">Customer</option>
-                  <option value="staff">Staff</option>
-                  <option value="super_admin">Super Admin</option>
-                </select>
               </div>
             </div>
           </div>

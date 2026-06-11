@@ -539,7 +539,12 @@ export default function OrdersManagement() {
                             <Dropdown
                               options={paymentStatusOptions}
                               value={order.paymentStatus}
-                              onChange={(value) => updatePaymentStatus(order.id, value as string)}
+                              onChange={(value) => {
+                                const newStatus = value as string;
+                                if (newStatus && newStatus !== order.paymentStatus) {
+                                  setPendingPaymentUpdate({ orderId: order.id, paymentStatus: newStatus });
+                                }
+                              }}
                               placeholder="Select Status"
                               clearable={false}
                               searchable={false}
@@ -591,9 +596,11 @@ export default function OrdersManagement() {
                   Previous
                 </button>
                 
-                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                  const page = i + 1;
-                  return (
+                {(() => {
+                  const delta = 2;
+                  const start = Math.max(1, currentPage - delta);
+                  const end = Math.min(totalPages, currentPage + delta);
+                  return Array.from({ length: end - start + 1 }, (_, i) => start + i).map(page => (
                     <button
                       key={page}
                       onClick={() => handlePageChange(page)}
@@ -605,8 +612,8 @@ export default function OrdersManagement() {
                     >
                       {page}
                     </button>
-                  );
-                })}
+                  ));
+                })()}
                 
                 <button
                   onClick={() => handlePageChange(currentPage + 1)}
@@ -869,6 +876,23 @@ export default function OrdersManagement() {
           </div>
         )}
       </ConfirmationDialog>
+
+      {/* Payment Status Confirmation Dialog */}
+      <ConfirmationDialog
+        isOpen={!!pendingPaymentUpdate}
+        onClose={() => setPendingPaymentUpdate(null)}
+        onConfirm={() => {
+          if (pendingPaymentUpdate) {
+            updatePaymentStatus(pendingPaymentUpdate.orderId, pendingPaymentUpdate.paymentStatus);
+          }
+          setPendingPaymentUpdate(null);
+        }}
+        title="Update Payment Status"
+        message={`Change payment status to "${pendingPaymentUpdate?.paymentStatus?.toUpperCase()}"? ${pendingPaymentUpdate?.paymentStatus === 'refunded' ? 'This action may be irreversible.' : ''}`}
+        confirmText="Confirm"
+        cancelText="Cancel"
+        type={pendingPaymentUpdate?.paymentStatus === 'refunded' ? 'danger' : 'warning'}
+      />
     </div>
   );
 }

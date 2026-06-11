@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, ConflictException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { UsersService } from '../users/users.service';
 import { LoginDto } from './dto/login.dto';
@@ -19,20 +19,30 @@ export class AuthService {
 
   async register(registerDto: RegisterDto) {
     const { password, phone, ...userData } = registerDto;
-    const hashedPassword = await bcrypt.hash(password, 10);
-    
-    // Normalize phone number to international format for SMS/WhatsApp compatibility
     const normalizedPhone = normalizePhoneForDatabase(phone);
-    
-    const user = await this.usersService.create({
-      ...userData,
-      role: userData.role ?? 'customer',
-      phone: normalizedPhone,
-      password: hashedPassword,
-    });
 
-    const tokens = await this.generateTokens(user.id, user.role);
-    return { user, ...tokens };
+    const existing = await this.usersService.findByPhone(normalizedPhone);
+    if (existing) {
+      throw new ConflictException('An account with this phone number already exists.');
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    try {
+      const user = await this.usersService.create({
+        ...userData,
+        role: userData.role ?? 'customer',
+        phone: normalizedPhone,
+        password: hashedPassword,
+      });
+      const tokens = await this.generateTokens(user.id, user.role);
+      return { user, ...tokens };
+    } catch (err) {
+      if (err?.code === '23505') {
+        throw new ConflictException('An account with this phone number already exists.');
+      }
+      throw err;
+    }
   }
 
   async login(loginDto: LoginDto) {

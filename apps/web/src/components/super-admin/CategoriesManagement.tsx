@@ -72,7 +72,7 @@ export default function CategoriesManagement() {
         });
         if (!res.ok) { toast.error('Image upload failed'); return; }
         const data = await res.json();
-        imageUrl = data.url;
+        imageUrl = data.data?.url || data.url;
       }
 
       const payload = { ...formData, name: trimmedName, image: imageUrl };

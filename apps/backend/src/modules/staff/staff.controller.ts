@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Patch, Body, Param, Query, UseGuards, Request } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Body, Param, Query, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { IsString, IsNotEmpty, IsPhoneNumber, MinLength, IsOptional, IsEmail } from 'class-validator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -11,6 +11,13 @@ class CreateStaffDto {
   @IsPhoneNumber('PK') phone: string;
   @IsEmail() @IsOptional() email?: string;
   @IsString() @MinLength(6) password: string;
+}
+
+class UpdateStaffDto {
+  @IsString() @IsNotEmpty() @IsOptional() name?: string;
+  @IsString() @IsOptional() phone?: string;
+  @IsEmail() @IsOptional() email?: string;
+  @IsString() @MinLength(6) @IsOptional() password?: string;
 }
 
 @ApiTags('Staff Management')
@@ -58,6 +65,29 @@ export class StaffController {
   @ApiOperation({ summary: 'Activate or deactivate a staff member' })
   async updateStatus(@Param('id') id: string, @Body() body: { isActive: boolean }) {
     return this.usersService.updateUserStatus(id, body.isActive);
+  }
+
+  @Patch(':id')
+  @ApiOperation({ summary: 'Update staff member details' })
+  async updateStaff(@Param('id') id: string, @Body() dto: UpdateStaffDto) {
+    const updates: any = {};
+    if (dto.name) updates.name = dto.name;
+    if (dto.phone) updates.phone = dto.phone;
+    if (dto.email !== undefined) updates.email = dto.email;
+    if (dto.password) {
+      const bcrypt = await import('bcryptjs');
+      updates.password = await bcrypt.hash(dto.password, 10);
+    }
+    const user = await this.usersService.update(id, updates);
+    const { password, ...result } = user as any;
+    return result;
+  }
+
+  @Delete(':id')
+  @ApiOperation({ summary: 'Delete a staff member permanently' })
+  async deleteStaff(@Param('id') id: string) {
+    await this.usersService.remove(id);
+    return { message: 'Staff member deleted' };
   }
 
   @Get('activity')

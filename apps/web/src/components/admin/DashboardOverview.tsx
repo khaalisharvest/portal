@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { useAuth } from '@/contexts/AuthContext';
 import Icon from '@/components/ui/Icon';
+import toast from 'react-hot-toast';
 
 interface DashboardStats {
   totalOrders: number;
@@ -63,10 +64,10 @@ export default function DashboardOverview() {
           topProducts: data.topProducts || []
         });
       } else {
-        console.error('Failed to fetch dashboard data:', response.status);
+        toast.error('Failed to load dashboard data');
       }
     } catch (error) {
-      console.error('Error fetching dashboard data:', error);
+      toast.error('Failed to load dashboard data');
     } finally {
       setLoading(false);
     }

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { userTypesApi, UserType, CreateUserTypeDto } from '@/services/userTypes';
 import ConfirmationDialog from '@/components/ui/ConfirmationDialog';
+import toast from 'react-hot-toast';
 
 export default function UserTypesManagement() {
   const [userTypes, setUserTypes] = useState<UserType[]>([]);
@@ -52,7 +53,7 @@ export default function UserTypesManagement() {
       const data = await userTypesApi.getAll();
       setUserTypes(data);
     } catch (error) {
-      // Error loading user types
+      toast.error('Failed to load user types');
     } finally {
       setLoading(false);
     }
@@ -69,7 +70,7 @@ export default function UserTypesManagement() {
       await loadUserTypes();
       resetForm();
     } catch (error) {
-      // Error saving user type
+      toast.error(editingType ? 'Failed to update user type' : 'Failed to create user type');
     }
   };
 
@@ -118,7 +119,7 @@ export default function UserTypesManagement() {
       await userTypesApi.delete(pendingDelete.id);
       await loadUserTypes();
     } catch (error) {
-      // Error deleting user type
+      toast.error('Failed to delete user type');
     } finally {
       setShowConfirmDialog(false);
       setPendingDelete(null);

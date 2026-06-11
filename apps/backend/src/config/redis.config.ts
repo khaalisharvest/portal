@@ -79,8 +79,8 @@ export class RedisConfig implements CacheOptionsFactory {
         ttl: env.REDIS_TTL * 1000,
       };
     } catch (error) {
-      this.logger.error(`Failed to create Redis cache store: ${error.message}`, error.stack);
-      throw error;
+      this.logger.error(`Failed to create Redis cache store: ${error.message} — falling back to in-memory cache`);
+      return { ttl: env.REDIS_TTL * 1000 };
     }
   }
 }

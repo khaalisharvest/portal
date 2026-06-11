@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import AdminLayout from '@/components/layout/AdminLayout';
 import Icon from '@/components/ui/Icon';
+import ConfirmationDialog from '@/components/ui/ConfirmationDialog';
 import toast from 'react-hot-toast';
 
 interface StaffMember {
@@ -70,6 +71,16 @@ export default function StaffManagementPage() {
   const [form, setForm] = useState({ name: '', phone: '', email: '', password: '' });
   const [selectedStaff, setSelectedStaff] = useState<string | null>(null);
 
+  // Edit state
+  const [showEditForm, setShowEditForm] = useState(false);
+  const [editingMember, setEditingMember] = useState<StaffMember | null>(null);
+  const [editForm, setEditForm] = useState({ name: '', phone: '', email: '', password: '' });
+
+  // Delete state
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deletingMember, setDeletingMember] = useState<StaffMember | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
   const authHeader = useCallback(() => {
     const t = localStorage.getItem('backend_token');
     return t ? `Bearer ${t}` : '';
@@ -135,15 +146,74 @@ export default function StaffManagementPage() {
   };
 
   const toggleStatus = async (id: string, isActive: boolean) => {
-    const r = await fetch(`/api/v1/admin/staff/${id}/status`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json', Authorization: authHeader() },
-      body: JSON.stringify({ isActive }),
-    });
-    if (r.ok) {
-      toast.success(isActive ? 'Staff activated' : 'Staff deactivated');
-      fetchStaff();
+    try {
+      const r = await fetch(`/api/v1/admin/staff/${id}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: authHeader() },
+        body: JSON.stringify({ isActive }),
+      });
+      if (r.ok) {
+        toast.success(isActive ? 'Staff activated' : 'Staff deactivated');
+        fetchStaff();
+      } else {
+        const e = await r.json();
+        toast.error(e.error || 'Failed to update status');
+      }
+    } catch { toast.error('Failed to update status'); }
+  };
+
+  const openEdit = (member: StaffMember) => {
+    setEditingMember(member);
+    setEditForm({ name: member.name, phone: member.phone, email: member.email || '', password: '' });
+    setShowEditForm(true);
+  };
+
+  const handleEditStaff = async () => {
+    if (!editingMember || !editForm.name || !editForm.phone) {
+      toast.error('Name and phone are required');
+      return;
     }
+    setSaving(true);
+    try {
+      const body: any = { name: editForm.name, phone: editForm.phone, email: editForm.email || undefined };
+      if (editForm.password) body.password = editForm.password;
+      const r = await fetch(`/api/v1/admin/staff/${editingMember.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: authHeader() },
+        body: JSON.stringify(body),
+      });
+      if (r.ok) {
+        toast.success('Staff member updated');
+        setShowEditForm(false);
+        setEditingMember(null);
+        fetchStaff();
+      } else {
+        const e = await r.json();
+        toast.error(e.error || 'Failed to update staff');
+      }
+    } catch { toast.error('Failed to update staff'); }
+    finally { setSaving(false); }
+  };
+
+  const confirmDelete = async () => {
+    if (!deletingMember) return;
+    setDeleting(true);
+    try {
+      const r = await fetch(`/api/v1/admin/staff/${deletingMember.id}`, {
+        method: 'DELETE',
+        headers: { Authorization: authHeader() },
+      });
+      if (r.ok) {
+        toast.success('Staff member deleted');
+        setShowDeleteConfirm(false);
+        setDeletingMember(null);
+        fetchStaff();
+      } else {
+        const e = await r.json();
+        toast.error(e.error || 'Failed to delete staff');
+      }
+    } catch { toast.error('Failed to delete staff'); }
+    finally { setDeleting(false); }
   };
 
   const handleStaffFilter = (staffId: string | null) => {
@@ -169,7 +239,6 @@ export default function StaffManagementPage() {
               Add Staff
             </button>
           </div>
-
 
           {/* Staff Grid */}
           <div>
@@ -207,7 +276,19 @@ export default function StaffManagementPage() {
                       <span className="font-medium text-gray-700">{member.totalActions} actions</span>
                       <span>{member.lastActionAt ? timeAgo(member.lastActionAt) : 'No activity'}</span>
                     </div>
-                    <div className="mt-3 flex justify-end">
+                    <div className="mt-3 flex justify-end gap-2">
+                      <button
+                        onClick={e => { e.stopPropagation(); openEdit(member); }}
+                        className="text-xs px-3 py-1 rounded-full border border-blue-300 text-blue-600 hover:bg-blue-50 transition-colors"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={e => { e.stopPropagation(); setDeletingMember(member); setShowDeleteConfirm(true); }}
+                        className="text-xs px-3 py-1 rounded-full border border-red-300 text-red-600 hover:bg-red-50 transition-colors"
+                      >
+                        Delete
+                      </button>
                       <button
                         onClick={e => { e.stopPropagation(); toggleStatus(member.id, !member.isActive); }}
                         className={`text-xs px-3 py-1 rounded-full border transition-colors ${member.isActive ? 'border-red-300 text-red-600 hover:bg-red-50' : 'border-green-300 text-green-600 hover:bg-green-50'}`}
@@ -271,95 +352,116 @@ export default function StaffManagementPage() {
         {/* Add Staff Drawer */}
         {showAddForm && (
           <div className="fixed inset-0 z-50 flex">
-            {/* Backdrop */}
             <div className="flex-1 bg-black bg-opacity-40" onClick={resetForm} />
-
-            {/* Panel */}
             <div className="w-full max-w-md bg-white flex flex-col shadow-2xl overflow-hidden">
-              {/* Header */}
               <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
                 <h3 className="text-lg font-semibold text-gray-900">New Staff Member</h3>
                 <button onClick={resetForm} className="text-gray-400 hover:text-gray-600">
                   <Icon name="close" className="w-5 h-5" />
                 </button>
               </div>
-
-              {/* Scrollable body */}
-              <div className="flex-1 overflow-y-auto">
-                <div className="p-6 space-y-5">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Full Name <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={form.name}
-                      onChange={e => setForm({ ...form, name: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
-                      placeholder="Staff member name"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Phone <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={form.phone}
-                      onChange={e => setForm({ ...form, phone: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
-                      placeholder="+923001234567"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                    <input
-                      type="email"
-                      value={form.email}
-                      onChange={e => setForm({ ...form, email: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
-                      placeholder="staff@example.com"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Password <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="password"
-                      value={form.password}
-                      onChange={e => setForm({ ...form, password: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
-                      placeholder="Min. 6 characters"
-                    />
-                  </div>
+              <div className="flex-1 overflow-y-auto p-6 space-y-5">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Full Name <span className="text-red-500">*</span></label>
+                  <input type="text" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
+                    placeholder="Staff member name" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Phone <span className="text-red-500">*</span></label>
+                  <input type="text" value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
+                    placeholder="+923001234567" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                  <input type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
+                    placeholder="staff@example.com" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Password <span className="text-red-500">*</span></label>
+                  <input type="password" value={form.password} onChange={e => setForm({ ...form, password: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
+                    placeholder="Min. 6 characters" />
                 </div>
               </div>
-
-              {/* Footer */}
               <div className="px-6 py-4 border-t border-gray-200 flex justify-end gap-3 bg-gray-50">
-                <button
-                  type="button"
-                  onClick={resetForm}
-                  className="px-4 py-2 text-sm text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-                >
+                <button type="button" onClick={resetForm}
+                  className="px-4 py-2 text-sm text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
                   Cancel
                 </button>
-                <button
-                  type="button"
-                  onClick={handleAddStaff}
-                  disabled={saving}
-                  className="px-5 py-2 text-sm font-medium text-white bg-gradient-to-r from-orange-500 to-green-500 rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
-                >
+                <button type="button" onClick={handleAddStaff} disabled={saving}
+                  className="px-5 py-2 text-sm font-medium text-white bg-gradient-to-r from-orange-500 to-green-500 rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed">
                   {saving ? 'Adding...' : 'Add Staff Member'}
                 </button>
               </div>
             </div>
           </div>
         )}
+
+        {/* Edit Staff Drawer */}
+        {showEditForm && editingMember && (
+          <div className="fixed inset-0 z-50 flex">
+            <div className="flex-1 bg-black bg-opacity-40" onClick={() => { setShowEditForm(false); setEditingMember(null); }} />
+            <div className="w-full max-w-md bg-white flex flex-col shadow-2xl overflow-hidden">
+              <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+                <h3 className="text-lg font-semibold text-gray-900">Edit Staff Member</h3>
+                <button onClick={() => { setShowEditForm(false); setEditingMember(null); }} className="text-gray-400 hover:text-gray-600">
+                  <Icon name="close" className="w-5 h-5" />
+                </button>
+              </div>
+              <div className="flex-1 overflow-y-auto p-6 space-y-5">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Full Name <span className="text-red-500">*</span></label>
+                  <input type="text" value={editForm.name} onChange={e => setEditForm({ ...editForm, name: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Phone <span className="text-red-500">*</span></label>
+                  <input type="text" value={editForm.phone} onChange={e => setEditForm({ ...editForm, phone: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                    placeholder="+923001234567" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                  <input type="email" value={editForm.email} onChange={e => setEditForm({ ...editForm, email: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    New Password <span className="text-gray-400 font-normal">(leave blank to keep current)</span>
+                  </label>
+                  <input type="password" value={editForm.password} onChange={e => setEditForm({ ...editForm, password: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                    placeholder="Min. 6 characters" />
+                </div>
+              </div>
+              <div className="px-6 py-4 border-t border-gray-200 flex justify-end gap-3 bg-gray-50">
+                <button onClick={() => { setShowEditForm(false); setEditingMember(null); }}
+                  className="px-4 py-2 text-sm text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">
+                  Cancel
+                </button>
+                <button onClick={handleEditStaff} disabled={saving}
+                  className="px-5 py-2 text-sm font-medium text-white bg-gradient-to-r from-orange-500 to-green-500 rounded-lg hover:opacity-90 disabled:opacity-50">
+                  {saving ? 'Saving...' : 'Save Changes'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Delete Confirmation */}
+        <ConfirmationDialog
+          isOpen={showDeleteConfirm}
+          onClose={() => { setShowDeleteConfirm(false); setDeletingMember(null); }}
+          onConfirm={confirmDelete}
+          title="Delete Staff Member"
+          message={`Are you sure you want to permanently delete "${deletingMember?.name}"? This cannot be undone.`}
+          confirmText={deleting ? 'Deleting...' : 'Delete'}
+          cancelText="Cancel"
+          type="danger"
+        />
       </AdminLayout>
     </ProtectedRoute>
   );

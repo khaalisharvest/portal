@@ -209,13 +209,16 @@ export default function AdminContactsPage() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${localStorage.getItem('backend_token')}`,
         },
-        body: JSON.stringify({ adminResponse: responseText.trim() }),
+        body: JSON.stringify({ adminResponse: responseText.trim(), status: 'replied' }),
       });
 
       if (response.ok) {
         toast.success('Response saved successfully');
         setShowResponseModal(false);
         setResponseText('');
+        if (selectedContact) {
+          setSelectedContact({ ...selectedContact, adminResponse: responseText.trim(), status: 'replied' });
+        }
         await fetchContacts();
         await fetchStats();
       } else {
