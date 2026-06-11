@@ -88,7 +88,6 @@ export default function AdminCustomersPage() {
 
       const response = await fetch(`/api/v1/admin/users/customers?${params}`, {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('backend_token')}`,
         },
       });
 
@@ -158,7 +157,6 @@ export default function AdminCustomersPage() {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('backend_token')}`,
         },
         body: JSON.stringify({ isActive }),
       });

@@ -506,7 +506,7 @@ export class OrdersService {
     await queryRunner.startTransaction();
 
     try {
-      console.log('Creating guest order with data:', JSON.stringify(createGuestOrderDto, null, 2));
+      this.logger.debug('Creating guest order');
       // Verify products exist and are available
       const productIds = createGuestOrderDto.items.map(item => item.productId);
       const uniqueProductIds = [...new Set(productIds)]; // Remove duplicates
@@ -531,7 +531,7 @@ export class OrdersService {
 
       // Guest addresses don't have a userId (null)
       // Create guest address
-      console.log('Creating guest address without userId');
+      
       const guestAddress = queryRunner.manager.create(Address, {
         userId: null, // Guest addresses don't have a userId
         fullName: createGuestOrderDto.address.fullName,
@@ -547,9 +547,9 @@ export class OrdersService {
         instructions: createGuestOrderDto.address.instructions
       });
 
-      console.log('Saving guest address...');
+      
       const savedAddress = await queryRunner.manager.save(Address, guestAddress);
-      console.log('Guest address saved with ID:', savedAddress.id);
+      
 
       // Calculate totals
       let subtotal = 0;

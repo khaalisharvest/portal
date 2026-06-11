@@ -103,7 +103,6 @@ export default function OrderDetailsPage() {
       setLoading(true);
       const response = await fetch(`/api/v1/orders/${orderId}`, {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('backend_token')}`,
         },
       });
 
@@ -138,11 +137,10 @@ export default function OrderDetailsPage() {
   const handleCancelOrder = async () => {
     if (!order) return;
     setIsCancelling(true);
-    const backendToken = localStorage.getItem('backend_token');
     try {
       const res = await fetch(`/api/v1/orders/${order.id}/cancel`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${backendToken}` },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ reason: cancellationReason || 'Customer requested cancellation' }),
       });
       if (res.ok) {

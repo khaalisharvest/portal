@@ -136,16 +136,9 @@ export default function OrdersPage() {
       params.append('page', '1');
       params.append('limit', '100'); // Fetch more orders to have enough for filtering
 
-      const backendToken = localStorage.getItem('backend_token');
-
-      if (!backendToken) {
-        router.push('/auth/login');
-        return;
-      }
 
       const response = await fetch(`/api/v1/orders?${params}`, {
         headers: {
-          'Authorization': `Bearer ${backendToken}`,
         },
       });
 
@@ -209,19 +202,11 @@ export default function OrdersPage() {
 
     try {
       setIsCancelling(true);
-      const backendToken = localStorage.getItem('backend_token');
-
-      if (!backendToken) {
-        toast.error('Please login to cancel orders');
-        router.push('/auth/login');
-        return;
-      }
 
       const response = await fetch(`/api/v1/orders/${pendingCancel.id}/cancel`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${backendToken}`,
         },
         body: JSON.stringify({
           reason: cancellationReason || 'Customer requested cancellation',

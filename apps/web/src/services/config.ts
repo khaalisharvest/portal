@@ -54,7 +54,7 @@ class ConfigService {
     try {
       const deliveryResponse = await fetch(`/api/v1/settings/delivery`, {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('backend_token')}`,
+          
         },
       });
       

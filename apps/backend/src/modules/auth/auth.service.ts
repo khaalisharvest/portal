@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException, ConflictException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, ConflictException, Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { UsersService } from '../users/users.service';
 import { LoginDto } from './dto/login.dto';
@@ -11,6 +11,8 @@ import { env } from '../../config/env';
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     private usersService: UsersService,
     private jwtService: JwtService,
@@ -81,7 +83,7 @@ export class AuthService {
     if (user) {
       // Check if user account is active
       if (!user.isActive) {
-        console.warn(`[Auth] Login attempt for inactive user: ${user.id}`);
+        this.logger.warn(`Login attempt for inactive user: ${user.id}`);
         return null;
       }
 
@@ -92,7 +94,7 @@ export class AuthService {
         return result;
       } else {
         // Log the issue for monitoring but don't expose details
-        console.warn(`[Auth] Password validation failed for user: ${user.id}`);
+        this.logger.warn(`Password validation failed for user: ${user.id}`);
         return null;
       }
     }
@@ -148,7 +150,7 @@ export class AuthService {
       await this.emailService.send(user.email, 'Reset Your Khaalis Harvest Password', html);
     } else {
       // Log the link to console for phone-only users in development
-      console.log(`[PASSWORD RESET LINK] ${resetUrl}`);
+      this.logger.log(`Password reset link (SMTP not configured): ${resetUrl}`);
     }
 
     return { message: 'If an account exists, a reset link has been sent.' };

@@ -130,7 +130,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (response.ok) {
         // Store token and user data
         localStorage.setItem('auth_token', data.token);
-        localStorage.setItem('backend_token', data.backendToken);
+        // backend_token is stored as HttpOnly cookie by the login BFF route — no localStorage
         if (data.refreshToken) {
           localStorage.setItem('refresh_token', data.refreshToken);
         }
@@ -192,7 +192,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (res.ok) {
         const data = await res.json();
         if (data.backendToken) {
-          localStorage.setItem('backend_token', data.backendToken);
+          // backend_token is refreshed as HttpOnly cookie by the refresh BFF route
           return data.backendToken;
         }
       }

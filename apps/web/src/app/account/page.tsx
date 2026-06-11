@@ -39,12 +39,11 @@ function AccountContent() {
     }
   }, [user]);
 
-  const token = () => localStorage.getItem('backend_token') || '';
+  
 
   const fetchAddresses = async () => {
     try {
       const res = await fetch('/api/v1/orders/addresses', {
-        headers: { Authorization: `Bearer ${token()}` },
       });
       if (res.ok) {
         const data = await res.json();
@@ -63,7 +62,7 @@ function AccountContent() {
     try {
       const res = await fetch('/api/v1/auth/profile', {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token()}` },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: profileForm.name.trim(), email: profileForm.email || undefined }),
       });
       if (!res.ok) {
@@ -104,7 +103,7 @@ function AccountContent() {
     try {
       const res = await fetch('/api/v1/auth/change-password', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token()}` },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           currentPassword: passwordForm.currentPassword,
           newPassword: passwordForm.newPassword,
@@ -127,7 +126,6 @@ function AccountContent() {
     try {
       const res = await fetch(`/api/v1/orders/addresses/${addressId}`, {
         method: 'DELETE',
-        headers: { Authorization: `Bearer ${token()}` },
       });
       if (res.ok) {
         setAddresses(prev => prev.filter((a: any) => a.id !== addressId));

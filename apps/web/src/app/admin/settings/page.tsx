@@ -207,10 +207,8 @@ export default function AdminSettingsPage() {
   const [orders, setOrders] = useState<OrderSettings | null>(null);
   const [notification, setNotification] = useState<NotificationBarSettings | null>(null);
 
-  const authHeader = useCallback(() => {
-    const token = localStorage.getItem('backend_token');
-    return token ? `Bearer ${token}` : '';
-  }, []);
+  // backend_token sent automatically via HttpOnly cookie
+  const authHeader = useCallback(() => '', []);
 
   const fetchTab = useCallback(async (tab: Tab) => {
     if (fetchedTabs.current.has(tab)) return;

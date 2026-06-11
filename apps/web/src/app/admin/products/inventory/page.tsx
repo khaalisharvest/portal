@@ -47,11 +47,9 @@ function InventoryContent() {
   const LIMIT = 20;
 
   const fetchProducts = useCallback(async (page = 1) => {
-    const token = localStorage.getItem('backend_token');
     try {
       setIsLoading(true);
       const res = await fetch(`/api/v1/products/admin?includeAll=true&limit=${LIMIT}&page=${page}`, {
-        headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) throw new Error('Failed to load');
       const data = await res.json();
@@ -70,11 +68,10 @@ function InventoryContent() {
   useEffect(() => { fetchProducts(1); }, [fetchProducts]);
 
   const handleUpdateInventory = async (productId: string) => {
-    const token = localStorage.getItem('backend_token');
     try {
       const res = await fetch(`/api/v1/products/${productId}/inventory`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           productId,
           quantity: editForm.quantity,

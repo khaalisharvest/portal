@@ -1,3 +1,4 @@
+// All requests go through Next.js BFF routes — auth handled via HttpOnly cookie
 const API_BASE = '/api/v1';
 
 export interface ProductType {
@@ -25,16 +26,8 @@ export interface CreateProductTypeDto {
 
 export const productTypesApi = {
   async getAll(): Promise<ProductType[]> {
-    const response = await fetch(`${API_BASE}/product-types`, {
-      headers: {
-        'Authorization': `Bearer ${typeof window !== 'undefined' ? localStorage.getItem('backend_token') : ''}`,
-      },
-    });
-    
-    if (!response.ok) {
-      throw new Error('Failed to fetch product types');
-    }
-    
+    const response = await fetch(`${API_BASE}/product-types`);
+    if (!response.ok) throw new Error('Failed to fetch product types');
     const data = await response.json();
     return data.data || data;
   },
@@ -42,18 +35,13 @@ export const productTypesApi = {
   async create(productType: CreateProductTypeDto): Promise<ProductType> {
     const response = await fetch(`${API_BASE}/product-types`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${typeof window !== 'undefined' ? localStorage.getItem('backend_token') : ''}`,
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(productType),
     });
-    
     if (!response.ok) {
       const error = await response.json();
       throw new Error(error.message || 'Failed to create product type');
     }
-    
     const data = await response.json();
     return data.data || data;
   },
@@ -61,30 +49,19 @@ export const productTypesApi = {
   async update(id: string, productType: Partial<CreateProductTypeDto>): Promise<ProductType> {
     const response = await fetch(`${API_BASE}/product-types/${id}`, {
       method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${typeof window !== 'undefined' ? localStorage.getItem('backend_token') : ''}`,
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(productType),
     });
-    
     if (!response.ok) {
       const error = await response.json();
       throw new Error(error.message || 'Failed to update product type');
     }
-    
     const data = await response.json();
     return data.data || data;
   },
 
   async delete(id: string): Promise<void> {
-    const response = await fetch(`${API_BASE}/product-types/${id}`, {
-      method: 'DELETE',
-      headers: {
-        'Authorization': `Bearer ${typeof window !== 'undefined' ? localStorage.getItem('backend_token') : ''}`,
-      },
-    });
-    
+    const response = await fetch(`${API_BASE}/product-types/${id}`, { method: 'DELETE' });
     if (!response.ok) {
       const error = await response.json();
       throw new Error(error.message || error.error || 'Failed to delete product type');

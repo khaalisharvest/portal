@@ -181,7 +181,6 @@ export default function CheckoutPage() {
     try {
       const response = await fetch(`/api/v1/orders/addresses`, {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('backend_token')}`,
         },
       });
 
@@ -242,7 +241,6 @@ export default function CheckoutPage() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('backend_token')}`,
         },
         body: JSON.stringify(addressData),
       });
@@ -386,7 +384,6 @@ export default function CheckoutPage() {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('backend_token')}`,
           },
           body: JSON.stringify(orderData),
         });

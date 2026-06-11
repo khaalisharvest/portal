@@ -44,7 +44,6 @@ export default function DashboardOverview() {
       // Single API call to fetch all dashboard statistics
       const response = await fetch(`/api/v1/admin/dashboard`, {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('backend_token')}`,
         },
       });
 

@@ -1,4 +1,4 @@
-// Use relative URLs to go through Next.js API routes
+// All requests go through Next.js BFF routes — auth handled via HttpOnly cookie
 const API_BASE = '/api/super-admin';
 
 export interface UserType {
@@ -76,16 +76,8 @@ export interface CreateUserTypeDto {
 
 export const userTypesApi = {
   async getAll(): Promise<UserType[]> {
-    const response = await fetch(`${API_BASE}/user-types`, {
-      headers: {
-        ...(typeof window !== 'undefined' && localStorage.getItem('backend_token') && { 'Authorization': `Bearer ${localStorage.getItem('backend_token')}` }),
-      },
-    });
-    
-    if (!response.ok) {
-      throw new Error('Failed to fetch user types');
-    }
-    
+    const response = await fetch(`${API_BASE}/user-types`);
+    if (!response.ok) throw new Error('Failed to fetch user types');
     const data = await response.json();
     return data.data || data;
   },
@@ -93,18 +85,13 @@ export const userTypesApi = {
   async create(userType: CreateUserTypeDto): Promise<UserType> {
     const response = await fetch(`${API_BASE}/user-types`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(typeof window !== 'undefined' && localStorage.getItem('backend_token') && { 'Authorization': `Bearer ${localStorage.getItem('backend_token')}` }),
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(userType),
     });
-    
     if (!response.ok) {
       const error = await response.json();
       throw new Error(error.message || 'Failed to create user type');
     }
-    
     const data = await response.json();
     return data.data || data;
   },
@@ -112,30 +99,19 @@ export const userTypesApi = {
   async update(id: string, userType: Partial<CreateUserTypeDto>): Promise<UserType> {
     const response = await fetch(`${API_BASE}/user-types/${id}`, {
       method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(typeof window !== 'undefined' && localStorage.getItem('backend_token') && { 'Authorization': `Bearer ${localStorage.getItem('backend_token')}` }),
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(userType),
     });
-    
     if (!response.ok) {
       const error = await response.json();
       throw new Error(error.message || 'Failed to update user type');
     }
-    
     const data = await response.json();
     return data.data || data;
   },
 
   async delete(id: string): Promise<void> {
-    const response = await fetch(`${API_BASE}/user-types/${id}`, {
-      method: 'DELETE',
-      headers: {
-        ...(typeof window !== 'undefined' && localStorage.getItem('backend_token') && { 'Authorization': `Bearer ${localStorage.getItem('backend_token')}` }),
-      },
-    });
-    
+    const response = await fetch(`${API_BASE}/user-types/${id}`, { method: 'DELETE' });
     if (!response.ok) {
       const error = await response.json();
       throw new Error(error.message || 'Failed to delete user type');

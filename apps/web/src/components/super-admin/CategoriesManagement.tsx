@@ -62,12 +62,10 @@ export default function CategoriesManagement() {
       // Upload pending file to Cloudinary now (on Save, not on select)
       let imageUrl = formData.image;
       if (pendingImageFile) {
-        const token = localStorage.getItem('backend_token');
         const fd = new FormData();
         fd.append('file', pendingImageFile);
         const res = await fetch('/api/v1/products/upload-image', {
           method: 'POST',
-          headers: { Authorization: `Bearer ${token}` },
           body: fd,
         });
         if (!res.ok) { toast.error('Image upload failed'); return; }

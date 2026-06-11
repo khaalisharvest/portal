@@ -71,7 +71,6 @@ export default function AdminContactsPage() {
 
       const response = await fetch(`/api/v1/contacts?${params}`, {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('backend_token')}`,
         },
       });
 
@@ -100,7 +99,6 @@ export default function AdminContactsPage() {
     try {
       const response = await fetch('/api/v1/contacts/stats', {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('backend_token')}`,
         },
       });
 
@@ -140,7 +138,6 @@ export default function AdminContactsPage() {
       const response = await fetch(`/api/v1/contacts/${id}/read`, {
         method: 'PATCH',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('backend_token')}`,
         },
       });
 
@@ -167,7 +164,6 @@ export default function AdminContactsPage() {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('backend_token')}`,
         },
         body: JSON.stringify({ status }),
       });
@@ -207,7 +203,6 @@ export default function AdminContactsPage() {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('backend_token')}`,
         },
         body: JSON.stringify({ adminResponse: responseText.trim(), status: 'replied' }),
       });
@@ -244,7 +239,6 @@ export default function AdminContactsPage() {
       const response = await fetch(`/api/v1/contacts/${pendingAction.contactId}`, {
         method: 'DELETE',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('backend_token')}`,
         },
       });
 

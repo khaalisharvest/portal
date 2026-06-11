@@ -130,7 +130,6 @@ export default function OrdersManagement() {
 
       const response = await fetch(`/api/v1/admin/orders?${params}`, {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('backend_token')}`,
         },
       });
 
@@ -162,7 +161,6 @@ export default function OrdersManagement() {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('backend_token')}`,
         },
         body: JSON.stringify({ status, ...additionalData }),
       });
@@ -190,7 +188,6 @@ export default function OrdersManagement() {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('backend_token')}`,
         },
         body: JSON.stringify({ paymentStatus }),
       });

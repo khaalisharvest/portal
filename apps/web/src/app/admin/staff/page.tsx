@@ -81,10 +81,8 @@ export default function StaffManagementPage() {
   const [deletingMember, setDeletingMember] = useState<StaffMember | null>(null);
   const [deleting, setDeleting] = useState(false);
 
-  const authHeader = useCallback(() => {
-    const t = localStorage.getItem('backend_token');
-    return t ? `Bearer ${t}` : '';
-  }, []);
+  // backend_token is sent automatically via HttpOnly cookie — no manual header needed
+  const authHeader = useCallback(() => '', []);
 
   const fetchStaff = useCallback(async () => {
     setLoading(true);

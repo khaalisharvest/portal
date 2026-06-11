@@ -149,7 +149,6 @@ export default function ProductsManagement() {
       // Fetch all categories with their product types in a single API call
       const response = await fetch(`/api/v1/products/categories-with-types`, {
         headers: {
-          'Authorization': `Bearer ${typeof window !== 'undefined' ? localStorage.getItem('backend_token') : ''}`,
         },
       });
 
@@ -192,7 +191,6 @@ export default function ProductsManagement() {
 
       const response = await fetch(`/api/v1/products/admin?${params}`, {
         headers: {
-          'Authorization': `Bearer ${typeof window !== 'undefined' ? localStorage.getItem('backend_token') : ''}`,
         },
       });
 
@@ -215,7 +213,6 @@ export default function ProductsManagement() {
       // Start from saved URLs, strip any nulls/empty that may exist from old data
       let allImages = formData.images.filter((u): u is string => typeof u === 'string' && u.length > 0);
       if (pendingFiles.length > 0) {
-        const token = localStorage.getItem('backend_token');
         const uploadedUrls: string[] = [];
         try {
           for (const { file } of pendingFiles) {
@@ -223,7 +220,6 @@ export default function ProductsManagement() {
             fd.append('file', file);
             const res = await fetch('/api/v1/products/upload-image', {
               method: 'POST',
-              headers: { Authorization: `Bearer ${token}` },
               body: fd,
             });
             if (!res.ok) throw new Error('Image upload failed');
@@ -239,7 +235,6 @@ export default function ProductsManagement() {
               uploadedUrls.map(url =>
                 fetch(`/api/v1/products/upload-image?url=${encodeURIComponent(url)}`, {
                   method: 'DELETE',
-                  headers: { Authorization: `Bearer ${token}` },
                 })
               )
             );
@@ -279,13 +274,11 @@ export default function ProductsManagement() {
         : `/api/v1/products`;
       const method = editingProduct ? 'PUT' : 'POST';
 
-      const backendToken = localStorage.getItem('backend_token');
 
       const response = await fetch(url, {
         method,
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${backendToken}`,
         },
         body: JSON.stringify(productData),
       });
@@ -353,13 +346,11 @@ export default function ProductsManagement() {
     if (!pendingDelete) return;
 
     try {
-      const backendToken = localStorage.getItem('backend_token');
 
       const response = await fetch(`/api/v1/products/${pendingDelete.id}`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${backendToken}`,
         },
       });
       if (response.ok) {
@@ -738,7 +729,6 @@ export default function ProductsManagement() {
                                   method: 'PUT',
                                   headers: {
                                     'Content-Type': 'application/json',
-                                    'Authorization': `Bearer ${localStorage.getItem('backend_token')}`,
                                   },
                                   body: JSON.stringify({ isAvailable: !product.isAvailable }),
                                 });
