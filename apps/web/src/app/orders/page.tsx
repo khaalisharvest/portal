@@ -191,6 +191,7 @@ export default function OrdersPage() {
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include',
         body: JSON.stringify({
           reason: cancellationReason || 'Customer requested cancellation',
         }),
@@ -265,7 +266,7 @@ export default function OrdersPage() {
             >
               All Orders
             </button>
-            {['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled'].map((status) => (
+            {['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled', 'refunded'].map((status) => (
               <button
                 key={status}
                 onClick={() => handleStatusFilter(status)}

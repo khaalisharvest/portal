@@ -4,9 +4,9 @@ import { proxy } from '@/lib/proxy';
 export const GET = (req: NextRequest, { params }: { params: { id: string } }) =>
   proxy(req, { path: `/api/v1/categories/${params.id}` });
 
-// Protected: update / delete category (super_admin)
+// Protected: update / delete category (super_admin, staff)
 export const PATCH = (req: NextRequest, { params }: { params: { id: string } }) =>
-  proxy(req, { path: `/api/v1/categories/${params.id}`, requireAuth: true });
+  proxy(req, { path: `/api/v1/categories/${params.id}`, requireAuth: true, requireRole: ['super_admin', 'staff'] });
 
 export const DELETE = (req: NextRequest, { params }: { params: { id: string } }) =>
-  proxy(req, { path: `/api/v1/categories/${params.id}`, requireAuth: true });
+  proxy(req, { path: `/api/v1/categories/${params.id}`, requireAuth: true, requireRole: ['super_admin', 'staff'] });
