@@ -6,7 +6,7 @@ import ConditionalHeader from '@/components/layout/ConditionalHeader';
 import ConditionalFooter from '@/components/layout/ConditionalFooter';
 import ConditionalNotificationBar from '@/components/layout/ConditionalNotificationBar';
 import WhatsAppButton from '@/components/ui/WhatsAppButton';
-import { APP_URL } from '@/config/env';
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://khaalisharvest.com';
 
 const poppins = Poppins({
   subsets: ['latin'],
