@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Khaalis Harvest — Official Letterhead A4</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=Playfair+Display:ital,wght@0,700;1,600&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  @page { size: A4 portrait; margin: 0; }
+
+  /*
+   * A4 at 96 dpi = 794 × 1123 px
+   * Left 8px = accent bar  →  all content has padding-left: 36px (28px clearance from bar)
+   * Footer is NOT absolutely positioned — uses flex layout to stay at bottom
+   */
+  html, body {
+    width: 794px;
+    height: 1123px;
+    font-family: 'Poppins', sans-serif;
+    background: #FAFAF7;
+    color: #1a1a1a;
+  }
+
+  body {
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* ── Decorative: left bar + top amber stripe ── */
+  .deco-bar-left {
+    position: absolute;
+    top: 0; left: 0;
+    width: 8px; height: 100%;
+    background: linear-gradient(180deg, #3d7a2e 0%, #3d7a2e 65%, #8B5E3C 100%);
+    z-index: 5;
+  }
+
+  .deco-stripe-top {
+    position: absolute;
+    top: 0; left: 8px; right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #d97706, #fbbf24 50%, #d97706);
+    z-index: 5;
+  }
+
+  /* ── Watermark ── */
+  .deco-watermark {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    opacity: 0.010;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ── All real content sits in this column ── */
+  .page {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    padding-left: 36px;   /* 8px bar + 28px gap */
+    padding-right: 36px;
+    padding-top: 22px;
+    padding-bottom: 0;
+  }
+
+  /* ═══ HEADER ═══════════════════════════════════════════════════════════ */
+  .header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    padding-bottom: 14px;
+  }
+
+  .logo-block {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-shrink: 0;
+  }
+
+  .logo-block img {
+    width: 62px;
+    height: 62px;
+    object-fit: contain;
+    border-radius: 10px;
+    display: block;
+  }
+
+  .brand-text {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  .brand-text .ms-label {
+    font-size: 7.5px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #8B5E3C;
+    margin-bottom: 1px;
+  }
+
+  .brand-text .company-name {
+    font-family: 'Playfair Display', serif;
+    font-size: 24px;
+    font-weight: 700;
+    color: #3d7a2e;
+    line-height: 1;
+    white-space: nowrap;
+  }
+
+  .brand-text .tagline {
+    font-size: 7.5px;
+    font-weight: 400;
+    color: #77736A;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    margin-top: 5px;
+  }
+
+  /* Right contact block */
+  .header-contact {
+    font-size: 8px;
+    color: #55524A;
+    line-height: 1.9;
+    text-align: right;
+    flex-shrink: 0;
+    max-width: 310px;
+  }
+
+  .header-contact .c-row {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 5px;
+    white-space: nowrap;
+  }
+
+  .header-contact .amber-dot {
+    width: 4px; height: 4px;
+    border-radius: 50%;
+    background: #d97706;
+    flex-shrink: 0;
+    display: inline-block;
+  }
+
+  .header-contact a {
+    color: #3d7a2e;
+    text-decoration: none;
+    font-weight: 500;
+  }
+
+  /* ═══ GREEN INFO STRIP ══════════════════════════════════════════════════ */
+  .info-strip {
+    background: #3d7a2e;
+    border-radius: 6px;
+    padding: 6px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 14px;
+    flex-shrink: 0;
+  }
+
+  .info-strip .s-left {
+    font-size: 7.5px;
+    font-weight: 500;
+    color: rgba(255,255,255,0.95);
+    letter-spacing: 0.3px;
+    white-space: nowrap;
+  }
+
+  .info-strip .s-right {
+    font-size: 7px;
+    font-weight: 400;
+    color: rgba(255,255,255,0.7);
+    letter-spacing: 0.3px;
+    white-space: nowrap;
+  }
+
+  /* ═══ DATE / REF / SUBJECT ══════════════════════════════════════════════ */
+  .meta-bar {
+    display: flex;
+    border: 1px solid #E8E6DC;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #fff;
+    margin-bottom: 18px;
+    flex-shrink: 0;
+  }
+
+  .meta-cell {
+    padding: 7px 14px;
+    border-right: 1px solid #E8E6DC;
+    flex: 1;
+  }
+
+  .meta-cell:last-child {
+    border-right: none;
+    flex: 2;
+  }
+
+  .meta-cell .ml {
+    font-size: 6.5px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: #3d7a2e;
+    margin-bottom: 4px;
+  }
+
+  .meta-cell .mv {
+    font-size: 8.5px;
+    color: #28271F;
+    font-weight: 400;
+    border-bottom: 1px solid #D1CEC0;
+    padding-bottom: 2px;
+    min-height: 14px;
+  }
+
+  /* ═══ SALUTATION ════════════════════════════════════════════════════════ */
+  .salutation {
+    font-size: 9.5px;
+    font-weight: 500;
+    color: #3D3B35;
+    margin-bottom: 14px;
+    flex-shrink: 0;
+  }
+
+  /* ═══ WRITING AREA — grows to fill remaining space ══════════════════════ */
+  .writing-area {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding-bottom: 12px;
+  }
+
+  .wline {
+    border-bottom: 0.5px solid #D1CEC0;
+    height: 22px;
+  }
+
+  /* ═══ SIGNATURE ═════════════════════════════════════════════════════════ */
+  .sig-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    padding: 10px 0 14px 0;
+    flex-shrink: 0;
+  }
+
+  .sig-block .sig-opening {
+    font-size: 8.5px;
+    color: #55524A;
+    margin-bottom: 20px;
+  }
+
+  .sig-block .sig-line {
+    width: 190px;
+    border-top: 1.5px solid #3d7a2e;
+    margin-bottom: 5px;
+  }
+
+  .sig-block .sig-name {
+    font-family: 'Playfair Display', serif;
+    font-size: 12px;
+    font-weight: 700;
+    color: #3d7a2e;
+    line-height: 1.2;
+  }
+
+  .sig-block .sig-title {
+    font-size: 8px;
+    font-weight: 600;
+    color: #8B5E3C;
+    margin-top: 2px;
+  }
+
+  .sig-block .sig-meta {
+    font-size: 7px;
+    color: #A8A497;
+    margin-top: 3px;
+  }
+
+  .stamp-placeholder {
+    width: 96px;
+    height: 96px;
+    flex-shrink: 0;
+  }
+
+  /* ═══ FOOTER — always at very bottom ════════════════════════════════════ */
+  .footer {
+    flex-shrink: 0;
+    margin-left: -36px;
+    margin-right: -36px;
+  }
+
+  .footer-meta {
+    padding: 6px 36px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top: 1px solid #E8E6DC;
+  }
+
+  .footer-meta span {
+    font-size: 6.5px;
+    color: #A8A497;
+    letter-spacing: 0.3px;
+  }
+
+  .footer-green {
+    background: #3d7a2e;
+    padding: 8px 36px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .footer-green span {
+    font-size: 7px;
+    color: rgba(255,255,255,0.8);
+    letter-spacing: 0.3px;
+  }
+
+  .footer-green .fw-site {
+    font-size: 8px;
+    font-weight: 700;
+    color: #fff;
+    letter-spacing: 0.5px;
+  }
+
+  .footer-amber-bar {
+    height: 4px;
+    background: linear-gradient(90deg, #d97706, #fbbf24 50%, #d97706);
+  }
+</style>
+</head>
+<body>
+
+<!-- Decorative (non-content) elements -->
+<div class="deco-bar-left"></div>
+<div class="deco-stripe-top"></div>
+
+<svg class="deco-watermark" width="360" height="480" viewBox="0 0 200 270" xmlns="http://www.w3.org/2000/svg">
+  <path d="M100 260 C45 195 15 120 42 58 C68 0 132 18 158 78 C186 138 158 212 100 260Z" fill="#3d7a2e"/>
+  <line x1="100" y1="58" x2="100" y2="260" stroke="#3d7a2e" stroke-width="3" fill="none"/>
+  <path d="M100 175 C65 155 48 118 63 88" stroke="#3d7a2e" stroke-width="2.5" fill="none"/>
+  <path d="M100 175 C135 155 152 118 137 88" stroke="#3d7a2e" stroke-width="2.5" fill="none"/>
+  <path d="M100 230 C75 215 60 188 72 165" stroke="#3d7a2e" stroke-width="2" fill="none"/>
+  <path d="M100 230 C125 215 140 188 128 165" stroke="#3d7a2e" stroke-width="2" fill="none"/>
+</svg>
+
+<!-- PAGE LAYOUT (flex column, fills full 794×1123) -->
+<div class="page">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="logo-block">
+      <img src="logo-crop.png" alt="Khaalis Harvest">
+      <div class="brand-text">
+        <span class="ms-label">M/S</span>
+        <span class="company-name">Khaalis Harvest</span>
+        <span class="tagline">Pure · Organic · Pakistani</span>
+      </div>
+    </div>
+
+    <div class="header-contact">
+      <div class="c-row"><span class="amber-dot"></span>167/A, Railway Burt Colony, Garhi Shahu, Lahore</div>
+      <div class="c-row"><span class="amber-dot"></span>0320-4749700 &nbsp;·&nbsp; 042-36369362</div>
+      <div class="c-row"><span class="amber-dot"></span><a href="mailto:khaalisharvest@gmail.com">khaalisharvest@gmail.com</a></div>
+      <div class="c-row"><span class="amber-dot"></span><a href="mailto:jamilbilal88@gmail.com">jamilbilal88@gmail.com</a></div>
+      <div class="c-row"><span class="amber-dot"></span><a href="http://khaalisharvest.com">www.khaalisharvest.com</a></div>
+    </div>
+  </div>
+
+  <!-- INFO STRIP -->
+  <div class="info-strip">
+    <span class="s-left">M/S Khaalis Harvest &nbsp;·&nbsp; Sole Proprietorship &nbsp;·&nbsp; Wholesale of Food, Beverages &amp; Tobacco</span>
+    <span class="s-right">NTN: 35202-4988377-3 &nbsp;·&nbsp; Est. 10 August 2026</span>
+  </div>
+
+  <!-- DATE / REF / SUBJECT -->
+  <div class="meta-bar">
+    <div class="meta-cell">
+      <div class="ml">Date</div>
+      <div class="mv">&nbsp;</div>
+    </div>
+    <div class="meta-cell">
+      <div class="ml">Reference No.</div>
+      <div class="mv">KH / &nbsp;&nbsp;&nbsp;&nbsp; / 2026</div>
+    </div>
+    <div class="meta-cell">
+      <div class="ml">Subject</div>
+      <div class="mv">&nbsp;</div>
+    </div>
+  </div>
+
+  <!-- SALUTATION -->
+  <div class="salutation">Dear Sir / Madam,</div>
+
+  <!-- WRITING LINES — flex:1 fills all remaining vertical space -->
+  <div class="writing-area">
+    <div class="wline"></div>
+    <div class="wline"></div>
+    <div class="wline"></div>
+    <div class="wline"></div>
+    <div class="wline"></div>
+    <div class="wline"></div>
+    <div class="wline"></div>
+    <div class="wline"></div>
+    <div class="wline"></div>
+    <div class="wline"></div>
+    <div class="wline"></div>
+    <div class="wline"></div>
+    <div class="wline"></div>
+    <div class="wline"></div>
+    <div class="wline"></div>
+    <div class="wline"></div>
+    <div class="wline"></div>
+    <div class="wline"></div>
+    <div class="wline"></div>
+    <div class="wline"></div>
+  </div>
+
+  <!-- SIGNATURE -->
+  <div class="sig-row">
+    <div class="sig-block">
+      <div class="sig-opening">Yours faithfully,</div>
+      <div class="sig-line"></div>
+      <div class="sig-name">Muhammad Bilal Ahmad Jamil</div>
+      <div class="sig-title">Proprietor — M/S Khaalis Harvest</div>
+      <div class="sig-meta">CNIC: 35202-4988377-3 &nbsp;·&nbsp; NTN: 3520249883773</div>
+    </div>
+    <!-- Actual circular stamp embedded at 96×96 -->
+    <div class="stamp-placeholder">
+      <svg width="96" height="96" viewBox="0 0 270 270" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <path id="lh-arc-top" d="M 22,135 A 113,113 0 0,1 248,135" fill="none"/>
+          <path id="lh-arc-bot" d="M 248,140 A 113,113 0 0,1 22,140" fill="none"/>
+        </defs>
+        <circle cx="135" cy="135" r="126" fill="none" stroke="#3d7a2e" stroke-width="4.5"/>
+        <circle cx="135" cy="135" r="113" fill="none" stroke="#3d7a2e" stroke-width="1.2" stroke-dasharray="4 4"/>
+        <circle cx="135" cy="135" r="103" fill="none" stroke="#8B5E3C" stroke-width="0.8" opacity="0.4"/>
+        <text font-family="Poppins, sans-serif" font-size="13.5" font-weight="800" fill="#3d7a2e" letter-spacing="3.2">
+          <textPath href="#lh-arc-top" startOffset="8%">M/S KHAALIS HARVEST</textPath>
+        </text>
+        <text font-family="Poppins, sans-serif" font-size="9.5" font-weight="600" fill="#8B5E3C" letter-spacing="1.8">
+          <textPath href="#lh-arc-bot" startOffset="11%">SOLE PROPRIETORSHIP · LAHORE</textPath>
+        </text>
+        <!-- Logo image in center -->
+        <!-- near-square crop 509×540 — center at (135,120), 68×72 box -->
+        <image href="logo-crop.png" x="101" y="84" width="68" height="72" preserveAspectRatio="xMidYMid meet"/>
+        <text x="135" y="172" font-family="Poppins, sans-serif" font-size="8.5" font-weight="700" fill="#234718" text-anchor="middle" letter-spacing="0.8">NTN: 35202-4988377-3</text>
+        <text x="135" y="185" font-family="Poppins, sans-serif" font-size="8" font-weight="500" fill="#55524A" text-anchor="middle">0320-4749700</text>
+        <circle cx="135" cy="9"   r="4" fill="#d97706"/>
+        <circle cx="261" cy="135" r="4" fill="#d97706"/>
+        <circle cx="135" cy="261" r="4" fill="#d97706"/>
+        <circle cx="9"   cy="135" r="4" fill="#d97706"/>
+        <circle cx="135" cy="9"   r="2.5" fill="#fff"/>
+        <circle cx="261" cy="135" r="2.5" fill="#fff"/>
+        <circle cx="135" cy="261" r="2.5" fill="#fff"/>
+        <circle cx="9"   cy="135" r="2.5" fill="#fff"/>
+      </svg>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <div class="footer">
+    <div class="footer-meta">
+      <span>Proprietor: Mr. Muhammad Bilal Ahmad Jamil &nbsp;·&nbsp; S/O: Muhammad Jamil &nbsp;·&nbsp; Lahore, Punjab</span>
+      <span>Page ____ of ____</span>
+    </div>
+    <div class="footer-green">
+      <span>Wholesale of Food, Beverages &amp; Tobacco &nbsp;|&nbsp; Garhi Shahu, Lahore</span>
+      <span class="fw-site">www.khaalisharvest.com</span>
+      <span>NTN: 35202-4988377-3</span>
+    </div>
+    <div class="footer-amber-bar"></div>
+  </div>
+
+</div>
+</body>
+</html>
