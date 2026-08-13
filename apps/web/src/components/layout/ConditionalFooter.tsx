@@ -6,8 +6,7 @@ import Footer from './Footer';
 export default function ConditionalFooter() {
   const pathname = usePathname();
   
-  // Hide footer for admin dashboard pages
-  if (pathname.startsWith('/admin/')) {
+  if (pathname.startsWith('/admin/') || pathname === '/') {
     return null;
   }
   

@@ -6,8 +6,7 @@ import Header from './Header';
 export default function ConditionalHeader() {
   const pathname = usePathname();
   
-  // Hide header for admin dashboard pages
-  if (pathname.startsWith('/admin/')) {
+  if (pathname.startsWith('/admin/') || pathname === '/') {
     return null;
   }
   
