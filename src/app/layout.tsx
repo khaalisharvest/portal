@@ -1,11 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import { Poppins } from 'next/font/google';
 import './globals.css';
-import { Providers } from './providers';
-import ConditionalHeader from '@/components/layout/ConditionalHeader';
-import ConditionalFooter from '@/components/layout/ConditionalFooter';
-import ConditionalNotificationBar from '@/components/layout/ConditionalNotificationBar';
-import WhatsAppButton from '@/components/ui/WhatsAppButton';
+
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://khaalisharvest.com';
 
 const poppins = Poppins({
@@ -15,63 +11,35 @@ const poppins = Poppins({
   display: 'swap',
 });
 
-// Disable static generation - app uses React Context (AuthContext, CartContext, FilterContext)
-// which requires dynamic rendering at request time, not static generation at build time
-export const dynamic = 'force-dynamic';
-
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
-  themeColor: '#3d7a2e',
+  themeColor: '#0f2318',
 };
 
 export const metadata: Metadata = {
   metadataBase: new URL(APP_URL),
-  title: 'Khaalis Harvest - Pure Organic Products',
-  description: 'Pakistan\'s premier organic marketplace. Pure, unadulterated products delivered to your door. The Pure Embrace of nature.',
-  keywords: 'khaalis harvest, organic, pure, fresh products, vegetables, plants, milk, Pakistan, natural products, authentic, unadulterated',
-  authors: [{ name: 'Khaalis Harvest Team' }],
-  manifest: '/manifest.json',
+  title: 'Khaalis Harvest — Something Pure is Coming to Lahore',
+  description: "Lahore's first truly organic marketplace. Pure food, honest sourcing, delivered fresh. Coming soon.",
+  keywords: 'organic food Lahore, pure organic products Pakistan, khaalis harvest, خالص',
+  authors: [{ name: 'Khaalis Harvest' }],
   icons: {
     icon: '/images/favicon-512x512.png',
     apple: '/images/favicon-512x512.png',
-    shortcut: '/images/favicon-512x512.png',
   },
   openGraph: {
-    title: 'Khaalis Harvest - Pure Organic Products',
-    description: 'Pakistan\'s premier organic marketplace. Pure, unadulterated products delivered to your door. The Pure Embrace of nature.',
+    title: 'Khaalis Harvest — Something Pure is Coming',
+    description: "Lahore's first truly organic marketplace. Coming soon.",
     type: 'website',
-    locale: 'en_US',
     siteName: 'Khaalis Harvest',
-    images: [
-      {
-        url: '/images/og-image.svg',
-        width: 1200,
-        height: 630,
-        alt: 'Khaalis Harvest - Pure Organic Products',
-      },
-    ],
-  },
-  twitter: {
-    card: 'summary_large_image',
-    title: 'Khaalis Harvest - Pure Organic Products',
-    description: 'Pakistan\'s premier organic marketplace. Pure, unadulterated products delivered to your door. The Pure Embrace of nature.',
-    images: ['/images/og-image.svg'],
+    images: [{ url: '/images/og-image.jpg', width: 1200, height: 630 }],
   },
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" dir="ltr">
+    <html lang="en">
       <head>
-        <link rel="icon" href="/images/favicon-512x512.png" />
-        <link rel="shortcut icon" href="/images/favicon-512x512.png" />
-        <link rel="apple-touch-icon" href="/images/favicon-512x512.png" />
-        {/* Noto Nastaliq Urdu — preconnect speeds up the request, display=swap prevents render blocking */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link
@@ -79,16 +47,8 @@ export default function RootLayout({
           href="https://fonts.googleapis.com/css2?family=Noto+Nastaliq+Urdu:wght@400;700&display=swap"
         />
       </head>
-      <body className={`${poppins.variable} font-sans bg-neutral-50 text-neutral-800`}>
-        <Providers>
-          <ConditionalNotificationBar />
-          <ConditionalHeader />
-          <main className="min-h-screen">
-            {children}
-          </main>
-          <ConditionalFooter />
-          <WhatsAppButton />
-        </Providers>
+      <body className={`${poppins.variable} font-sans`}>
+        {children}
       </body>
     </html>
   );
