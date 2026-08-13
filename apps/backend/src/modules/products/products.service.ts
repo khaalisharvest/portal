@@ -89,6 +89,8 @@ export class ProductsService {
       if (!filters.includeAll) {
         conditions.push('product.isAvailable = :isAvailable');
         params.isAvailable = true;
+        conditions.push('product.status = :activeStatus');
+        params.activeStatus = 'active';
       }
       if (filters.category) {
         const categoryIds = filters.category.split(',').map(id => id.trim());
@@ -236,7 +238,7 @@ export class ProductsService {
   async findOne(id: string): Promise<Product> {
     const product = await this.productRepository.findOne({
       where: { id },
-      relations: ['category', 'productType'],
+      relations: ['category', 'productType', 'inventory'],
     });
     if (!product) throw new NotFoundException(`Product with ID ${id} not found`);
     return product;

@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, ServiceUnavailableException } from '@nestjs/common';
 import * as nodemailer from 'nodemailer';
 import * as Sentry from '@sentry/nestjs';
 import { env } from '../../config/env';
@@ -34,6 +34,23 @@ export class EmailService {
     } catch (err) {
       this.logger.error(`Email failed → ${to.replace(/(.{2}).*@/, '$1***@')}: ${err.message}`);
       Sentry.captureException(err, { extra: { recipient: to.replace(/(.{2}).*@/, '$1***@'), subject } });
+    }
+  }
+
+  /** Like send() but throws ServiceUnavailableException on SMTP failure — use for security-critical flows like OTP. */
+  async sendCritical(to: string, subject: string, html: string): Promise<void> {
+    if (!to) return;
+    if (!this.transporter) {
+      this.logger.log(`[EMAIL DEV] To: ${to.replace(/(.{2}).*@/, '$1***@')} | Subject: ${subject}`);
+      return;
+    }
+    try {
+      await this.transporter.sendMail({ from: `"Khaalis Harvest" <${env.SMTP_FROM}>`, to, subject, html });
+      this.logger.log(`Email sent → ${to}`);
+    } catch (err) {
+      this.logger.error(`Critical email failed → ${to.replace(/(.{2}).*@/, '$1***@')}: ${err.message}`);
+      Sentry.captureException(err, { extra: { recipient: to.replace(/(.{2}).*@/, '$1***@'), subject } });
+      throw new ServiceUnavailableException('Failed to send reset code. Please try again later.');
     }
   }
 }

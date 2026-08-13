@@ -1,6 +1,7 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Like } from 'typeorm';
+import * as bcrypt from 'bcryptjs';
 import { User } from './entities/user.entity';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -224,7 +225,7 @@ export class UsersService {
   async updateUserRole(id: string, role: string): Promise<User> {
     const validRoles = ['customer', 'staff', 'super_admin'];
     if (!validRoles.includes(role)) {
-      throw new Error(`Invalid role. Must be one of: ${validRoles.join(', ')}`);
+      throw new BadRequestException(`Invalid role. Must be one of: ${validRoles.join(', ')}`);
     }
     const user = await this.findById(id);
     user.role = role;
@@ -243,8 +244,17 @@ export class UsersService {
     await this.usersRepository.update(id, { password: hashedPassword, resetToken: null, resetTokenExpiry: null } as any);
   }
 
+  async adminSetPassword(id: string, newPassword: string): Promise<void> {
+    await this.findById(id); // throws NotFoundException if user does not exist
+    const hashed = await bcrypt.hash(newPassword, 10);
+    await this.usersRepository.update(id, { password: hashed, resetToken: null, resetTokenExpiry: null } as any);
+  }
+
   async findByEmail(email: string): Promise<User | null> {
-    return this.usersRepository.findOne({ where: { email } });
+    return this.usersRepository
+      .createQueryBuilder('user')
+      .where('LOWER(user.email) = LOWER(:email)', { email })
+      .getOne();
   }
 
   async findByResetToken(token: string): Promise<User | null> {
@@ -252,6 +262,26 @@ export class UsersService {
       .createQueryBuilder('user')
       .addSelect('user.resetToken')
       .where('user.resetToken = :token', { token })
+      .getOne();
+  }
+
+  async findByOtp(otp: string): Promise<User | null> {
+    return this.usersRepository
+      .createQueryBuilder('user')
+      .addSelect('user.resetToken')
+      .addSelect('user.resetTokenExpiry')
+      .where('user.resetToken = :otp', { otp })
+      .getOne();
+  }
+
+  /** Scoped OTP lookup — matches OTP only for the specific user identified by phone or email. */
+  async findByOtpAndIdentifier(otp: string, identifier: string): Promise<User | null> {
+    return this.usersRepository
+      .createQueryBuilder('user')
+      .addSelect('user.resetToken')
+      .addSelect('user.resetTokenExpiry')
+      .where('user.resetToken = :otp', { otp })
+      .andWhere('(user.phone = :identifier OR LOWER(user.email) = LOWER(:identifier))', { identifier })
       .getOne();
   }
 

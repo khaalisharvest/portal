@@ -83,10 +83,11 @@ module.exports = {
       },
 
       fontFamily: {
-        sans:    ['var(--font-poppins)', 'system-ui', 'sans-serif'],
-        display: ['var(--font-poppins)', 'system-ui', 'sans-serif'],
-        body:    ['var(--font-poppins)', 'system-ui', 'sans-serif'],  // alias — kept for backward compat
-        urdu:    ['Noto Nastaliq Urdu', 'serif'],
+        sans:     ['var(--font-poppins)', 'system-ui', 'sans-serif'],
+        display:  ['var(--font-poppins)', 'system-ui', 'sans-serif'],
+        body:     ['var(--font-poppins)', 'system-ui', 'sans-serif'],
+        playfair: ['var(--font-playfair)', 'Georgia', 'serif'],
+        urdu:     ['Noto Nastaliq Urdu', 'serif'],
       },
 
       fontSize: {

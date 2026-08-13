@@ -1,12 +1,13 @@
-import { Injectable, UnauthorizedException, ConflictException, Logger } from '@nestjs/common';
+import { Injectable, UnauthorizedException, ConflictException, BadRequestException, Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { randomInt } from 'crypto';
 import { UsersService } from '../users/users.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { normalizePhoneForDatabase } from '../../utils/phoneValidation';
 import * as bcrypt from 'bcryptjs';
-import { randomBytes } from 'crypto';
 import { EmailService } from '../notifications/email.service';
+import { WhatsAppService } from '../notifications/whatsapp.service';
 import { env } from '../../config/env';
 
 @Injectable()
@@ -17,6 +18,7 @@ export class AuthService {
     private usersService: UsersService,
     private jwtService: JwtService,
     private emailService: EmailService,
+    private whatsAppService: WhatsAppService,
   ) {}
 
   async register(registerDto: RegisterDto) {
@@ -128,9 +130,12 @@ export class AuthService {
     }
   }
 
-  async forgotPassword(identifier: string): Promise<{ message: string }> {
+  async forgotPassword(identifier: string): Promise<{
+    message: string; channel?: string; maskedContact?: string;
+    identifier?: string; action?: string; adminWhatsapp?: string;
+  }> {
     const normalizedId = identifier.includes('@')
-      ? identifier
+      ? identifier.trim().toLowerCase()
       : normalizePhoneForDatabase(identifier);
 
     const user = identifier.includes('@')
@@ -138,31 +143,59 @@ export class AuthService {
       : await this.usersService.findByPhone(normalizedId);
 
     if (!user) {
-      return { message: 'If an account exists, a reset link has been sent.' };
+      throw new BadRequestException(
+        identifier.includes('@')
+          ? 'No account found with this email address. Please check and try again.'
+          : 'No account found with this phone number. Please check and try again.',
+      );
     }
 
-    const token = randomBytes(32).toString('hex');
-    const expiry = new Date(Date.now() + 60 * 60 * 1000);
-    await this.usersService.setResetToken(user.id, token, expiry);
+    // Contact-admin path — no OTP needed, admin resets directly via dashboard
+    if (!user.email && !env.WHATSAPP_PHONE_NUMBER_ID) {
+      return {
+        message: 'Password reset via WhatsApp is not available. Please contact admin.',
+        action: 'contact_admin',
+        adminWhatsapp: env.ADMIN_WHATSAPP,
+      };
+    }
 
-    const resetUrl = `${env.FRONTEND_URL}/auth/reset-password?token=${token}`;
-    const html = `
-    <div style="font-family:Arial,sans-serif;max-width:500px;margin:0 auto;padding:24px">
-      <h2 style="color:#4B8B3B">🌿 Reset Your Password</h2>
-      <p>Click the button below to reset your Khaalis Harvest password. This link expires in 1 hour.</p>
-      <a href="${resetUrl}" style="display:inline-block;background:#4B8B3B;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;margin:16px 0">Reset Password</a>
-      <p style="color:#737373;font-size:12px">If you didn't request this, ignore this email.</p>
-      <p style="color:#737373;font-size:11px">Link: ${resetUrl}</p>
-    </div>`;
+    // Generate cryptographically secure 6-digit OTP
+    const otp = String(randomInt(100000, 1000000));
+    const expiry = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+
+    const html = `<div style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto;background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e5e7eb">
+  <div style="background:#3d7a2e;padding:24px 28px">
+    <h1 style="color:#ffffff;margin:0;font-size:20px;font-weight:700">Khaalis Harvest</h1>
+    <p style="color:#a8d5a2;margin:4px 0 0;font-size:13px">The Pure Embrace of Nature</p>
+  </div>
+  <div style="padding:32px 28px">
+    <h2 style="color:#111827;margin:0 0 8px;font-size:22px;font-weight:700">Password Reset Code</h2>
+    <p style="color:#6b7280;margin:0 0 24px;font-size:15px;line-height:1.6">Use the code below to reset your password. It expires in <strong>15 minutes</strong>.</p>
+    <div style="background:#f0fdf4;border:2px solid #3d7a2e;border-radius:12px;padding:20px;text-align:center;margin-bottom:24px">
+      <p style="margin:0 0 4px;font-size:13px;color:#6b7280;text-transform:uppercase;letter-spacing:1px">Your reset code</p>
+      <p style="margin:0;font-size:40px;font-weight:800;color:#3d7a2e;letter-spacing:8px">${otp}</p>
+    </div>
+    <p style="color:#9ca3af;font-size:13px;margin:0;line-height:1.6">If you didn't request this, you can safely ignore this email.</p>
+  </div>
+  <div style="background:#f9fafb;padding:16px 28px;border-top:1px solid #e5e7eb">
+    <p style="color:#9ca3af;font-size:12px;margin:0">Khaalis Harvest · Pakistan's organic marketplace</p>
+  </div>
+</div>`;
 
     if (user.email) {
-      await this.emailService.send(user.email, 'Reset Your Khaalis Harvest Password', html);
-    } else {
-      // Log the link to console for phone-only users in development
-      this.logger.log(`Password reset link (SMTP not configured): ${resetUrl}`);
+      // Send FIRST — only store OTP if delivery succeeds (C3 fix)
+      await this.emailService.sendCritical(user.email, 'Your Khaalis Harvest Password Reset Code', html);
+      await this.usersService.setResetToken(user.id, otp, expiry);
+      const maskedEmail = user.email.replace(/(.{2})[^@]*(@.*)/, '$1***$2');
+      return { message: 'If an account exists, a reset code has been sent.', channel: 'email', maskedContact: maskedEmail, identifier: normalizedId };
     }
 
-    return { message: 'If an account exists, a reset link has been sent.' };
+    // WhatsApp path — send FIRST, then store (C3 fix)
+    await this.whatsAppService.sendOtp(user.phone, otp);
+    await this.usersService.setResetToken(user.id, otp, expiry);
+    const digits = user.phone.replace(/\D/g, '');
+    const maskedPhone = `+${digits.slice(0, 4)}***${digits.slice(-4)}`;
+    return { message: 'If an account exists, a reset code has been sent.', channel: 'whatsapp', maskedContact: maskedPhone, identifier: normalizedId };
   }
 
   async updateProfile(userId: string, updates: { name?: string; email?: string }) {
@@ -188,14 +221,27 @@ export class AuthService {
     return { message: 'Password changed successfully.' };
   }
 
-  async resetPassword(token: string, newPassword: string): Promise<{ message: string }> {
-    const user = await this.usersService.findByResetToken(token);
-    if (!user || !user.resetTokenExpiry || user.resetTokenExpiry < new Date()) {
-      throw new UnauthorizedException('Invalid or expired reset token');
+  async resetPassword(otp: string, identifier: string, newPassword: string): Promise<{ message: string }> {
+    const normalizedId = identifier.includes('@')
+      ? identifier.trim().toLowerCase()
+      : normalizePhoneForDatabase(identifier);
+
+    // Scoped lookup — OTP only valid for the account that requested it (C2 fix)
+    const user = await this.usersService.findByOtpAndIdentifier(otp, normalizedId);
+
+    if (!user || !user.resetToken || !user.resetTokenExpiry) {
+      throw new UnauthorizedException('Invalid or expired reset code.');
     }
-    const hashed = await bcrypt.hash(newPassword, 10);
-    await this.usersService.updatePassword(user.id, hashed);
-    return { message: 'Password reset successfully. You can now log in.' };
+
+    if (new Date() > user.resetTokenExpiry) {
+      await this.usersService.setResetToken(user.id, null, null);
+      throw new UnauthorizedException('Reset code has expired. Please request a new one.');
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    await this.usersService.updatePassword(user.id, hashedPassword);
+
+    return { message: 'Password reset successfully.' };
   }
 
   private async generateTokens(userId: string, role: string) {

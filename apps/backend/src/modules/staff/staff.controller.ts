@@ -61,6 +61,17 @@ export class StaffController {
     return result;
   }
 
+  @Get(':id')
+  @ApiOperation({ summary: 'Get a single staff member by ID' })
+  async getStaff(@Param('id', new ParseUUIDPipe()) id: string) {
+    const member = await this.usersService.findById(id);
+    if (!member || member.role !== 'staff') {
+      throw new BadRequestException('Staff member not found');
+    }
+    const { password, ...result } = member as any;
+    return result;
+  }
+
   @Patch(':id/status')
   @ApiOperation({ summary: 'Activate or deactivate a staff member' })
   async updateStatus(@Param('id') id: string, @Body() body: { isActive: boolean }) {

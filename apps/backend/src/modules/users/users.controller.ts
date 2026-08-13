@@ -1,4 +1,5 @@
 import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Query } from '@nestjs/common';
+import { SetPasswordDto } from '../auth/dto/set-password.dto';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -130,6 +131,18 @@ export class AdminUsersController {
     @Body() body: { role: string }
   ) {
     return this.usersService.updateUserRole(id, body.role);
+  }
+
+  @Patch(':id/set-password')
+  @Roles('super_admin', 'staff')
+  @ApiOperation({ summary: 'Admin set user password' })
+  @ApiResponse({ status: 200, description: 'Password updated successfully' })
+  async setUserPassword(
+    @Param('id') id: string,
+    @Body() dto: SetPasswordDto,
+  ) {
+    await this.usersService.adminSetPassword(id, dto.newPassword);
+    return { message: 'Password updated successfully' };
   }
 
   @Get(':id/stats')

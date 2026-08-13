@@ -141,8 +141,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const data = await response.json();
 
       if (response.ok) {
-        // Auto-login after successful registration
-        return await login(userData.phone, userData.password);
+        // Register BFF already sets all auth cookies and returns the user — no second login needed
+        localStorage.setItem('user', JSON.stringify(data.user));
+        setUser(data.user);
+        if (data.user.role === 'super_admin' || data.user.role === 'staff') {
+          router.push('/admin/dashboard');
+        } else {
+          router.push('/orders');
+        }
+        return { success: true };
       } else {
         return { success: false, error: data.message || 'Registration failed' };
       }
@@ -176,6 +183,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = () => {
     localStorage.removeItem('user');
+    localStorage.removeItem('cart');
     setUser(null);
     fetch('/api/auth/logout', { method: 'POST', credentials: 'include' }).catch(() => {});
     router.push('/');

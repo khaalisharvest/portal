@@ -3,7 +3,7 @@ import { proxy } from '@/lib/proxy';
 
 // Protected: upload image to Cloudinary (super_admin, staff)
 export const POST = (req: NextRequest) =>
-  proxy(req, { path: '/api/v1/upload/image', requireAuth: true });
+  proxy(req, { path: '/api/v1/upload/image', requireAuth: true, requireRole: ['super_admin', 'staff'] });
 
 // Protected: delete image from Cloudinary by URL (?url=...)
 export const DELETE = (req: NextRequest) =>

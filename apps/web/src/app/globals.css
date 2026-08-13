@@ -91,7 +91,7 @@
   }
 
   .input-error {
-    @apply border-error-500 focus:ring-error-400 focus:border-error-400;
+    @apply border-error-500 focus:ring-error-500 focus:border-error-500;
   }
 
   .select-field {
@@ -278,23 +278,33 @@
   50%       { opacity: 0.5; }
 }
 
-@keyframes notification-scroll {
+/*
+  Single-track infinite marquee.
+  Content is doubled (set A + set B, identical). The animation moves -50% of
+  the element's own width, which equals exactly one set. Because A and B are
+  identical, the loop snap is invisible — perfectly seamless at every speed.
+  left/top/bottom with no right: element width = content width, so -50%
+  correctly references content width rather than the container.
+*/
+@keyframes nb-ticker {
   from { transform: translateX(0); }
-  to   { transform: translateX(var(--nb-translate, -25%)); }
+  to   { transform: translateX(-50%); }
 }
 
-.notification-scroll {
-  display: inline-flex;
+.nb-track {
   position: absolute;
-  inset: 0;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  display: inline-flex;
   align-items: center;
   white-space: nowrap;
-  animation: notification-scroll var(--nb-duration, 50s) linear infinite;
+  animation: nb-ticker var(--nb-duration, 30s) linear infinite;
   will-change: transform;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .notification-scroll { animation-duration: calc(var(--nb-duration, 50s) * 3); }
+  .nb-track { animation-duration: calc(var(--nb-duration, 30s) * 5); }
 }
 
 /* ────────────────────────── RTL SUPPORT ───────────────────────────────────── */
@@ -302,3 +312,4 @@
 [dir="rtl"]            { text-align: right; }
 [dir="rtl"] .text-left { text-align: right; }
 [dir="rtl"] .text-right{ text-align: left; }
+

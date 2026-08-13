@@ -1,5 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsString, IsNumber, IsBoolean, IsOptional, IsArray, Min, IsObject, IsIn, IsNotEmpty, MaxLength } from 'class-validator';
+import { PRODUCT_UNITS } from '../../../common/constants/units';
 
 export class CreateProductDto {
   @ApiProperty()
@@ -8,10 +9,11 @@ export class CreateProductDto {
   @MaxLength(200)
   name: string;
 
-  @ApiProperty()
+  @ApiProperty({ required: false, default: '' })
+  @IsOptional()
   @IsString()
   @MaxLength(5000)
-  description: string;
+  description?: string;
 
   @ApiProperty()
   @IsNumber()
@@ -48,9 +50,8 @@ export class CreateProductDto {
   @IsBoolean()
   isAvailable?: boolean;
 
-  @ApiProperty({ required: false })
-  @IsString()
-  @IsNotEmpty()
+  @ApiProperty({ enum: PRODUCT_UNITS })
+  @IsIn([...PRODUCT_UNITS])
   unit: string;
 
   @ApiProperty({ required: false })
@@ -99,4 +100,40 @@ export class CreateProductDto {
   @IsOptional()
   @IsArray()
   variants?: Array<{ name: string; price: number; originalPrice?: number; isAvailable?: boolean }>;
+
+  // ── Food Labeling (PFA compliance) ────────────────────────────────────
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  ingredients?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsObject()
+  nutritionalInfo?: Record<string, string>;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  expiryInfo?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  batchNumber?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  cprNumber?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  allergens?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  manufacturerInfo?: string;
 }

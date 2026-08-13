@@ -32,7 +32,8 @@ export class UpdateNotificationBarSettingsDto {
   @IsString() @MaxLength(1000) text: string;
   @IsString() backgroundColor: string;
   @IsString() textColor: string;
-  @Type(() => Number) @IsNumber() @Min(10) speed: number;
+  @Type(() => Number) @IsNumber() @Min(10) @Max(100) speed: number;
+  @IsOptional() @IsString() @MaxLength(2048) link?: string;
 }
 
 export class UpdatePaymentSettingsDto {

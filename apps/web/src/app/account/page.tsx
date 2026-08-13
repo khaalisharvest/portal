@@ -1,11 +1,13 @@
 'use client';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/contexts/AuthContext';
 import { authFetch } from '@/lib/authFetch';
-import toast from 'react-hot-toast';
+import { toast } from 'sonner';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
+import Dropdown from '@/components/ui/Dropdown';
+import PasswordHint from '@/components/ui/PasswordHint';
 
 export default function AccountPage() {
   return (
@@ -28,6 +30,15 @@ function AccountContent() {
   const [passwordForm, setPasswordForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
   const [passwordLoading, setPasswordLoading] = useState(false);
   const [showPasswords, setShowPasswords] = useState({ current: false, new: false, confirm: false });
+
+  // Add address form
+  const [showAddressForm, setShowAddressForm] = useState(false);
+  const [newAddress, setNewAddress] = useState({
+    addressLine1: '', addressLine2: '', city: '',
+    state: 'Punjab', postalCode: '54000', country: 'Pakistan',
+    type: 'home' as 'home' | 'work' | 'other', isDefault: false, instructions: '',
+  });
+  const [addressLoading, setAddressLoading] = useState(false);
 
   useEffect(() => {
     fetchAddresses();
@@ -132,6 +143,36 @@ function AccountContent() {
     }
   };
 
+  const handleCreateAddress = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newAddress.addressLine1.trim() || !newAddress.city) {
+      toast.error('Address line 1 and city are required');
+      return;
+    }
+    setAddressLoading(true);
+    try {
+      const res = await authFetch('/api/v1/orders/addresses', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...newAddress,
+          fullName: user?.name,
+          phone: user?.phone,
+        }),
+      });
+      if (!res.ok) throw new Error('Failed to create address');
+      const data = await res.json();
+      setAddresses(prev => [...prev, data.data ?? data]);
+      setNewAddress({ addressLine1: '', addressLine2: '', city: '', state: 'Punjab', postalCode: '54000', country: 'Pakistan', type: 'home', isDefault: false, instructions: '' });
+      setShowAddressForm(false);
+      toast.success('Address added');
+    } catch {
+      toast.error('Failed to add address');
+    } finally {
+      setAddressLoading(false);
+    }
+  };
+
   const tabs = [
     {
       id: 'profile',
@@ -219,12 +260,12 @@ function AccountContent() {
                 <h2 className="text-xl font-bold text-neutral-900 mb-6">Personal Information</h2>
                 <form onSubmit={handleUpdateProfile} className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-neutral-700 mb-1">Full Name <span className="text-red-500">*</span></label>
+                    <label className="block text-sm font-medium text-neutral-700 mb-1">Full Name <span className="text-error-500">*</span></label>
                     <input
                       type="text"
                       value={profileForm.name}
                       onChange={e => setProfileForm(p => ({ ...p, name: e.target.value }))}
-                      className="w-full px-4 py-3 border border-neutral-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      className="input-field"
                       placeholder="Your full name"
                       minLength={2}
                       required
@@ -236,7 +277,7 @@ function AccountContent() {
                       type="email"
                       value={profileForm.email}
                       onChange={e => setProfileForm(p => ({ ...p, email: e.target.value }))}
-                      className="w-full px-4 py-3 border border-neutral-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      className="input-field"
                       placeholder="your@email.com"
                     />
                   </div>
@@ -259,19 +300,126 @@ function AccountContent() {
 
             {activeTab === 'addresses' && (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="bg-white rounded-2xl shadow-sm p-6">
-                <h2 className="text-xl font-bold text-neutral-900 mb-6">Saved Addresses</h2>
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-xl font-bold text-neutral-900">Saved Addresses</h2>
+                  <button
+                    onClick={() => setShowAddressForm(v => !v)}
+                    className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-primary-700 bg-primary-50 border border-primary-200 rounded-xl hover:bg-primary-100 transition-colors"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d={showAddressForm ? 'M6 18L18 6M6 6l12 12' : 'M12 4v16m8-8H4'} />
+                    </svg>
+                    {showAddressForm ? 'Cancel' : 'Add Address'}
+                  </button>
+                </div>
+
+                {/* Add address form */}
+                <AnimatePresence>
+                  {showAddressForm && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      transition={{ duration: 0.2 }}
+                      className="overflow-hidden mb-6"
+                    >
+                      <form onSubmit={handleCreateAddress} className="p-4 border border-neutral-200 rounded-xl bg-neutral-50 space-y-4">
+                        {/* Read-only contact info */}
+                        <div className="bg-primary-50 border border-primary-100 rounded-lg p-3">
+                          <p className="text-xs font-medium text-primary-700 mb-2">Contact Information</p>
+                          <div className="grid grid-cols-2 gap-3">
+                            <div>
+                              <p className="text-[11px] text-primary-600 mb-1">Full Name</p>
+                              <div className="px-3 py-2 bg-white border border-primary-100 rounded-lg text-sm text-neutral-700">{user?.name}</div>
+                            </div>
+                            <div>
+                              <p className="text-[11px] text-primary-600 mb-1">Phone</p>
+                              <div className="px-3 py-2 bg-white border border-primary-100 rounded-lg text-sm text-neutral-700">{user?.phone}</div>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-neutral-700 mb-1">Address Line 1 *</label>
+                          <input
+                            type="text" required
+                            value={newAddress.addressLine1}
+                            onChange={e => setNewAddress(a => ({ ...a, addressLine1: e.target.value }))}
+                            className="input-field"
+                            placeholder="Street address, house number"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-neutral-700 mb-1">Address Line 2</label>
+                          <input
+                            type="text"
+                            value={newAddress.addressLine2}
+                            onChange={e => setNewAddress(a => ({ ...a, addressLine2: e.target.value }))}
+                            className="input-field"
+                            placeholder="Apartment, floor, etc. (optional)"
+                          />
+                        </div>
+
+                        <div>
+                          <Dropdown
+                            label="City *"
+                            options={[{ value: 'Lahore', label: 'Lahore' }]}
+                            value={newAddress.city}
+                            onChange={value => setNewAddress(a => ({ ...a, city: Array.isArray(value) ? value[0] : value }))}
+                            placeholder="Select city"
+                            size="md"
+                            variant="default"
+                            showCheckmark={false}
+                          />
+                          <p className="text-xs text-neutral-400 mt-1">Currently delivering to Lahore only</p>
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-neutral-700 mb-1">Delivery Instructions</label>
+                          <textarea
+                            value={newAddress.instructions}
+                            onChange={e => setNewAddress(a => ({ ...a, instructions: e.target.value }))}
+                            rows={2}
+                            className="w-full px-4 py-3 text-sm border border-neutral-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-300 focus:border-primary-400 resize-none placeholder:text-neutral-400"
+                            placeholder="Any special delivery instructions…"
+                          />
+                        </div>
+
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={newAddress.isDefault}
+                            onChange={e => setNewAddress(a => ({ ...a, isDefault: e.target.checked }))}
+                            className="rounded border-neutral-300 text-primary-600 focus:ring-primary-500"
+                          />
+                          <span className="text-sm text-neutral-700">Set as default address</span>
+                        </label>
+
+                        <div className="flex gap-3">
+                          <button type="submit" disabled={addressLoading} className="btn-primary flex-1 disabled:opacity-50">
+                            {addressLoading ? 'Saving…' : 'Save Address'}
+                          </button>
+                          <button type="button" onClick={() => setShowAddressForm(false)} className="btn-outline flex-1">
+                            Cancel
+                          </button>
+                        </div>
+                      </form>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                {/* Addresses list */}
                 {addresses.length === 0 ? (
                   <div className="text-center py-8 text-neutral-500">
-                    <div className="flex justify-center mb-3">
-                      <svg className="w-10 h-10 text-neutral-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />
-                      </svg>
-                    </div>
-                    <p>No saved addresses yet. Add one during checkout.</p>
+                    <svg className="w-10 h-10 text-neutral-300 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />
+                    </svg>
+                    <p className="text-sm">No saved addresses yet. Add one above.</p>
                   </div>
                 ) : (
-                  <div className="space-y-4">
+                  <div className="space-y-3">
                     {addresses.map((addr: any) => (
                       <div key={addr.id} className="border border-neutral-200 rounded-xl p-4 flex justify-between items-start">
                         <div>
@@ -280,13 +428,13 @@ function AccountContent() {
                             <span className="text-xs bg-neutral-100 text-neutral-600 px-2 py-0.5 rounded-full capitalize">{addr.type}</span>
                             {addr.isDefault && <span className="text-xs bg-primary-100 text-primary-700 px-2 py-0.5 rounded-full">Default</span>}
                           </div>
-                          <p className="text-sm text-neutral-600">{addr.addressLine1}</p>
+                          <p className="text-sm text-neutral-600">{addr.addressLine1}{addr.addressLine2 ? `, ${addr.addressLine2}` : ''}</p>
                           <p className="text-sm text-neutral-600">{addr.city}, {addr.state} {addr.postalCode}</p>
                           <p className="text-sm text-neutral-500">{addr.phone}</p>
                         </div>
                         <button
                           onClick={() => handleDeleteAddress(addr.id)}
-                          className="text-error-400 hover:text-error-600 text-sm"
+                          className="text-sm text-error-400 hover:text-error-600 transition-colors"
                         >
                           Remove
                         </button>
@@ -309,7 +457,7 @@ function AccountContent() {
                         type={showPasswords.current ? 'text' : 'password'}
                         value={passwordForm.currentPassword}
                         onChange={e => setPasswordForm(p => ({ ...p, currentPassword: e.target.value }))}
-                        className="w-full px-4 py-3 border border-neutral-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 pr-12"
+                        className="input-field pr-12"
                         placeholder="Enter current password"
                         required
                       />
@@ -334,7 +482,7 @@ function AccountContent() {
                         type={showPasswords.new ? 'text' : 'password'}
                         value={passwordForm.newPassword}
                         onChange={e => setPasswordForm(p => ({ ...p, newPassword: e.target.value }))}
-                        className="w-full px-4 py-3 border border-neutral-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 pr-12"
+                        className="input-field pr-12"
                         placeholder="Min. 8 characters"
                         minLength={8}
                         required
@@ -352,6 +500,7 @@ function AccountContent() {
                         </svg>
                       </button>
                     </div>
+                    <PasswordHint password={passwordForm.newPassword} />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-neutral-700 mb-1">Confirm New Password</label>
@@ -360,10 +509,10 @@ function AccountContent() {
                         type={showPasswords.confirm ? 'text' : 'password'}
                         value={passwordForm.confirmPassword}
                         onChange={e => setPasswordForm(p => ({ ...p, confirmPassword: e.target.value }))}
-                        className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 pr-12 ${
+                        className={`input-field pr-12 ${
                           passwordForm.confirmPassword && passwordForm.confirmPassword !== passwordForm.newPassword
-                            ? 'border-red-400'
-                            : 'border-neutral-300'
+                            ? 'input-error'
+                            : ''
                         }`}
                         placeholder="Repeat new password"
                         required
@@ -382,7 +531,7 @@ function AccountContent() {
                       </button>
                     </div>
                     {passwordForm.confirmPassword && passwordForm.confirmPassword !== passwordForm.newPassword && (
-                      <p className="text-xs text-red-500 mt-1">Passwords do not match</p>
+                      <p className="text-xs text-error-500 mt-1">Passwords do not match</p>
                     )}
                   </div>
                   <button

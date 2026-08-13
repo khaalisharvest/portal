@@ -3,7 +3,10 @@ import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import AdminLayout from '@/components/layout/AdminLayout';
-import toast from 'react-hot-toast';
+import { toast } from 'sonner';
+import PageHeader from '@/components/admin/PageHeader';
+import { AdminSkeletonRow } from '@/components/admin/AdminSkeletonRow';
+import ConfirmationDialog from '@/components/ui/ConfirmationDialog';
 
 interface InventoryRecord {
   id?: string;
@@ -45,6 +48,7 @@ function InventoryContent() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalProducts, setTotalProducts] = useState(0);
+  const [discardDialog, setDiscardDialog] = useState<{ open: boolean; onConfirm: () => void }>({ open: false, onConfirm: () => {} });
   const LIMIT = 20;
 
   const fetchProducts = useCallback(async (page = 1) => {
@@ -96,10 +100,19 @@ function InventoryContent() {
 
   const startEdit = (product: Product) => {
     if (editingId && editingId !== product.id) {
-      if (!confirm('You have unsaved changes. Discard and edit this product instead?')) {
-        return;
-      }
+      setDiscardDialog({
+        open: true,
+        onConfirm: () => {
+          setDiscardDialog({ open: false, onConfirm: () => {} });
+          doStartEdit(product);
+        },
+      });
+      return;
     }
+    doStartEdit(product);
+  };
+
+  const doStartEdit = (product: Product) => {
     const inv = product.inventory?.[0];
     setEditingId(product.id);
     setEditForm({
@@ -111,24 +124,24 @@ function InventoryContent() {
     });
   };
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600" />
-      </div>
-    );
-  }
-
   return (
     <div>
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-neutral-800">Inventory Management</h1>
-          <p className="text-neutral-600 mt-1">Set stock levels for each product ({totalProducts} total)</p>
-        </div>
-      </div>
+      <PageHeader
+        title="Inventory"
+        breadcrumbs={[{ label: 'Admin', href: '/admin/dashboard' }, { label: 'Products', href: '/admin/products' }, { label: 'Inventory' }]}
+      />
 
-      <div className="bg-white rounded-2xl shadow-soft overflow-hidden">
+      <ConfirmationDialog
+        isOpen={discardDialog.open}
+        onClose={() => setDiscardDialog({ open: false, onConfirm: () => {} })}
+        onConfirm={discardDialog.onConfirm}
+        title="Discard unsaved changes?"
+        message="You have unsaved changes to the current row. Discard them and edit this product instead?"
+        confirmText="Discard"
+        type="warning"
+      />
+
+      <div className="bg-white rounded-xl border border-neutral-200 overflow-hidden">
         <table className="w-full">
           <thead>
             <tr className="bg-neutral-50 border-b border-neutral-200">
@@ -141,10 +154,12 @@ function InventoryContent() {
             </tr>
           </thead>
           <tbody>
-            {products.map((product, idx) => {
+            {isLoading ? (
+              Array.from({ length: 6 }).map((_, i) => <AdminSkeletonRow key={i} cols={6} />)
+            ) : products.map((product, idx) => {
               const inv = product.inventory?.[0];
               const available = inv ? (inv.quantity - (inv.reservedQuantity || 0)) : null;
-              const isLow = inv && available !== null && available <= (inv.minimumStock || 10);
+              const isLow = inv && available !== null && inv.minimumStock > 0 && available <= inv.minimumStock;
               const isEditing = editingId === product.id;
 
               return (
@@ -153,7 +168,7 @@ function InventoryContent() {
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   transition={{ delay: idx * 0.02 }}
-                  className="border-b border-neutral-100 hover:bg-neutral-50"
+                  className={`border-b border-neutral-100 hover:bg-neutral-50 ${isLow ? 'bg-error-50' : ''}`}
                 >
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">

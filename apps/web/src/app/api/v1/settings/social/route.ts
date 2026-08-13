@@ -5,4 +5,4 @@ export const GET = (req: NextRequest) =>
   proxy(req, { path: '/api/v1/settings/social' });
 
 export const PATCH = (req: NextRequest) =>
-  proxy(req, { path: '/api/v1/settings/social', requireAuth: true });
+  proxy(req, { path: '/api/v1/settings/social', requireAuth: true, requireRole: ['super_admin'] });

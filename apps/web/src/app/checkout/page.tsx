@@ -9,10 +9,11 @@ import { useAuth } from '@/contexts/AuthContext';
 import Icon from '@/components/ui/Icon';
 import ProductLoader from '@/components/ui/ProductLoader';
 import Dropdown from '@/components/ui/Dropdown';
-import toast from 'react-hot-toast';
+import { toast } from 'sonner';
 import {  DeliveryCalculation } from '@/services/settings';
 import { configService } from '@/services/config';
 import { validatePakistaniPhone, getPhonePlaceholder } from '@/utils/phoneValidation';
+import { usePublicSettings } from '@/hooks/usePublicSettings';
 
 function fmt(n: number) {
   return Number(n).toLocaleString('en-PK', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
@@ -42,6 +43,7 @@ export default function CheckoutPage() {
   const [selectedAddress, setSelectedAddress] = useState<string>('');
   const [paymentMethod, setPaymentMethod] = useState<'cash_on_delivery' | 'bank_transfer'>('cash_on_delivery');
   const [notes, setNotes] = useState('');
+  const { settings: publicSettings }   = usePublicSettings();
   const [isCreatingOrder, setIsCreatingOrder] = useState(false);
   const [isFetchingAddresses, setIsFetchingAddresses] = useState(false);
   const [showAddressForm, setShowAddressForm] = useState(false);
@@ -49,7 +51,6 @@ export default function CheckoutPage() {
   const [isCalculatingDelivery, setIsCalculatingDelivery] = useState(false);
   const [guestPhoneError, setGuestPhoneError] = useState('');
   const [addressPhoneError, setAddressPhoneError] = useState('');
-  const [publicSettings, setPublicSettings] = useState<Record<string, any>>({});
   const [newAddress, setNewAddress] = useState({
     fullName: '',
     phone: '',
@@ -105,13 +106,6 @@ export default function CheckoutPage() {
       calculateDeliveryFee().catch(() => {});
     }
   }, [cartState.totalPrice]);
-
-  useEffect(() => {
-    fetch('/api/v1/public/settings')
-      .then((r) => r.json())
-      .then((data) => setPublicSettings(data))
-      .catch(() => {}); // non-critical — UI degrades gracefully
-  }, []);
 
   const calculateDeliveryFee = async () => {
     if (cartState.totalPrice <= 0) return;
@@ -312,9 +306,10 @@ export default function CheckoutPage() {
       }
     }
 
-    // Check minimum order amount
-    if (deliveryCalculation !== null && cartState.totalPrice < (publicSettings.min_order_amount || 0)) {
-      toast.error(`Minimum order amount is ₨${publicSettings.min_order_amount || 0}`);
+    // Check minimum order amount — only enforce when the setting has loaded and is > 0
+    const minOrder = Number(publicSettings.min_order_amount);
+    if (minOrder > 0 && cartState.totalPrice < minOrder) {
+      toast.error(`Minimum order amount is ₨${minOrder.toLocaleString('en-PK')}`);
       return;
     }
 
@@ -433,7 +428,7 @@ export default function CheckoutPage() {
   // Show loading state while cart is being loaded
   if (cartState.isLoading) {
     return (
-      <div className="min-h-screen organic-gradient flex items-center justify-center">
+      <div className="min-h-screen bg-neutral-50 flex items-center justify-center">
         <div className="text-center">
           <ProductLoader size="lg" />
           <p className="text-neutral-600">Loading your basket...</p>
@@ -456,31 +451,21 @@ export default function CheckoutPage() {
   // Show checkout mode selection for non-logged-in users
   if (checkoutMode === 'select') {
     return (
-      <div className="min-h-screen organic-gradient">
+      <div className="min-h-screen bg-neutral-50">
         {/* Breadcrumb */}
         <div className="bg-white border-b border-neutral-100">
-          <div className="container-custom py-4">
-            <nav className="flex items-center space-x-2 text-sm">
-              <button
-                onClick={() => router.push('/')}
-                className="text-neutral-500 hover:text-primary-600 transition-colors"
-              >
-                Home
-              </button>
-              <Icon name="chevron-right" className="w-4 h-4 text-neutral-400" />
-              <button
-                onClick={() => router.push('/cart')}
-                className="text-neutral-500 hover:text-primary-600 transition-colors"
-              >
-                Basket
-              </button>
-              <Icon name="chevron-right" className="w-4 h-4 text-neutral-400" />
+          <div className="container-custom py-3">
+            <nav className="flex items-center gap-1.5 text-sm text-neutral-500">
+              <button onClick={() => router.push('/')} className="hover:text-primary-600 transition-colors">Home</button>
+              <Icon name="chevron-right" className="w-3.5 h-3.5 text-neutral-300" />
+              <button onClick={() => router.push('/cart')} className="hover:text-primary-600 transition-colors">Basket</button>
+              <Icon name="chevron-right" className="w-3.5 h-3.5 text-neutral-300" />
               <span className="text-neutral-900 font-medium">Checkout</span>
             </nav>
           </div>
         </div>
 
-        <div className="container-custom py-4 sm:py-6 lg:py-8">
+        <div className="container-custom py-8">
           <div className="max-w-2xl mx-auto">
             <h1 className="text-xl sm:text-2xl font-bold text-neutral-900 mb-4 sm:mb-6 text-center">Checkout Options</h1>
 
@@ -528,32 +513,22 @@ export default function CheckoutPage() {
   }
 
   return (
-    <div className="min-h-screen organic-gradient">
+    <div className="min-h-screen bg-neutral-50 pb-28 lg:pb-8">
       {/* Breadcrumb */}
-      <div className="bg-white border-b border-primary-100">
-        <div className="container-custom py-4">
-          <nav className="flex items-center space-x-2 text-sm">
-            <button
-              onClick={() => router.push('/')}
-              className="text-neutral-500 hover:text-primary-600 transition-colors"
-            >
-              Home
-            </button>
-            <Icon name="chevron-right" className="w-4 h-4 text-neutral-400" />
-            <button
-              onClick={() => router.push('/cart')}
-              className="text-neutral-500 hover:text-primary-600 transition-colors"
-            >
-              Basket
-            </button>
-            <Icon name="chevron-right" className="w-4 h-4 text-neutral-400" />
+      <div className="bg-white border-b border-neutral-100">
+        <div className="container-custom py-3">
+          <nav className="flex items-center gap-1.5 text-sm text-neutral-500">
+            <button onClick={() => router.push('/')} className="hover:text-primary-600 transition-colors">Home</button>
+            <Icon name="chevron-right" className="w-3.5 h-3.5 text-neutral-300" />
+            <button onClick={() => router.push('/cart')} className="hover:text-primary-600 transition-colors">Basket</button>
+            <Icon name="chevron-right" className="w-3.5 h-3.5 text-neutral-300" />
             <span className="text-neutral-900 font-medium">Checkout</span>
           </nav>
         </div>
       </div>
 
-      <div className="container-custom py-4 sm:py-6 lg:py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
+      <div className="container-custom py-4 lg:py-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-8">
           {/* Checkout Form */}
           <div className="lg:col-span-2 space-y-4 sm:space-y-6">
             {/* Guest Information Form */}
@@ -714,7 +689,7 @@ export default function CheckoutPage() {
                   </div>
                 ) : isFetchingAddresses ? (
                   <div className="flex items-center justify-center py-10 gap-3 text-neutral-400">
-                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary-500" />
+                    <span className="w-5 h-5 border-2 border-primary-200 border-t-primary-500 rounded-full animate-spin" />
                     <span className="text-sm">Loading addresses…</span>
                   </div>
                 ) : (
@@ -724,7 +699,7 @@ export default function CheckoutPage() {
                       {addresses.map((address) => (
                         <label
                           key={address.id}
-                          className={`flex items-start space-x-3 p-3 sm:p-4 border rounded-lg cursor-pointer transition-colors ${selectedAddress === address.id
+                          className={`flex items-start space-x-3 p-3 sm:p-4 border rounded-xl cursor-pointer transition-colors ${selectedAddress === address.id
                             ? 'border-primary-500 bg-primary-50'
                             : 'border-neutral-200 hover:border-neutral-300'
                             }`}
@@ -933,7 +908,7 @@ export default function CheckoutPage() {
                   ].map((method) => (
                     <label
                       key={method.value}
-                      className={`flex items-center space-x-3 p-3 sm:p-4 border rounded-lg cursor-pointer transition-colors ${paymentMethod === method.value
+                      className={`flex items-center space-x-3 p-3 sm:p-4 border rounded-xl cursor-pointer transition-colors ${paymentMethod === method.value
                         ? 'border-primary-500 bg-primary-50'
                         : 'border-neutral-200 hover:border-neutral-300'
                         }`}
@@ -1091,12 +1066,30 @@ export default function CheckoutPage() {
                   </div>
                 </div>
 
+                {/* Min order notice — shown when total is below threshold */}
+                {(() => {
+                  const minOrder = Number(publicSettings.min_order_amount);
+                  return minOrder > 0 && cartState.totalPrice < minOrder ? (
+                    <div className="flex items-start gap-2 bg-secondary-50 border border-secondary-200 rounded-xl px-3 py-2.5">
+                      <svg className="w-4 h-4 text-secondary-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                          d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+                      </svg>
+                      <p className="text-xs text-secondary-700 leading-relaxed">
+                        Minimum order is <span className="font-semibold">₨{Number(publicSettings.min_order_amount).toLocaleString('en-PK')}</span>.
+                        Your cart is <span className="font-semibold">₨{(minOrder - cartState.totalPrice).toLocaleString('en-PK')}</span> short.
+                      </p>
+                    </div>
+                  ) : null;
+                })()}
+
                 <button
                   onClick={handlePlaceOrder}
                   disabled={
                     isCreatingOrder ||
                     !!guestPhoneError ||
                     !!addressPhoneError ||
+                    (Number(publicSettings.min_order_amount) > 0 && cartState.totalPrice < Number(publicSettings.min_order_amount)) ||
                     (checkoutMode === 'guest'
                       ? (!guestInfo.name || !guestInfo.phone || !newAddress.addressLine1 || !newAddress.city || !newAddress.state || !newAddress.postalCode)
                       : !selectedAddress
@@ -1106,7 +1099,7 @@ export default function CheckoutPage() {
                 >
                   {isCreatingOrder ? (
                     <>
-                      <div className="animate-spin rounded-full h-4 w-4 sm:h-5 sm:w-5 border-b-2 border-white"></div>
+                      <span className="w-4 h-4 sm:w-5 sm:h-5 border-2 border-white/40 border-t-white rounded-full animate-spin" />
                       <span>Placing Order...</span>
                     </>
                   ) : (
@@ -1119,6 +1112,39 @@ export default function CheckoutPage() {
               </div>
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* ── Sticky mobile Place Order bar ────────────────────────────────── */}
+      <div className="fixed bottom-16 inset-x-0 z-30 lg:hidden">
+        <div className="mx-3 mb-2 bg-white rounded-2xl border border-neutral-100 shadow-lg px-4 py-3 flex items-center gap-3">
+          <div className="flex-1 min-w-0">
+            <div className="text-xs text-neutral-400">
+              {cartState.totalItems} {cartState.totalItems === 1 ? 'item' : 'items'}
+              {deliveryCalculation?.isFree ? ' · Free delivery' : deliveryCalculation?.deliveryFee ? ` · +₨${fmt(deliveryCalculation.deliveryFee)} delivery` : ''}
+            </div>
+            <div className="text-base font-bold text-neutral-900 tabular-nums">
+              ₨{fmt((cartState.totalPrice || 0) + (deliveryCalculation?.deliveryFee || 0))}
+            </div>
+          </div>
+          <button
+            onClick={handlePlaceOrder}
+            disabled={
+              isCreatingOrder ||
+              !!guestPhoneError ||
+              !!addressPhoneError ||
+              (Number(publicSettings.min_order_amount) > 0 && cartState.totalPrice < Number(publicSettings.min_order_amount)) ||
+              (checkoutMode === 'guest'
+                ? (!guestInfo.name || !guestInfo.phone || !newAddress.addressLine1 || !newAddress.city || !newAddress.state || !newAddress.postalCode)
+                : !selectedAddress
+              )
+            }
+            className="btn-cta flex-shrink-0 py-2.5 px-5 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isCreatingOrder ? (
+              <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+            ) : 'Place Order'}
+          </button>
         </div>
       </div>
     </div>

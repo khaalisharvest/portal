@@ -3,9 +3,9 @@
 import { useState, useMemo } from 'react';
 import { validatePakistaniPhone, getPhonePlaceholder } from '@/utils/phoneValidation';
 import Dropdown, { DropdownOption } from '@/components/ui/Dropdown';
-import { toast } from 'react-hot-toast';
-import { ADMIN_EMAIL, ADMIN_WHATSAPP } from '@/config/env';
+import { toast } from 'sonner';
 import OrganicPattern from '@/components/ui/OrganicPattern';
+import { usePublicSettings } from '@/hooks/usePublicSettings';
 
 const subjectOptions: DropdownOption[] = [
   { value: 'general',  label: 'General Inquiry'    },
@@ -17,9 +17,12 @@ const subjectOptions: DropdownOption[] = [
 ];
 
 export default function ContactPage() {
-  const [formData, setFormData] = useState({ name: '', email: '', phone: '', subject: '', message: '' });
-  const [phoneError, setPhoneError]   = useState('');
+  const [formData, setFormData]         = useState({ name: '', email: '', phone: '', subject: '', message: '' });
+  const [phoneError, setPhoneError]     = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { settings }                    = usePublicSettings();
+  const adminWhatsapp                   = settings.admin_whatsapp;
+  const adminEmail                      = settings.admin_email;
 
   const validatePhone = (phone: string) => {
     const v = validatePakistaniPhone(phone);
@@ -76,7 +79,7 @@ export default function ContactPage() {
     setFormData({ ...formData, subject: Array.isArray(value) ? value[0] : value });
 
   return (
-    <div className="min-h-screen bg-neutral-50 relative overflow-hidden">
+    <div className="min-h-screen bg-neutral-50 relative">
       <OrganicPattern />
       <div className="relative container-custom py-12">
         <div className="grid lg:grid-cols-5 gap-10 items-start">
@@ -91,9 +94,9 @@ export default function ContactPage() {
             </div>
 
             <div className="space-y-4">
-              {ADMIN_WHATSAPP && (
+              {adminWhatsapp && (
                 <a
-                  href={`https://wa.me/${ADMIN_WHATSAPP.replace(/[^0-9]/g, '')}`}
+                  href={`https://wa.me/${adminWhatsapp.replace(/[^0-9]/g, '')}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-4 p-4 bg-white rounded-xl border border-neutral-100 shadow-sm hover:border-primary-200 hover:shadow-md transition-all duration-200 group"
@@ -105,14 +108,14 @@ export default function ContactPage() {
                   </div>
                   <div>
                     <p className="text-xs text-neutral-400 font-medium uppercase tracking-wide">WhatsApp</p>
-                    <p className="text-sm font-semibold text-neutral-800">{ADMIN_WHATSAPP}</p>
+                    <p className="text-sm font-semibold text-neutral-800">{adminWhatsapp}</p>
                   </div>
                 </a>
               )}
 
-              {ADMIN_EMAIL && (
+              {adminEmail && (
                 <a
-                  href={`mailto:${ADMIN_EMAIL}`}
+                  href={`mailto:${adminEmail}`}
                   className="flex items-center gap-4 p-4 bg-white rounded-xl border border-neutral-100 shadow-sm hover:border-primary-200 hover:shadow-md transition-all duration-200 group"
                 >
                   <div className="h-10 w-10 bg-primary-50 rounded-lg flex items-center justify-center flex-shrink-0 group-hover:bg-primary-100 transition-colors">
@@ -122,7 +125,7 @@ export default function ContactPage() {
                   </div>
                   <div>
                     <p className="text-xs text-neutral-400 font-medium uppercase tracking-wide">Email</p>
-                    <p className="text-sm font-semibold text-neutral-800">{ADMIN_EMAIL}</p>
+                    <p className="text-sm font-semibold text-neutral-800">{adminEmail}</p>
                   </div>
                 </a>
               )}

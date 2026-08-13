@@ -21,6 +21,8 @@ const nextConfig = {
       { protocol: 'https', hostname: 'res.cloudinary.com' },
       // Cloudinary media delivery
       { protocol: 'https', hostname: 'media.cloudinary.com' },
+      // Allow any HTTPS source — product images can come from arbitrary URLs
+      { protocol: 'https', hostname: '**' },
     ],
     formats: ['image/webp', 'image/avif'],
   },

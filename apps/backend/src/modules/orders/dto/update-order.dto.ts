@@ -29,4 +29,8 @@ export class UpdateOrderDto {
   @IsString()
   @IsOptional()
   paymentReference?: string;
+
+  @IsString()
+  @IsOptional()
+  notes?: string;
 }

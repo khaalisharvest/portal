@@ -9,8 +9,8 @@ export class ActivityLog {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column()
-  staffId: string;
+  @Column({ nullable: true })
+  staffId: string | null;
 
   @Column()
   staffName: string;

@@ -7,6 +7,8 @@ import { OrderItem } from './entities/order-item.entity';
 import { Address } from './entities/address.entity';
 import { Product } from '../products/entities/product.entity';
 import { User } from '../users/entities/user.entity';
+import { Review } from '../products/entities/review.entity';
+import { Contact } from '../contacts/entities/contact.entity';
 import { SettingsModule } from '../settings/settings.module';
 import { ActivityModule } from '../activity/activity.module';
 
@@ -17,7 +19,9 @@ import { ActivityModule } from '../activity/activity.module';
       OrderItem,
       Address,
       Product,
-      User
+      User,
+      Review,
+      Contact,
     ]),
     SettingsModule,
     ActivityModule,

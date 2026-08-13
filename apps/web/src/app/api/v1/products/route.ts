@@ -7,4 +7,4 @@ export const GET = (req: NextRequest) =>
 
 // Protected: create product (super_admin, staff)
 export const POST = (req: NextRequest) =>
-  proxy(req, { path: '/api/v1/products', requireAuth: true });
+  proxy(req, { path: '/api/v1/products', requireAuth: true, requireRole: ['super_admin', 'staff'] });

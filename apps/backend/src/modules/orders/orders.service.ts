@@ -7,6 +7,8 @@ import { OrderItem } from './entities/order-item.entity';
 import { Address } from './entities/address.entity';
 import { Product } from '../products/entities/product.entity';
 import { Inventory } from '../products/entities/inventory.entity';
+import { Review } from '../products/entities/review.entity';
+import { Contact } from '../contacts/entities/contact.entity';
 import { User } from '../users/entities/user.entity';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderDto } from './dto/update-order.dto';
@@ -34,6 +36,10 @@ export class OrdersService {
     private productRepository: Repository<Product>,
     @InjectRepository(User)
     private userRepository: Repository<User>,
+    @InjectRepository(Review)
+    private reviewRepository: Repository<Review>,
+    @InjectRepository(Contact)
+    private contactRepository: Repository<Contact>,
     private dataSource: DataSource,
     private settingsService: SettingsService,
     private emailService: EmailService,
@@ -63,6 +69,9 @@ export class OrdersService {
   }
 
   async createOrder(userId: string, createOrderDto: CreateOrderDto): Promise<Order> {
+    const { maintenanceMode } = await this.settingsService.getStoreSettings();
+    if (maintenanceMode) throw new BadRequestException('Store is temporarily unavailable. Please try again later.');
+
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
@@ -243,8 +252,14 @@ export class OrdersService {
   async cancelOrder(id: string, reason: string, userId: string): Promise<Order> {
     const order = await this.findOne(id, userId);
 
-    if (order.status === OrderStatus.DELIVERED || order.status === OrderStatus.CANCELLED) {
-      throw new BadRequestException('Cannot cancel completed or already cancelled order');
+    // Users may only cancel their own pending orders.
+    // Once an admin moves the order to any other status, only admin can cancel.
+    if (order.status !== OrderStatus.PENDING) {
+      throw new BadRequestException(
+        order.status === OrderStatus.CANCELLED
+          ? 'Order is already cancelled'
+          : 'This order can no longer be cancelled. Please contact us if you need assistance.',
+      );
     }
 
     const queryRunner = this.dataSource.createQueryRunner();
@@ -337,7 +352,7 @@ export class OrdersService {
   }
 
   // Admin methods
-  async getAllOrders(page: number = 1, limit: number = 10, status?: OrderStatus, paymentStatus?: PaymentStatus, search?: string): Promise<{ orders: Order[], total: number, totalPages: number }> {
+  async getAllOrders(page: number = 1, limit: number = 10, status?: OrderStatus, paymentStatus?: PaymentStatus, search?: string, dateFrom?: string, dateTo?: string): Promise<{ orders: Order[], total: number, totalPages: number }> {
     const queryBuilder = this.orderRepository
       .createQueryBuilder('order')
       .leftJoinAndSelect('order.address', 'address')
@@ -353,10 +368,20 @@ export class OrdersService {
       queryBuilder.andWhere('order.paymentStatus = :paymentStatus', { paymentStatus });
     }
 
+    if (dateFrom) {
+      queryBuilder.andWhere('order.createdAt >= :dateFrom', { dateFrom: new Date(dateFrom) });
+    }
+
+    if (dateTo) {
+      const end = new Date(dateTo);
+      end.setHours(23, 59, 59, 999);
+      queryBuilder.andWhere('order.createdAt <= :dateTo', { dateTo: end });
+    }
+
     // Search by order number (optimized for ORD-YYYYMMDD-XXXX format)
     if (search && search.trim()) {
       const searchTerm = search.trim();
-      
+
       // Smart search strategy:
       // 1. If search starts with "ORD" or contains "-", use prefix search (can use index)
       // 2. If search is all digits (likely searching by date or suffix), use substring search
@@ -388,7 +413,11 @@ export class OrdersService {
 
   // Dashboard statistics for admin
   async getDashboardStats() {
-    // Fetch all data in parallel for better performance
+    const oneWeekAgo = new Date();
+    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+
     const [
       totalOrders,
       orders,
@@ -397,45 +426,65 @@ export class OrdersService {
       completedOrders,
       totalProducts,
       topProducts,
-      totalCustomers
+      totalCustomers,
+      pendingReviewsCount,
+      unreadMessagesCount,
+      lowStockCount,
+      newCustomersThisWeek,
+      pendingReviews,
+      recentMessages,
     ] = await Promise.all([
-      // Total orders count
       this.orderRepository.count(),
-      
-      // Recent orders (last 5)
       this.orderRepository.find({
         order: { createdAt: 'DESC' },
         take: 5,
         relations: ['user', 'items'],
-        select: ['id', 'orderNumber', 'status', 'totalAmount', 'createdAt']
+        select: ['id', 'orderNumber', 'status', 'totalAmount', 'createdAt'],
       }),
-      
-      // Total revenue (sum of all delivered orders)
       this.orderRepository
         .createQueryBuilder('order')
         .select('SUM(order.totalAmount)', 'total')
         .where('order.status = :status', { status: OrderStatus.DELIVERED })
         .getRawOne(),
-      
-      // Pending orders count
       this.orderRepository.count({ where: { status: OrderStatus.PENDING } }),
-      
-      // Completed orders count
       this.orderRepository.count({ where: { status: OrderStatus.DELIVERED } }),
-      
-      // Total products count
       this.productRepository.count({ where: { isAvailable: true } }),
-      
-      // Top products (first 5 available products)
       this.productRepository.find({
         where: { isAvailable: true },
         take: 5,
         relations: ['category'],
-        select: ['id', 'name', 'price', 'unit', 'images', 'category']
+        select: ['id', 'name', 'price', 'unit', 'images', 'category'],
       }),
-      
-      // Total customers count
-      this.userRepository.count({ where: { role: 'customer' } })
+      this.userRepository.count({ where: { role: 'customer' } }),
+      // Attention data
+      this.reviewRepository.count({ where: { status: 'pending' } }),
+      this.contactRepository.count({ where: { status: 'pending' } }),
+      this.dataSource
+        .createQueryBuilder()
+        .select('COUNT(*)', 'count')
+        .from('inventory', 'inv')
+        .where('"minimumStock" > 0')
+        .andWhere('(quantity - "reservedQuantity") <= "minimumStock"')
+        .getRawOne()
+        .then(r => parseInt(r?.count ?? '0', 10))
+        .catch(() => 0),
+      this.userRepository
+        .createQueryBuilder('u')
+        .where('u.role = :role', { role: 'customer' })
+        .andWhere('u.createdAt >= :since', { since: oneWeekAgo })
+        .getCount(),
+      this.reviewRepository.find({
+        where: { status: 'pending' },
+        order: { createdAt: 'DESC' },
+        take: 5,
+        relations: ['product', 'user'],
+      }),
+      this.contactRepository.find({
+        where: { status: 'pending' },
+        order: { createdAt: 'DESC' },
+        take: 5,
+        select: ['id', 'name', 'subject', 'createdAt'],
+      }),
     ]);
 
     const totalRevenue = totalRevenueResult?.total ? parseFloat(totalRevenueResult.total) : 0;
@@ -448,7 +497,20 @@ export class OrdersService {
       pendingOrders,
       completedOrders,
       recentOrders: orders,
-      topProducts
+      topProducts,
+      pendingReviewsCount,
+      unreadMessagesCount,
+      lowStockCount,
+      newCustomersThisWeek,
+      pendingReviews: pendingReviews.map(r => ({
+        id: r.id,
+        productName: (r as any).product?.name ?? 'Unknown product',
+        customerName: (r as any).user?.name ?? 'Unknown customer',
+        rating: r.rating,
+        comment: r.comment,
+        createdAt: r.createdAt,
+      })),
+      recentMessages,
     };
   }
 
@@ -507,6 +569,32 @@ export class OrdersService {
       } finally {
         await queryRunner.release();
       }
+    } else if (newStatus === OrderStatus.DELIVERED && previousStatus !== OrderStatus.DELIVERED) {
+      const queryRunner = this.dataSource.createQueryRunner();
+      await queryRunner.connect();
+      await queryRunner.startTransaction();
+      try {
+        Object.assign(order, updateOrderDto);
+        await queryRunner.manager.save(Order, order);
+        const orderItems = await queryRunner.manager.find(OrderItem, { where: { orderId: id } });
+        for (const item of orderItems) {
+          const qty = Math.floor(Number(item.quantity));
+          // Decrement both physical quantity and reserved quantity on delivery
+          await queryRunner.manager.query(
+            `UPDATE inventory SET
+              quantity = GREATEST(quantity - $1, 0),
+              "reservedQuantity" = GREATEST("reservedQuantity" - $1, 0)
+            WHERE "productId" = $2`,
+            [qty, item.productId]
+          );
+        }
+        await queryRunner.commitTransaction();
+      } catch (error) {
+        await queryRunner.rollbackTransaction();
+        throw error;
+      } finally {
+        await queryRunner.release();
+      }
     } else {
       Object.assign(order, updateOrderDto);
       await this.orderRepository.save(order);
@@ -555,6 +643,9 @@ export class OrdersService {
   }
 
   async createGuestOrder(createGuestOrderDto: CreateGuestOrderDto): Promise<Order> {
+    const { maintenanceMode } = await this.settingsService.getStoreSettings();
+    if (maintenanceMode) throw new BadRequestException('Store is temporarily unavailable. Please try again later.');
+
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
@@ -888,16 +979,16 @@ export class OrdersService {
         orderItems.push(orderItem);
       }
 
-      // Validate minimum order amount
-      const minOrderAmount = await this.settingsService.getSetting('min_order_amount', 500);
-      if (subtotal < Number(minOrderAmount)) {
+      // Validate minimum order amount — always from DB, no hardcoded fallback
+      const { minOrderAmount } = await this.settingsService.getOrderSettings();
+      if (subtotal < minOrderAmount) {
         throw new BadRequestException(`Minimum order amount is ₨${minOrderAmount}. Your order total is ₨${subtotal}`);
       }
 
-      // Validate COD availability
+      // Validate COD availability — always from DB, no hardcoded fallback
       if (orderData.paymentMethod === 'cash_on_delivery') {
-        const codEnabled = await this.settingsService.getSetting('cod_enabled', true);
-        if (codEnabled === false) {
+        const { codEnabled } = await this.settingsService.getPaymentSettings();
+        if (!codEnabled) {
           throw new BadRequestException('Cash on delivery is currently not available. Please use bank transfer.');
         }
       }

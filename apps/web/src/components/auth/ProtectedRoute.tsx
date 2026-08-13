@@ -1,7 +1,7 @@
 'use client';
 
 import { useAuth } from '@/contexts/AuthContext';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { useEffect, ReactNode } from 'react';
 import ProductLoader from '@/components/ui/ProductLoader';
 
@@ -18,11 +18,12 @@ export function ProtectedRoute({
 }: ProtectedRouteProps) {
   const { user, isLoading } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
     if (!isLoading) {
       if (!user) {
-        router.push(redirectTo);
+        router.push(`${redirectTo}?redirect=${encodeURIComponent(pathname)}`);
         return;
       }
 

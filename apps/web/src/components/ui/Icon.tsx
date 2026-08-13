@@ -1,16 +1,21 @@
 'use client';
 
 import { ReactNode } from 'react';
-import { 
-  FolderIcon, 
-  TagIcon, 
-  ScaleIcon, 
-  CubeIcon, 
+import {
+  FolderIcon,
+  TagIcon,
+  ScaleIcon,
+  CubeIcon,
   CubeTransparentIcon,
   ShoppingBagIcon,
   TruckIcon,
   UserIcon,
+  UsersIcon,
+  UserGroupIcon,
+  UserMinusIcon,
+  UserPlusIcon,
   CogIcon,
+  Cog6ToothIcon,
   ChartBarIcon,
   HomeIcon,
   HeartIcon,
@@ -33,6 +38,8 @@ import {
   ChevronUpIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
+  ChevronDoubleLeftIcon,
+  ChevronDoubleRightIcon,
   ArrowUpIcon,
   ArrowDownIcon,
   ArrowLeftIcon,
@@ -106,23 +113,9 @@ import {
   SparklesIcon,
   FireIcon,
   BoltIcon,
-  HeartIcon as HeartSolidIcon,
-  StarIcon as StarSolidIcon,
-  CheckCircleIcon as CheckCircleSolidIcon,
-  XCircleIcon as XCircleSolidIcon,
-  ExclamationTriangleIcon as ExclamationTriangleSolidIcon,
-  InformationCircleIcon as InformationCircleSolidIcon,
-  HomeIcon as HomeSolidIcon,
-  UserIcon as UserSolidIcon,
-  CogIcon as CogSolidIcon,
-  ChartBarIcon as ChartBarSolidIcon,
-  ShoppingBagIcon as ShoppingBagSolidIcon,
-  TruckIcon as TruckSolidIcon,
-  FolderIcon as FolderSolidIcon,
-  TagIcon as TagSolidIcon,
-  ScaleIcon as ScaleSolidIcon,
-  CubeIcon as CubeSolidIcon,
-  CubeTransparentIcon as CubeTransparentSolidIcon
+  Squares2X2Icon,
+  BuildingStorefrontIcon,
+  ListBulletIcon,
 } from '@heroicons/react/24/solid';
 
 // Icon mapping for string-based icons
@@ -141,17 +134,25 @@ const iconMap: Record<string, ReactNode> = {
   'scale': <ScaleIcon className="w-4 h-4" />,
   'cube': <CubeIcon className="w-4 h-4" />,
   'box': <CubeTransparentIcon className="w-4 h-4" />,
-  'shopping-bag': <ShoppingBagIcon className="w-4 h-4" />,
+  'shopping-bag':  <ShoppingBagIcon className="w-4 h-4" />,
   'shopping-cart': <ShoppingCartIcon className="w-4 h-4" />,
   'credit-card': <CreditCardIcon className="w-4 h-4" />,
   
   // Navigation
   'home': <HomeIcon className="w-4 h-4" />,
   'user': <UserIcon className="w-4 h-4" />,
+  'users': <UsersIcon className="w-4 h-4" />,
+  'user-group': <UserGroupIcon className="w-4 h-4" />,
+  'user-minus': <UserMinusIcon className="w-4 h-4" />,
+  'user-plus': <UserPlusIcon className="w-4 h-4" />,
   'logout': <ArrowRightOnRectangleIcon className="w-4 h-4" />,
   'cog': <CogIcon className="w-4 h-4" />,
+  'cog-6-tooth': <Cog6ToothIcon className="w-4 h-4" />,
   'chart': <ChartBarIcon className="w-4 h-4" />,
   'truck': <TruckIcon className="w-4 h-4" />,
+  'building-storefront': <BuildingStorefrontIcon className="w-4 h-4" />,
+  'squares-2x2': <Squares2X2Icon className="w-4 h-4" />,
+  'list-bullet': <ListBulletIcon className="w-4 h-4" />,
   
   // Actions
   'plus': <PlusIcon className="w-4 h-4" />,
@@ -159,11 +160,14 @@ const iconMap: Record<string, ReactNode> = {
   'edit': <PencilIcon className="w-4 h-4" />,
   'delete': <TrashIcon className="w-4 h-4" />,
   'view': <EyeIcon className="w-4 h-4" />,
+  'eye': <EyeIcon className="w-4 h-4" />,
   'hide': <EyeSlashIcon className="w-4 h-4" />,
   'search': <MagnifyingGlassIcon className="w-4 h-4" />,
   'filter': <FunnelIcon className="w-4 h-4" />,
   'menu': <Bars3Icon className="w-4 h-4" />,
   'close': <XMarkIcon className="w-4 h-4" />,
+  'x': <XMarkIcon className="w-4 h-4" />,
+  'x-mark': <XMarkIcon className="w-4 h-4" />,
   'login': <UserIcon className="w-4 h-4" />,
   
   // Status
@@ -184,6 +188,8 @@ const iconMap: Record<string, ReactNode> = {
   'chevron-up': <ChevronUpIcon className="w-4 h-4" />,
   'chevron-left': <ChevronLeftIcon className="w-4 h-4" />,
   'chevron-right': <ChevronRightIcon className="w-4 h-4" />,
+  'chevron-double-left': <ChevronDoubleLeftIcon className="w-4 h-4" />,
+  'chevron-double-right': <ChevronDoubleRightIcon className="w-4 h-4" />,
   'arrow-up': <ArrowUpIcon className="w-4 h-4" />,
   'arrow-down': <ArrowDownIcon className="w-4 h-4" />,
   'arrow-left': <ArrowLeftIcon className="w-4 h-4" />,
@@ -223,7 +229,9 @@ const iconMap: Record<string, ReactNode> = {
   // System
   'refresh': <ArrowPathIcon className="w-4 h-4" />,
   'undo': <ArrowUturnLeftIcon className="w-4 h-4" />,
+  'arrow-uturn-left': <ArrowUturnLeftIcon className="w-4 h-4" />,
   'redo': <ArrowUturnRightIcon className="w-4 h-4" />,
+  'question-mark-circle': <InformationCircleIcon className="w-4 h-4" />,
   'external': <ArrowTopRightOnSquareIcon className="w-4 h-4" />,
   'download': <ArrowDownTrayIcon className="w-4 h-4" />,
   'upload': <ArrowUpTrayIcon className="w-4 h-4" />,
@@ -242,6 +250,7 @@ const iconMap: Record<string, ReactNode> = {
   
   // Storage
   'archive': <ArchiveBoxIcon className="w-4 h-4" />,
+  'archive-box': <ArchiveBoxIcon className="w-4 h-4" />,
   'archive-x': <ArchiveBoxXMarkIcon className="w-4 h-4" />,
   'inbox': <InboxIcon className="w-4 h-4" />,
   'inbox-arrow-down': <InboxArrowDownIcon className="w-4 h-4" />,

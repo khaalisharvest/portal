@@ -101,11 +101,11 @@ export class SettingsService {
       'delivery_fee', 'free_delivery_threshold', 'is_delivery_enabled', 'cod_enabled',
       'min_order_amount',
       'bank_name', 'bank_account_name', 'bank_account_number', 'bank_iban',
-      'admin_whatsapp',
+      'admin_whatsapp', 'admin_email',
       'store_maintenance_mode',
       'instagram_url', 'facebook_url', 'tiktok_url',
       'notification_bar_enabled', 'notification_bar_text',
-      'notification_bar_bg_color', 'notification_bar_text_color', 'notification_bar_speed',
+      'notification_bar_bg_color', 'notification_bar_text_color', 'notification_bar_speed', 'notification_bar_link',
     ];
     const rows = await this.settingsRepository.find({
       where: { key: In(publicKeys), isActive: true },
@@ -149,6 +149,7 @@ export class SettingsService {
     backgroundColor: string;
     textColor: string;
     speed: number;
+    link: string;
   }> {
     return {
       isEnabled: this.asBool(await this.getSetting('notification_bar_enabled', false)),
@@ -156,6 +157,7 @@ export class SettingsService {
       backgroundColor: String(await this.getSetting('notification_bar_bg_color', '#FF6B35')),
       textColor: String(await this.getSetting('notification_bar_text_color', '#FFFFFF')),
       speed: this.asNum(await this.getSetting('notification_bar_speed', 50)),
+      link: String(await this.getSetting('notification_bar_link', '')),
     };
   }
 
@@ -165,12 +167,14 @@ export class SettingsService {
     backgroundColor: string;
     textColor: string;
     speed: number;
+    link?: string;
   }): Promise<void> {
     await this.setSetting('notification_bar_enabled', data.isEnabled);
     await this.setSetting('notification_bar_text', data.text);
     await this.setSetting('notification_bar_bg_color', data.backgroundColor);
     await this.setSetting('notification_bar_text_color', data.textColor);
     await this.setSetting('notification_bar_speed', data.speed);
+    await this.setSetting('notification_bar_link', data.link ?? '');
   }
 
   // ─── Payment (bank details) ──────────────────────────────────────────────────
@@ -301,6 +305,13 @@ export class SettingsService {
       { key: 'instagram_url', name: 'Instagram URL', description: 'Instagram profile link shown in footer', value: '', type: SettingType.STRING, category: 'social', sortOrder: 1 },
       { key: 'facebook_url', name: 'Facebook URL', description: 'Facebook page link shown in footer', value: '', type: SettingType.STRING, category: 'social', sortOrder: 2 },
       { key: 'tiktok_url', name: 'TikTok URL', description: 'TikTok profile link shown in footer', value: '', type: SettingType.STRING, category: 'social', sortOrder: 3 },
+      // Notification bar
+      { key: 'notification_bar_enabled', name: 'Notification Bar Enabled', description: 'Whether the announcement bar is shown at the top of the store', value: false, type: SettingType.BOOLEAN, category: 'store', sortOrder: 2 },
+      { key: 'notification_bar_text', name: 'Notification Bar Text', description: 'Text displayed in the announcement bar', value: 'Free delivery on orders above ₨2,000', type: SettingType.STRING, category: 'store', sortOrder: 3 },
+      { key: 'notification_bar_bg_color', name: 'Notification Bar Background Color', description: 'Background color of the announcement bar', value: '#FF6B35', type: SettingType.STRING, category: 'store', sortOrder: 4 },
+      { key: 'notification_bar_text_color', name: 'Notification Bar Text Color', description: 'Text color of the announcement bar', value: '#FFFFFF', type: SettingType.STRING, category: 'store', sortOrder: 5 },
+      { key: 'notification_bar_speed', name: 'Notification Bar Speed', description: 'Scroll speed of the announcement bar', value: 50, type: SettingType.NUMBER, category: 'store', sortOrder: 6 },
+      { key: 'notification_bar_link', name: 'Notification Bar Link', description: 'Optional URL the announcement bar links to', value: '', type: SettingType.STRING, category: 'store', sortOrder: 7 },
     ];
 
     for (const item of defaults) {

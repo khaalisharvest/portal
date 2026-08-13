@@ -5,7 +5,10 @@ import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import AdminLayout from '@/components/layout/AdminLayout';
 import Icon from '@/components/ui/Icon';
 import ConfirmationDialog from '@/components/ui/ConfirmationDialog';
-import toast from 'react-hot-toast';
+import PasswordHint from '@/components/ui/PasswordHint';
+import { toast } from 'sonner';
+import PageHeader from '@/components/admin/PageHeader';
+import { AdminSkeletonCard } from '@/components/admin/AdminSkeletonRow';
 
 interface StaffMember {
   id: string;
@@ -39,7 +42,7 @@ const ACTION_LABELS: Record<string, string> = {
 };
 
 const ACTION_COLORS: Record<string, string> = {
-  order_status_updated: 'bg-blue-100 text-blue-700',
+  order_status_updated: 'bg-primary-100 text-primary-700',
   product_created: 'bg-green-100 text-green-700',
   product_updated: 'bg-yellow-100 text-yellow-700',
   product_deleted: 'bg-red-100 text-red-700',
@@ -70,6 +73,7 @@ export default function StaffManagementPage() {
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({ name: '', phone: '', email: '', password: '' });
   const [selectedStaff, setSelectedStaff] = useState<string | null>(null);
+  const [statusDialog, setStatusDialog] = useState<{ open: boolean; name: string; action: string; onConfirm: () => void }>({ open: false, name: '', action: '', onConfirm: () => {} });
 
   // Edit state
   const [showEditForm, setShowEditForm] = useState(false);
@@ -80,6 +84,13 @@ export default function StaffManagementPage() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deletingMember, setDeletingMember] = useState<StaffMember | null>(null);
   const [deleting, setDeleting] = useState(false);
+
+  // Set password state
+  const [setPasswordModal, setSetPasswordModal] = useState<{ id: string; name: string } | null>(null);
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordLoading, setPasswordLoading] = useState(false);
+  const [passwordError, setPasswordError] = useState('');
 
   const fetchStaff = useCallback(async () => {
     setLoading(true);
@@ -140,9 +151,7 @@ export default function StaffManagementPage() {
     finally { setSaving(false); }
   };
 
-  const toggleStatus = async (id: string, isActive: boolean, name: string) => {
-    const action = isActive ? 'activate' : 'deactivate';
-    if (!confirm(`Are you sure you want to ${action} ${name}?`)) return;
+  const doToggleStatus = async (id: string, isActive: boolean) => {
     try {
       const r = await fetch(`/api/v1/admin/staff/${id}/status`, {
         method: 'PATCH',
@@ -157,6 +166,49 @@ export default function StaffManagementPage() {
         toast.error(e.error || 'Failed to update status');
       }
     } catch { toast.error('Failed to update status'); }
+  };
+
+  const toggleStatus = (id: string, isActive: boolean, name: string) => {
+    const action = isActive ? 'activate' : 'deactivate';
+    setStatusDialog({
+      open: true,
+      name,
+      action,
+      onConfirm: () => {
+        setStatusDialog(s => ({ ...s, open: false }));
+        doToggleStatus(id, isActive);
+      },
+    });
+  };
+
+  const handleSetPassword = async () => {
+    if (!setPasswordModal) return;
+    if (newPassword.length < 8) { setPasswordError('Password must be at least 8 characters'); return; }
+    if (newPassword !== confirmPassword) { setPasswordError('Passwords do not match'); return; }
+    setPasswordError('');
+    setPasswordLoading(true);
+    try {
+      const res = await fetch(`/api/v1/admin/users/${setPasswordModal.id}/set-password`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ newPassword }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        const msg = Array.isArray(data?.message) ? data.message[0] : (data?.message || 'Failed to set password');
+        setPasswordError(msg);
+        return;
+      }
+      toast.success(`Password updated for ${setPasswordModal.name}`);
+      setSetPasswordModal(null);
+      setNewPassword('');
+      setConfirmPassword('');
+      setPasswordError('');
+    } catch {
+      setPasswordError('Connection error. Please try again.');
+    } finally {
+      setPasswordLoading(false);
+    }
   };
 
   const openEdit = (member: StaffMember) => {
@@ -221,29 +273,36 @@ export default function StaffManagementPage() {
     <ProtectedRoute requiredRoles={['super_admin']}>
       <AdminLayout>
         <div className="space-y-6">
-          {/* Header */}
-          <div className="flex justify-between items-center">
-            <div>
-              <h2 className="text-2xl font-bold text-gray-900">Staff Management</h2>
-              <p className="text-gray-500 text-sm mt-1">Manage staff members and monitor their activity</p>
-            </div>
-            <button
-              onClick={() => setShowAddForm(true)}
-              className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-orange-500 to-green-500 text-white text-sm font-medium rounded-lg hover:from-orange-600 hover:to-green-600"
-            >
-              <Icon name="plus" className="w-4 h-4 mr-2" />
-              Add Staff
-            </button>
-          </div>
+          <PageHeader
+            title="Staff"
+            breadcrumbs={[{ label: 'Admin', href: '/admin/dashboard' }, { label: 'Staff' }]}
+            action={
+              <button onClick={() => setShowAddForm(true)} className="btn-primary text-sm px-4 py-2">
+                + Add Staff
+              </button>
+            }
+          />
+
+          <ConfirmationDialog
+            isOpen={statusDialog.open}
+            onClose={() => setStatusDialog(s => ({ ...s, open: false }))}
+            onConfirm={statusDialog.onConfirm}
+            title={`${statusDialog.action === 'activate' ? 'Activate' : 'Deactivate'} staff member?`}
+            message={`Are you sure you want to ${statusDialog.action} ${statusDialog.name}?`}
+            confirmText={statusDialog.action === 'activate' ? 'Activate' : 'Deactivate'}
+            type={statusDialog.action === 'activate' ? 'info' : 'warning'}
+          />
 
           {/* Staff Grid */}
           <div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-3">Staff Members ({staff.length})</h3>
+            <h3 className="text-sm font-semibold text-neutral-600 uppercase tracking-wide mb-3">Staff Members ({staff.length})</h3>
             {loading ? (
-              <div className="flex justify-center py-12"><div className="animate-spin rounded-full h-8 w-8 border-2 border-orange-500 border-t-transparent" /></div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {Array.from({ length: 3 }).map((_, i) => <AdminSkeletonCard key={i} />)}
+              </div>
             ) : staff.length === 0 ? (
-              <div className="bg-white rounded-lg border border-gray-200 p-12 text-center">
-                <p className="text-gray-500 text-sm">No staff members yet. Add your first staff member above.</p>
+              <div className="bg-white rounded-lg border border-neutral-200 p-12 text-center">
+                <p className="text-neutral-500 text-sm">No staff members yet. Add your first staff member above.</p>
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -251,7 +310,7 @@ export default function StaffManagementPage() {
                   <div
                     key={member.id}
                     onClick={() => handleStaffFilter(selectedStaff === member.id ? null : member.id)}
-                    className={`bg-white rounded-lg border p-5 cursor-pointer transition-all ${selectedStaff === member.id ? 'border-orange-400 ring-1 ring-orange-400' : 'border-gray-200 hover:border-gray-300'}`}
+                    className={`bg-white rounded-lg border p-5 cursor-pointer transition-all ${selectedStaff === member.id ? 'border-orange-400 ring-1 ring-orange-400' : 'border-neutral-200 hover:border-neutral-300'}`}
                   >
                     <div className="flex items-start justify-between">
                       <div className="flex items-center space-x-3">
@@ -259,23 +318,23 @@ export default function StaffManagementPage() {
                           {getInitials(member.name)}
                         </div>
                         <div className="min-w-0">
-                          <p className="font-semibold text-gray-900 text-sm truncate">{member.name}</p>
-                          <p className="text-xs text-gray-500 truncate">{member.phone}</p>
-                          {member.email && <p className="text-xs text-gray-400 truncate">{member.email}</p>}
+                          <p className="font-semibold text-neutral-900 text-sm truncate">{member.name}</p>
+                          <p className="text-xs text-neutral-500 truncate">{member.phone}</p>
+                          {member.email && <p className="text-xs text-neutral-400 truncate">{member.email}</p>}
                         </div>
                       </div>
-                      <span className={`text-xs font-medium px-2 py-0.5 rounded-full flex-shrink-0 ${member.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+                      <span className={`text-xs font-medium px-2 py-0.5 rounded-full flex-shrink-0 ${member.isActive ? 'bg-green-100 text-green-700' : 'bg-neutral-100 text-neutral-500'}`}>
                         {member.isActive ? 'Active' : 'Inactive'}
                       </span>
                     </div>
-                    <div className="mt-4 flex items-center justify-between text-xs text-gray-500">
-                      <span className="font-medium text-gray-700">{member.totalActions} actions</span>
+                    <div className="mt-4 flex items-center justify-between text-xs text-neutral-500">
+                      <span className="font-medium text-neutral-700">{member.totalActions} actions</span>
                       <span>{member.lastActionAt ? timeAgo(member.lastActionAt) : 'No activity'}</span>
                     </div>
                     <div className="mt-3 flex justify-end gap-2">
                       <button
                         onClick={e => { e.stopPropagation(); openEdit(member); }}
-                        className="text-xs px-3 py-1 rounded-full border border-blue-300 text-blue-600 hover:bg-blue-50 transition-colors"
+                        className="text-xs px-3 py-1 rounded-full border border-primary-300 text-primary-600 hover:bg-primary-50 transition-colors"
                       >
                         Edit
                       </button>
@@ -291,6 +350,16 @@ export default function StaffManagementPage() {
                       >
                         {member.isActive ? 'Deactivate' : 'Activate'}
                       </button>
+                      <button
+                        onClick={e => { e.stopPropagation(); setSetPasswordModal({ id: member.id, name: member.name }); setNewPassword(''); setConfirmPassword(''); setPasswordError(''); }}
+                        className="text-xs px-3 py-1 rounded-full border border-neutral-300 text-neutral-600 hover:bg-neutral-50 transition-colors flex items-center gap-1"
+                        title="Set Password"
+                      >
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                        </svg>
+                        Set Pwd
+                      </button>
                     </div>
                   </div>
                 ))}
@@ -301,7 +370,7 @@ export default function StaffManagementPage() {
           {/* Activity Feed */}
           <div>
             <div className="flex items-center justify-between mb-3">
-              <h3 className="text-lg font-semibold text-gray-900">
+              <h3 className="text-lg font-semibold text-neutral-900">
                 {selectedStaff
                   ? `Activity — ${staff.find(s => s.id === selectedStaff)?.name}`
                   : 'All Staff Activity'}
@@ -312,11 +381,11 @@ export default function StaffManagementPage() {
                 </button>
               )}
             </div>
-            <div className="bg-white rounded-lg border border-gray-200 divide-y divide-gray-100">
+            <div className="bg-white rounded-lg border border-neutral-200 divide-y divide-neutral-100">
               {activityLoading ? (
                 <div className="flex justify-center py-10"><div className="animate-spin rounded-full h-6 w-6 border-2 border-orange-500 border-t-transparent" /></div>
               ) : activity.length === 0 ? (
-                <div className="py-10 text-center text-sm text-gray-500">No activity recorded yet</div>
+                <div className="py-10 text-center text-sm text-neutral-500">No activity recorded yet</div>
               ) : (
                 activity.map(entry => (
                   <div key={entry.id} className="flex items-start px-5 py-3 space-x-3">
@@ -325,19 +394,19 @@ export default function StaffManagementPage() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center space-x-2 flex-wrap gap-1">
-                        <span className="font-medium text-gray-900 text-sm">{entry.staffName}</span>
-                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${ACTION_COLORS[entry.action] || 'bg-gray-100 text-gray-600'}`}>
+                        <span className="font-medium text-neutral-900 text-sm">{entry.staffName}</span>
+                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${ACTION_COLORS[entry.action] || 'bg-neutral-100 text-neutral-600'}`}>
                           {ACTION_LABELS[entry.action] || entry.action}
                         </span>
                         {entry.entityLabel && (
-                          <span className="text-xs text-gray-500 truncate">· {entry.entityLabel}</span>
+                          <span className="text-xs text-neutral-500 truncate">· {entry.entityLabel}</span>
                         )}
                         {entry.details?.to && (
-                          <span className="text-xs text-gray-400">→ {entry.details.to}</span>
+                          <span className="text-xs text-neutral-400">→ {entry.details.to}</span>
                         )}
                       </div>
                     </div>
-                    <span className="text-xs text-gray-400 flex-shrink-0">{timeAgo(entry.createdAt)}</span>
+                    <span className="text-xs text-neutral-400 flex-shrink-0">{timeAgo(entry.createdAt)}</span>
                   </div>
                 ))
               )}
@@ -350,45 +419,46 @@ export default function StaffManagementPage() {
           <div className="fixed inset-0 z-50 flex">
             <div className="flex-1 bg-black bg-opacity-40" onClick={resetForm} />
             <div className="w-full max-w-md bg-white flex flex-col shadow-2xl overflow-hidden">
-              <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-                <h3 className="text-lg font-semibold text-gray-900">New Staff Member</h3>
-                <button onClick={resetForm} className="text-gray-400 hover:text-gray-600">
+              <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-200">
+                <h3 className="text-lg font-semibold text-neutral-900">New Staff Member</h3>
+                <button onClick={resetForm} className="text-neutral-400 hover:text-neutral-600">
                   <Icon name="close" className="w-5 h-5" />
                 </button>
               </div>
               <div className="flex-1 overflow-y-auto p-6 space-y-5">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Full Name <span className="text-red-500">*</span></label>
+                  <label className="block text-sm font-medium text-neutral-700 mb-1">Full Name <span className="text-red-500">*</span></label>
                   <input type="text" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
+                    className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-400 focus:border-primary-400 transition-colors"
                     placeholder="Staff member name" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Phone <span className="text-red-500">*</span></label>
+                  <label className="block text-sm font-medium text-neutral-700 mb-1">Phone <span className="text-red-500">*</span></label>
                   <input type="text" value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
+                    className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-400 focus:border-primary-400 transition-colors"
                     placeholder="+923001234567" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                  <label className="block text-sm font-medium text-neutral-700 mb-1">Email</label>
                   <input type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
+                    className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-400 focus:border-primary-400 transition-colors"
                     placeholder="staff@example.com" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Password <span className="text-red-500">*</span></label>
+                  <label className="block text-sm font-medium text-neutral-700 mb-1">Password <span className="text-red-500">*</span></label>
                   <input type="password" value={form.password} onChange={e => setForm({ ...form, password: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
-                    placeholder="Min. 6 characters" />
+                    className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-400 focus:border-primary-400 transition-colors"
+                    placeholder="Min. 8 chars, upper + lower + number" />
+                  <PasswordHint password={form.password} />
                 </div>
               </div>
-              <div className="px-6 py-4 border-t border-gray-200 flex justify-end gap-3 bg-gray-50">
+              <div className="px-6 py-4 border-t border-neutral-200 flex justify-end gap-3 bg-neutral-50">
                 <button type="button" onClick={resetForm}
-                  className="px-4 py-2 text-sm text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+                  className="px-4 py-2 text-sm text-neutral-700 bg-white border border-neutral-300 rounded-lg hover:bg-neutral-50 transition-colors">
                   Cancel
                 </button>
                 <button type="button" onClick={handleAddStaff} disabled={saving}
-                  className="px-5 py-2 text-sm font-medium text-white bg-gradient-to-r from-orange-500 to-green-500 rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed">
+                  className="px-5 py-2 text-sm font-medium text-white btn-primary disabled:opacity-50 disabled:cursor-not-allowed">
                   {saving ? 'Adding...' : 'Add Staff Member'}
                 </button>
               </div>
@@ -401,47 +471,92 @@ export default function StaffManagementPage() {
           <div className="fixed inset-0 z-50 flex">
             <div className="flex-1 bg-black bg-opacity-40" onClick={() => { setShowEditForm(false); setEditingMember(null); }} />
             <div className="w-full max-w-md bg-white flex flex-col shadow-2xl overflow-hidden">
-              <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-                <h3 className="text-lg font-semibold text-gray-900">Edit Staff Member</h3>
-                <button onClick={() => { setShowEditForm(false); setEditingMember(null); }} className="text-gray-400 hover:text-gray-600">
+              <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-200">
+                <h3 className="text-lg font-semibold text-neutral-900">Edit Staff Member</h3>
+                <button onClick={() => { setShowEditForm(false); setEditingMember(null); }} className="text-neutral-400 hover:text-neutral-600">
                   <Icon name="close" className="w-5 h-5" />
                 </button>
               </div>
               <div className="flex-1 overflow-y-auto p-6 space-y-5">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Full Name <span className="text-red-500">*</span></label>
+                  <label className="block text-sm font-medium text-neutral-700 mb-1">Full Name <span className="text-red-500">*</span></label>
                   <input type="text" value={editForm.name} onChange={e => setEditForm({ ...editForm, name: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500" />
+                    className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-400 focus:border-primary-400" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Phone <span className="text-red-500">*</span></label>
+                  <label className="block text-sm font-medium text-neutral-700 mb-1">Phone <span className="text-red-500">*</span></label>
                   <input type="text" value={editForm.phone} onChange={e => setEditForm({ ...editForm, phone: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                    className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-400 focus:border-primary-400"
                     placeholder="+923001234567" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                  <label className="block text-sm font-medium text-neutral-700 mb-1">Email</label>
                   <input type="email" value={editForm.email} onChange={e => setEditForm({ ...editForm, email: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500" />
+                    className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-400 focus:border-primary-400" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    New Password <span className="text-gray-400 font-normal">(leave blank to keep current)</span>
+                  <label className="block text-sm font-medium text-neutral-700 mb-1">
+                    New Password <span className="text-neutral-400 font-normal">(leave blank to keep current)</span>
                   </label>
                   <input type="password" value={editForm.password} onChange={e => setEditForm({ ...editForm, password: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                    placeholder="Min. 6 characters" />
+                    className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-400 focus:border-primary-400"
+                    placeholder="Min. 8 chars, upper + lower + number" />
+                  <PasswordHint password={editForm.password} />
                 </div>
               </div>
-              <div className="px-6 py-4 border-t border-gray-200 flex justify-end gap-3 bg-gray-50">
+              <div className="px-6 py-4 border-t border-neutral-200 flex justify-end gap-3 bg-neutral-50">
                 <button onClick={() => { setShowEditForm(false); setEditingMember(null); }}
-                  className="px-4 py-2 text-sm text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">
+                  className="px-4 py-2 text-sm text-neutral-700 bg-white border border-neutral-300 rounded-lg hover:bg-neutral-50">
                   Cancel
                 </button>
                 <button onClick={handleEditStaff} disabled={saving}
-                  className="px-5 py-2 text-sm font-medium text-white bg-gradient-to-r from-orange-500 to-green-500 rounded-lg hover:opacity-90 disabled:opacity-50">
+                  className="btn-primary text-sm px-5 py-2 disabled:opacity-50">
                   {saving ? 'Saving...' : 'Save Changes'}
                 </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Set Password Modal */}
+        {setPasswordModal && (
+          <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
+              <div className="flex items-center justify-between mb-5">
+                <div>
+                  <h3 className="text-base font-bold text-neutral-900">Set New Password</h3>
+                  <p className="text-sm text-neutral-500 mt-0.5">For {setPasswordModal.name}</p>
+                </div>
+                <button onClick={() => setSetPasswordModal(null)} className="p-1.5 rounded-lg text-neutral-400 hover:bg-neutral-100 transition-colors">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+              </div>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-neutral-700 mb-1">New Password</label>
+                  <input type="password" value={newPassword} onChange={e => { setNewPassword(e.target.value); setPasswordError(''); }}
+                    className="input-field" placeholder="Min. 8 chars, upper + lower + number" />
+                  <PasswordHint password={newPassword} />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-neutral-700 mb-1">Confirm Password</label>
+                  <input type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)}
+                    className={`input-field ${confirmPassword && confirmPassword !== newPassword ? 'input-error' : ''}`}
+                    placeholder="Repeat password" />
+                  {confirmPassword && confirmPassword !== newPassword && (
+                    <p className="mt-1 text-xs text-error-600">Passwords do not match</p>
+                  )}
+                </div>
+                {passwordError && (
+                  <p className="text-sm text-error-600 bg-error-50 border border-error-200 rounded-xl px-3 py-2">{passwordError}</p>
+                )}
+                <div className="flex gap-3 pt-1">
+                  <button onClick={handleSetPassword} disabled={passwordLoading || newPassword.length < 8 || newPassword !== confirmPassword}
+                    className="flex-1 btn-primary disabled:opacity-50">
+                    {passwordLoading ? 'Saving…' : 'Set Password'}
+                  </button>
+                  <button onClick={() => { setSetPasswordModal(null); setPasswordError(''); }} className="flex-1 btn-outline">Cancel</button>
+                </div>
               </div>
             </div>
           </div>

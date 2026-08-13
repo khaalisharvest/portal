@@ -1,10 +1,35 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import Image from 'next/image';
 import { useAuth } from '@/contexts/AuthContext';
-import Icon from '@/components/ui/Icon';
-import toast from 'react-hot-toast';
+import { toast } from 'sonner';
+import Link from 'next/link';
+import {
+  ShoppingBagIcon,
+  BanknotesIcon,
+  UsersIcon,
+  CubeIcon,
+} from '@heroicons/react/24/solid';
+import AdminStatCard from './AdminStatCard';
+import AttentionCard from './AttentionCard';
+import StatusBadge from './StatusBadge';
+import { AdminSkeletonRow } from './AdminSkeletonRow';
+
+interface PendingReview {
+  id: string;
+  productName: string;
+  customerName: string;
+  rating: number;
+  comment: string;
+  createdAt: string;
+}
+
+interface RecentMessage {
+  id: string;
+  name: string;
+  subject: string;
+  createdAt: string;
+}
 
 interface DashboardStats {
   totalOrders: number;
@@ -15,43 +40,54 @@ interface DashboardStats {
   completedOrders: number;
   recentOrders: any[];
   topProducts: any[];
+  pendingReviewsCount: number;
+  unreadMessagesCount: number;
+  lowStockCount: number;
+  newCustomersThisWeek: number;
+  newWishlistToday: number;
+  pendingReviews: PendingReview[];
+  recentMessages: RecentMessage[];
+}
+
+const EMPTY_STATS: DashboardStats = {
+  totalOrders: 0, totalRevenue: 0, totalCustomers: 0, totalProducts: 0,
+  pendingOrders: 0, completedOrders: 0, recentOrders: [], topProducts: [],
+  pendingReviewsCount: 0, unreadMessagesCount: 0, lowStockCount: 0,
+  newCustomersThisWeek: 0, newWishlistToday: 0, pendingReviews: [], recentMessages: [],
+};
+
+function timeAgo(dateStr: string) {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const m = Math.floor(diff / 60000);
+  if (m < 1) return 'just now';
+  if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h ago`;
+  return `${Math.floor(h / 24)}d ago`;
+}
+
+function getGreeting() {
+  const h = new Date().getHours();
+  if (h < 12) return 'Good morning';
+  if (h < 17) return 'Good afternoon';
+  return 'Good evening';
 }
 
 export default function DashboardOverview() {
   const { user } = useAuth();
-  const [stats, setStats] = useState<DashboardStats>({
-    totalOrders: 0,
-    totalRevenue: 0,
-    totalCustomers: 0,
-    totalProducts: 0,
-    pendingOrders: 0,
-    completedOrders: 0,
-    recentOrders: [],
-    topProducts: []
-  });
+  const [stats, setStats] = useState<DashboardStats>(EMPTY_STATS);
   const [loading, setLoading] = useState(true);
+  const [approvingId, setApprovingId] = useState<string | null>(null);
 
-  // This component is only for admins
-
-  useEffect(() => {
-    fetchDashboardData();
-  }, []);
+  useEffect(() => { fetchDashboardData(); }, []);
 
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
-      
-      // Single API call to fetch all dashboard statistics
-      const response = await fetch(`/api/v1/admin/dashboard`, {
-        headers: {
-        },
-      });
-
+      const response = await fetch('/api/v1/admin/dashboard', { credentials: 'include' });
       if (response.ok) {
-        const responseData = await response.json();
-        // Backend wraps response in { success: true, data: {...}, timestamp: "..." }
-        const data = responseData.data || responseData;
-        
+        const d = await response.json();
+        const data = d.data || d;
         setStats({
           totalOrders: data.totalOrders || 0,
           totalRevenue: data.totalRevenue || 0,
@@ -60,245 +96,271 @@ export default function DashboardOverview() {
           pendingOrders: data.pendingOrders || 0,
           completedOrders: data.completedOrders || 0,
           recentOrders: data.recentOrders || [],
-          topProducts: data.topProducts || []
+          topProducts: data.topProducts || [],
+          pendingReviewsCount: data.pendingReviewsCount || 0,
+          unreadMessagesCount: data.unreadMessagesCount || 0,
+          lowStockCount: data.lowStockCount || 0,
+          newCustomersThisWeek: data.newCustomersThisWeek || 0,
+          newWishlistToday: data.newWishlistToday || 0,
+          pendingReviews: data.pendingReviews || [],
+          recentMessages: data.recentMessages || [],
         });
       } else {
         toast.error('Failed to load dashboard data');
       }
-    } catch (error) {
+    } catch {
       toast.error('Failed to load dashboard data');
     } finally {
       setLoading(false);
     }
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'pending': return 'bg-yellow-100 text-yellow-800';
-      case 'processing': return 'bg-blue-100 text-blue-800';
-      case 'shipped': return 'bg-purple-100 text-purple-800';
-      case 'delivered': return 'bg-green-100 text-green-800';
-      case 'cancelled': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
+  const approveReview = async (id: string) => {
+    setApprovingId(id);
+    try {
+      await fetch(`/api/v1/admin/reviews/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ status: 'approved' }),
+      });
+      toast.success('Review approved');
+      fetchDashboardData();
+    } catch {
+      toast.error('Failed to approve review');
+    } finally {
+      setApprovingId(null);
     }
   };
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'pending': return 'clock';
-      case 'processing': return 'cog';
-      case 'shipped': return 'truck';
-      case 'delivered': return 'check';
-      case 'cancelled': return 'x-circle';
-      default: return 'info';
-    }
-  };
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div>
-      </div>
-    );
-  }
+  const attentionItems = [
+    { key: 'orders',   count: stats.pendingOrders,       label: 'Pending Orders',   href: '/admin/orders',            cta: 'View Orders',      color: 'amber' as const },
+    { key: 'reviews',  count: stats.pendingReviewsCount, label: 'Pending Reviews',  href: '/admin/reviews',           cta: 'Review Now',       color: 'amber' as const },
+    { key: 'messages', count: stats.unreadMessagesCount, label: 'Unread Messages',  href: '/admin/contacts',          cta: 'View Messages',    color: 'blue'  as const },
+    { key: 'stock',    count: stats.lowStockCount,       label: 'Low Stock Items',  href: '/admin/products/inventory', cta: 'Check Inventory', color: 'red'   as const },
+  ].filter(i => i.count > 0);
 
   return (
     <div className="space-y-6">
-      {/* Welcome Section */}
-      <div className="bg-gradient-to-r from-orange-50 to-green-50 border border-orange-200 rounded-lg p-6">
-        <div className="flex items-center space-x-3">
-          <div className="h-12 w-12 relative">
-            <Image
-              src="/images/logo.png"
-              alt="Khaalis Harvest Logo"
-              fill
-              className="object-contain"
-            />
-          </div>
-          <div>
-            <h2 className="text-2xl font-bold text-gray-900 font-['Poppins']">Welcome back, {user?.name}!</h2>
-            <p className="text-gray-600 font-['Open_Sans']">
-              Here's what's happening with your Khaalis Harvest platform today - managing fresh produce, dairy, plants, and all organic products.
-            </p>
-          </div>
+
+      {/* Welcome */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-xl font-semibold text-neutral-900">
+            {getGreeting()}, {user?.name?.split(' ')[0] ?? 'Admin'}
+          </h1>
+          <p className="text-sm text-neutral-400 mt-0.5">
+            {attentionItems.length > 0
+              ? `${attentionItems.length} item${attentionItems.length > 1 ? 's' : ''} need${attentionItems.length === 1 ? 's' : ''} your attention.`
+              : "Everything looks good — no pending actions."}
+          </p>
         </div>
+        <button
+          onClick={fetchDashboardData}
+          className="text-xs text-neutral-400 hover:text-neutral-700 border border-neutral-200 rounded-lg px-3 py-1.5 transition-colors"
+        >
+          Refresh
+        </button>
       </div>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-          <div className="flex items-center">
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <Icon name="shopping-cart" className="w-6 h-6 text-blue-600" />
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600 font-['Open_Sans']">
-                Total Orders
-              </p>
-              <p className="text-2xl font-bold text-gray-900 font-['Poppins']">{stats.totalOrders}</p>
-            </div>
-          </div>
+      {/* Attention strip — only shown when there are items */}
+      {!loading && attentionItems.length > 0 && (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          {attentionItems.map(item => (
+            <AttentionCard key={item.key} label={item.label} count={item.count} href={item.href} cta={item.cta} color={item.color} />
+          ))}
         </div>
+      )}
 
-        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-          <div className="flex items-center">
-            <div className="p-2 bg-green-100 rounded-lg">
-              <Icon name="credit-card" className="w-6 h-6 text-green-600" />
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600 font-['Open_Sans']">
-                Total Revenue
-              </p>
-              <p className="text-2xl font-bold text-gray-900 font-['Poppins']">₨{Number(stats.totalRevenue).toFixed(2)}</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-          <div className="flex items-center">
-            <div className="p-2 bg-purple-100 rounded-lg">
-              <Icon name="cube" className="w-6 h-6 text-purple-600" />
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600 font-['Open_Sans']">
-                Organic Products
-              </p>
-              <p className="text-2xl font-bold text-gray-900 font-['Poppins']">{stats.totalProducts}</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-          <div className="flex items-center">
-            <div className="p-2 bg-orange-100 rounded-lg">
-              <Icon name="user" className="w-6 h-6 text-orange-600" />
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600 font-['Open_Sans']">
-                Total Customers
-              </p>
-              <p className="text-2xl font-bold text-gray-900 font-['Poppins']">{stats.totalCustomers}</p>
-            </div>
-          </div>
-        </div>
+      {/* KPI cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <AdminStatCard
+          label="Total Orders"
+          value={loading ? '—' : stats.totalOrders.toLocaleString()}
+          icon={<ShoppingBagIcon />}
+          color="green"
+          trend={loading || !stats.pendingOrders ? undefined : { delta: `${stats.pendingOrders} pending`, up: true }}
+        />
+        <AdminStatCard
+          label="Total Revenue"
+          value={loading ? '—' : `₨${Number(stats.totalRevenue).toLocaleString('en-PK')}`}
+          icon={<BanknotesIcon />}
+          color="amber"
+        />
+        <AdminStatCard
+          label="Customers"
+          value={loading ? '—' : stats.totalCustomers.toLocaleString()}
+          icon={<UsersIcon />}
+          color="blue"
+          trend={loading || !stats.newCustomersThisWeek ? undefined : { delta: `+${stats.newCustomersThisWeek} this week`, up: true }}
+        />
+        <AdminStatCard
+          label="Products"
+          value={loading ? '—' : stats.totalProducts.toLocaleString()}
+          icon={<CubeIcon />}
+          color="purple"
+        />
       </div>
 
-      {/* Recent Orders and Top Products */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Recent Orders */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-          <div className="px-6 py-4 border-b border-gray-200">
-            <h3 className="text-lg font-medium text-gray-900 font-['Poppins']">Recent Orders</h3>
+      {/* Main two-column section */}
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+
+        {/* Recent Orders — 3/5 width */}
+        <div className="lg:col-span-3 bg-white rounded-xl border border-neutral-200">
+          <div className="flex items-center justify-between px-5 py-4 border-b border-neutral-100">
+            <h2 className="text-sm font-semibold text-neutral-800">Recent Orders</h2>
+            <Link href="/admin/orders" className="text-xs text-primary-600 hover:text-primary-700 font-medium">
+              View all →
+            </Link>
           </div>
-          <div className="p-6">
-            {stats.recentOrders.length === 0 ? (
-              <div className="text-center py-8">
-                <Icon name="shopping-cart" className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                <p className="text-gray-500 font-['Open_Sans']">No recent orders</p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {stats.recentOrders.map((order: any) => (
-                  <div key={order.id} className="flex items-center justify-between">
-                    <div className="flex items-center space-x-3">
-                      <div className="h-10 w-10 bg-gray-100 rounded-lg flex items-center justify-center">
-                        <Icon name="shopping-cart" className="w-5 h-5 text-gray-600" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-900">Order #{order.orderNumber}</p>
-                        <p className="text-xs text-gray-500">{new Date(order.createdAt).toLocaleDateString()}</p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-sm font-medium text-gray-900">₨{Number(order.totalAmount).toFixed(2)}</p>
-                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(order.status)}`}>
-                        <Icon name={getStatusIcon(order.status)} className="w-3 h-3 mr-1" />
-                        {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
-                      </span>
-                    </div>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr>
+                  <th className="px-5 py-2.5 text-left text-xs font-medium text-neutral-400">Order</th>
+                  <th className="px-5 py-2.5 text-left text-xs font-medium text-neutral-400">Customer</th>
+                  <th className="px-5 py-2.5 text-left text-xs font-medium text-neutral-400">Amount</th>
+                  <th className="px-5 py-2.5 text-left text-xs font-medium text-neutral-400">Status</th>
+                  <th className="px-5 py-2.5 text-left text-xs font-medium text-neutral-400">Time</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-neutral-50">
+                {loading
+                  ? Array.from({ length: 5 }).map((_, i) => <AdminSkeletonRow key={i} cols={5} />)
+                  : stats.recentOrders.length === 0
+                    ? (
+                      <tr>
+                        <td colSpan={5} className="px-5 py-8 text-center text-sm text-neutral-400">
+                          No orders yet
+                        </td>
+                      </tr>
+                    )
+                    : stats.recentOrders.map((order: any) => (
+                      <tr key={order.id} className="hover:bg-neutral-50 transition-colors">
+                        <td className="px-5 py-3 text-xs font-mono font-medium text-neutral-700">
+                          {order.orderNumber}
+                        </td>
+                        <td className="px-5 py-3 text-xs text-neutral-600">
+                          {order.user?.name ?? 'Guest'}
+                        </td>
+                        <td className="px-5 py-3 text-xs font-medium text-neutral-800">
+                          ₨{Number(order.totalAmount || 0).toLocaleString('en-PK')}
+                        </td>
+                        <td className="px-5 py-3">
+                          <StatusBadge status={order.status} />
+                        </td>
+                        <td className="px-5 py-3 text-xs text-neutral-400">
+                          {timeAgo(order.createdAt)}
+                        </td>
+                      </tr>
+                    ))
+                }
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Right column — 2/5 width */}
+        <div className="lg:col-span-2 space-y-4">
+
+          {/* This Week stats */}
+          <div className="bg-white rounded-xl border border-neutral-200 p-5">
+            <h2 className="text-sm font-semibold text-neutral-800 mb-4">This Week</h2>
+            <div className="space-y-3">
+              {[
+                { label: 'New customers',        value: loading ? '—' : stats.newCustomersThisWeek },
+                { label: 'Wishlist saves today', value: loading ? '—' : stats.newWishlistToday },
+                { label: 'Completed orders',     value: loading ? '—' : stats.completedOrders },
+              ].map(row => (
+                <div key={row.label} className="flex justify-between items-center">
+                  <span className="text-xs text-neutral-500">{row.label}</span>
+                  <span className="text-sm font-semibold text-neutral-800">{row.value}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Pending Reviews */}
+          <div className="bg-white rounded-xl border border-neutral-200">
+            <div className="flex items-center justify-between px-5 py-3 border-b border-neutral-100">
+              <h2 className="text-sm font-semibold text-neutral-800">Pending Reviews</h2>
+              <Link href="/admin/reviews" className="text-xs text-primary-600 hover:text-primary-700 font-medium">
+                View all →
+              </Link>
+            </div>
+            <div className="divide-y divide-neutral-50">
+              {loading
+                ? Array.from({ length: 3 }).map((_, i) => (
+                  <div key={i} className="px-5 py-3 animate-pulse space-y-1.5">
+                    <div className="h-3 bg-neutral-200 rounded w-1/2" />
+                    <div className="h-2.5 bg-neutral-100 rounded w-3/4" />
                   </div>
-                ))}
-              </div>
-            )}
+                ))
+                : stats.pendingReviews.length === 0
+                  ? <p className="px-5 py-4 text-xs text-neutral-400">No pending reviews</p>
+                  : stats.pendingReviews.map(review => (
+                    <div key={review.id} className="px-5 py-3">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="text-xs font-medium text-neutral-800 truncate">{review.productName}</p>
+                          <p className="text-xs text-neutral-400 flex items-center gap-1.5">
+                            <span>{review.customerName}</span>
+                            <span className="inline-flex items-center gap-0.5 bg-amber-50 text-amber-700 px-1.5 py-0.5 rounded font-medium text-[10px]">
+                              {review.rating}/5
+                            </span>
+                          </p>
+                          <p className="text-xs text-neutral-500 mt-0.5 line-clamp-1">{review.comment}</p>
+                        </div>
+                        <button
+                          onClick={() => approveReview(review.id)}
+                          disabled={approvingId === review.id}
+                          className="flex-shrink-0 text-xs text-primary-600 hover:text-primary-700 font-medium disabled:opacity-50 whitespace-nowrap"
+                        >
+                          {approvingId === review.id ? '...' : 'Approve'}
+                        </button>
+                      </div>
+                    </div>
+                  ))
+              }
+            </div>
           </div>
         </div>
+      </div>
 
-        {/* Top Products */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-          <div className="px-6 py-4 border-b border-gray-200">
-            <h3 className="text-lg font-medium text-gray-900 font-['Poppins']">Top Organic Products</h3>
+      {/* Recent Messages — only shown when there are messages */}
+      {(loading || stats.recentMessages.length > 0) && (
+        <div className="bg-white rounded-xl border border-neutral-200">
+          <div className="flex items-center justify-between px-5 py-4 border-b border-neutral-100">
+            <h2 className="text-sm font-semibold text-neutral-800">Unread Messages</h2>
+            <Link href="/admin/contacts" className="text-xs text-primary-600 hover:text-primary-700 font-medium">
+              View all →
+            </Link>
           </div>
-          <div className="p-6">
-            {stats.topProducts.length === 0 ? (
-              <div className="text-center py-8">
-                <Icon name="cube" className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                <p className="text-gray-500 font-['Open_Sans']">No organic products available</p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {stats.topProducts.map((product: any) => (
-                  <div key={product.id} className="flex items-center space-x-3">
-                    <div className="h-12 w-12 bg-gray-100 rounded-lg overflow-hidden">
-                      <img
-                        src={product.images?.[0] || '/images/placeholder.svg'}
-                        alt={product.name}
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-sm font-medium text-gray-900">{product.name}</p>
-                      <p className="text-xs text-gray-500">{product.category?.name || 'No category'}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-sm font-medium text-gray-900">₨{Number(product.price).toFixed(2)}</p>
-                      <p className="text-xs text-gray-500">{product.unit}</p>
-                    </div>
+          <div className="divide-y divide-neutral-50">
+            {loading
+              ? Array.from({ length: 3 }).map((_, i) => <AdminSkeletonRow key={i} cols={3} />)
+              : stats.recentMessages.map((msg: any) => (
+                <div key={msg.id} className="flex items-center justify-between px-5 py-3 hover:bg-neutral-50 transition-colors">
+                  <div>
+                    <p className="text-xs font-medium text-neutral-800">{msg.name}</p>
+                    <p className="text-xs text-neutral-500">{msg.subject}</p>
                   </div>
-                ))}
-              </div>
-            )}
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs text-neutral-400">{timeAgo(msg.createdAt)}</span>
+                    <Link
+                      href="/admin/contacts"
+                      className="text-xs text-primary-600 hover:text-primary-700 font-medium"
+                    >
+                      Reply →
+                    </Link>
+                  </div>
+                </div>
+              ))
+            }
           </div>
         </div>
-      </div>
+      )}
 
-      {/* Quick Actions */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h3 className="text-lg font-medium text-gray-900">Quick Actions</h3>
-        </div>
-        <div className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <a 
-              href="/admin/products"
-              className="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-            >
-              <Icon name="plus" className="w-5 h-5 text-orange-600 mr-3" />
-              <span className="text-sm font-medium text-gray-900">Manage Products</span>
-            </a>
-            <a 
-              href="/admin/products/categories"
-              className="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-            >
-              <Icon name="folder" className="w-5 h-5 text-blue-600 mr-3" />
-              <span className="text-sm font-medium text-gray-900">Manage Categories</span>
-            </a>
-            <a 
-              href="/admin/orders"
-              className="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-            >
-              <Icon name="shopping-cart" className="w-5 h-5 text-green-600 mr-3" />
-              <span className="text-sm font-medium text-gray-900">View Orders</span>
-            </a>
-            <a 
-              href="/admin/customers"
-              className="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-            >
-              <Icon name="user" className="w-5 h-5 text-purple-600 mr-3" />
-              <span className="text-sm font-medium text-gray-900">Manage Customers</span>
-            </a>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }

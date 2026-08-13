@@ -8,7 +8,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import Icon from '@/components/ui/Icon';
 import ProductLoader from '@/components/ui/ProductLoader';
 import ConfirmationDialog from '@/components/ui/ConfirmationDialog';
-import toast from 'react-hot-toast';
+import { toast } from 'sonner';
 
 function fmt(n: number) {
   return Number(n).toLocaleString('en-PK', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
@@ -104,6 +104,7 @@ export default function OrderDetailsPage() {
       const response = await fetch(`/api/v1/orders/${orderId}`, {
         headers: {
         },
+        credentials: 'include',
       });
 
       if (response.ok) {
@@ -141,6 +142,7 @@ export default function OrderDetailsPage() {
       const res = await fetch(`/api/v1/orders/${order.id}/cancel`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ reason: cancellationReason || 'Customer requested cancellation' }),
       });
       if (res.ok) {
@@ -481,7 +483,8 @@ export default function OrderDetailsPage() {
                     Continue Shopping
                   </button>
 
-                  {order.status !== 'delivered' && order.status !== 'cancelled' && order.status !== 'refunded' && (
+                  {/* Cancel — only while pending (before admin reviews) */}
+                  {order.status === 'pending' && (
                     <button
                       onClick={() => setShowCancelDialog(true)}
                       className="w-full text-xs sm:text-sm font-medium text-error-500 hover:text-error-600 flex items-center justify-center gap-1.5 py-2 transition-colors"
@@ -489,6 +492,16 @@ export default function OrderDetailsPage() {
                       <Icon name="x-circle" className="w-3.5 h-3.5" />
                       Cancel Order
                     </button>
+                  )}
+
+                  {/* Contact-to-cancel — once admin has acted on the order */}
+                  {order.status !== 'pending' && order.status !== 'cancelled' && order.status !== 'delivered' && order.status !== 'refunded' && (
+                    <p className="text-xs text-neutral-400 text-center leading-relaxed">
+                      To cancel this order, please{' '}
+                      <a href="/contact" className="text-primary-600 hover:underline font-medium">
+                        contact us
+                      </a>
+                    </p>
                   )}
                 </div>
               </div>

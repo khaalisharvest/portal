@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import Icon from './Icon';
 
 interface Category {
@@ -147,14 +148,21 @@ export default function CategoryTabs({
       </div>
       
       {/* Full-width modal positioned relative to the entire category bar */}
-      {openDropdown && categories.find(cat => cat.id === openDropdown) && (() => {
-        const category = categories.find(cat => cat.id === openDropdown);
-        const categoryProductTypes = getFilteredProductTypes(openDropdown);
-        
-        if (!category || categoryProductTypes.length === 0) return null;
-        
+      {(() => {
+        const category = openDropdown ? categories.find(cat => cat.id === openDropdown) : null;
+        const categoryProductTypes = openDropdown ? getFilteredProductTypes(openDropdown) : [];
+        const show = !!category && categoryProductTypes.length > 0;
+
         return (
-          <div className="absolute top-full left-0 right-0 mt-2 w-full z-50 overflow-hidden border border-neutral-200 rounded-b-xl shadow-lg">
+          <AnimatePresence>
+            {show && (
+          <motion.div
+            key={openDropdown}
+            initial={{ opacity: 0, y: -6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            transition={{ duration: 0.18, ease: 'easeOut' }}
+            className="absolute top-full left-0 right-0 mt-2 w-full z-50 overflow-hidden border border-neutral-200 rounded-b-xl shadow-lg">
             <div className="flex flex-col md:flex-row h-80 md:h-96 max-h-[70vh]">
               {/* Left Half - Product Type Options */}
               <div className="w-full md:w-1/2 bg-white flex flex-col min-h-0">
@@ -179,7 +187,7 @@ export default function CategoryTabs({
                 
                 {/* Product Type Options */}
                 <div className="flex-1 overflow-y-auto bg-white">
-                  {categoryProductTypes.map((type, index) => {
+                  {categoryProductTypes.map((type) => {
                     const isTypeActive = selectedProductType === type.id;
                     return (
                       <div key={type.id} className="relative">
@@ -226,7 +234,9 @@ export default function CategoryTabs({
                 <div className="absolute inset-0 bg-neutral-900/10"></div>
               </div>
             </div>
-          </div>
+          </motion.div>
+            )}
+          </AnimatePresence>
         );
       })()}
     </div>

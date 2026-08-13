@@ -8,7 +8,9 @@ import Dropdown from '@/components/ui/Dropdown';
 import { dropdownUtils } from '@/hooks/useDropdown';
 import Icon from '@/components/ui/Icon';
 import ConfirmationDialog from '@/components/ui/ConfirmationDialog';
-import toast from 'react-hot-toast';
+import { toast } from 'sonner';
+import PageHeader from '@/components/admin/PageHeader';
+import { AdminSkeletonRow } from '@/components/admin/AdminSkeletonRow';
 
 const QUICK_UNITS = ['kg', 'g', 'liter', 'ml', 'piece', 'dozen', 'pack', 'bunch', 'box', 'bottle', 'jar'];
 const QUICK_COLORS = [
@@ -136,41 +138,36 @@ export default function ProductTypesManagement() {
     }
   };
 
-  if (loading) return <div className="text-center py-8 text-gray-500">Loading...</div>;
-
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900">Product Types</h2>
-          <p className="text-gray-500 text-sm mt-1">Group products by type within each category</p>
-        </div>
-        <button
-          onClick={openCreate}
-          className="bg-gradient-to-r from-orange-500 to-green-500 text-white px-5 py-2 rounded-lg flex items-center gap-2 hover:opacity-90 transition-opacity"
-        >
-          <Icon name="plus" className="w-4 h-4" />
-          Add Product Type
-        </button>
-      </div>
+      <PageHeader
+        title="Product Types"
+        breadcrumbs={[{ label: 'Admin', href: '/admin/dashboard' }, { label: 'Products', href: '/admin/products' }, { label: 'Types' }]}
+        action={
+          <button onClick={openCreate} className="btn-primary text-sm px-4 py-2">
+            + Add Type
+          </button>
+        }
+      />
 
       {/* List */}
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
+      <div className="bg-white rounded-xl border border-neutral-200 overflow-hidden">
+        <table className="min-w-full divide-y divide-neutral-200">
+          <thead className="bg-neutral-50">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Category</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Units</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase">Type</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase">Category</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase">Units</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase">Status</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase">Actions</th>
             </tr>
           </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {productTypes.length === 0 ? (
+          <tbody className="bg-white divide-y divide-neutral-200">
+            {loading ? (
+              Array.from({ length: 4 }).map((_, i) => <AdminSkeletonRow key={i} cols={5} />)
+            ) : productTypes.length === 0 ? (
               <tr>
-                <td colSpan={5} className="px-6 py-12 text-center text-gray-400">
+                <td colSpan={5} className="px-6 py-12 text-center text-neutral-400">
                   <div className="flex flex-col items-center gap-2">
                     <div className="h-12 w-12 relative opacity-30">
                       <Image src="/images/logo.png" alt="" fill className="object-contain" />
@@ -181,7 +178,7 @@ export default function ProductTypesManagement() {
               </tr>
             ) : (
               productTypes.map(type => (
-                <tr key={type.id} className="hover:bg-gray-50">
+                <tr key={type.id} className="hover:bg-neutral-50">
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
                       <div
@@ -191,27 +188,27 @@ export default function ProductTypesManagement() {
                         {type.displayName.charAt(0).toUpperCase()}
                       </div>
                       <div>
-                        <div className="text-sm font-medium text-gray-900">{type.displayName}</div>
-                        {type.description && <div className="text-xs text-gray-400 truncate max-w-xs">{type.description}</div>}
+                        <div className="text-sm font-medium text-neutral-900">{type.displayName}</div>
+                        {type.description && <div className="text-xs text-neutral-400 truncate max-w-xs">{type.description}</div>}
                       </div>
                     </div>
                   </td>
-                  <td className="px-6 py-4 text-sm text-gray-600">
+                  <td className="px-6 py-4 text-sm text-neutral-600">
                     {categories.find(c => c.id === type.categoryId)?.name || '—'}
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex flex-wrap gap-1">
                       {(type.units || []).length > 0
                         ? (type.units || []).map((u, i) => (
-                            <span key={i} className="px-2 py-0.5 bg-blue-50 text-blue-700 text-xs rounded">{u}</span>
+                            <span key={i} className="px-2 py-0.5 bg-primary-50 text-primary-700 text-xs rounded">{u}</span>
                           ))
-                        : <span className="text-xs text-gray-400">—</span>
+                        : <span className="text-xs text-neutral-400">—</span>
                       }
                     </div>
                   </td>
                   <td className="px-6 py-4">
                     <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                      type.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
+                      type.isActive ? 'bg-green-100 text-green-700' : 'bg-neutral-100 text-neutral-500'
                     }`}>
                       {type.isActive ? 'Active' : 'Inactive'}
                     </span>
@@ -237,11 +234,11 @@ export default function ProductTypesManagement() {
           <div className="flex-1 bg-black bg-opacity-40" onClick={resetForm} />
           <div className="w-full max-w-md bg-white flex flex-col shadow-2xl overflow-hidden">
 
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 flex-shrink-0">
-              <h3 className="text-lg font-semibold text-gray-900">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-200 flex-shrink-0">
+              <h3 className="text-lg font-semibold text-neutral-900">
                 {editingType ? 'Edit Product Type' : 'New Product Type'}
               </h3>
-              <button onClick={resetForm} className="text-gray-400 hover:text-gray-600">
+              <button onClick={resetForm} className="text-neutral-400 hover:text-neutral-600">
                 <Icon name="close" className="w-5 h-5" />
               </button>
             </div>
@@ -250,7 +247,7 @@ export default function ProductTypesManagement() {
               <form onSubmit={handleSubmit} id="pt-form" className="p-6 space-y-5">
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-neutral-700 mb-1">
                     Category <span className="text-red-500">*</span>
                   </label>
                   <Dropdown
@@ -268,38 +265,38 @@ export default function ProductTypesManagement() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-neutral-700 mb-1">
                     Display Name <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
                     value={formData.displayName}
                     onChange={e => setFormData(p => ({ ...p, displayName: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                    className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-400 focus:border-primary-400"
                     placeholder="e.g. Chaunsa Mango, Buffalo Milk"
                     required
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                  <label className="block text-sm font-medium text-neutral-700 mb-1">Description</label>
                   <textarea
                     value={formData.description}
                     onChange={e => setFormData(p => ({ ...p, description: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 resize-none"
+                    className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-400 focus:border-primary-400 resize-none"
                     rows={2}
                     placeholder="Optional description"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Color</label>
+                  <label className="block text-sm font-medium text-neutral-700 mb-2">Color</label>
                   <div className="flex items-center gap-3">
                     <input
                       type="color"
                       value={formData.color}
                       onChange={e => setFormData(p => ({ ...p, color: e.target.value }))}
-                      className="w-10 h-8 border border-gray-300 rounded cursor-pointer p-0.5"
+                      className="w-10 h-8 border border-neutral-300 rounded cursor-pointer p-0.5"
                     />
                     <div className="flex gap-1.5">
                       {QUICK_COLORS.map(c => (
@@ -309,7 +306,7 @@ export default function ProductTypesManagement() {
                           title={c.label}
                           onClick={() => setFormData(p => ({ ...p, color: c.value }))}
                           className={`w-6 h-6 rounded-full border-2 transition-transform hover:scale-110 ${
-                            formData.color === c.value ? 'border-gray-700 scale-110' : 'border-transparent'
+                            formData.color === c.value ? 'border-neutral-700 scale-110' : 'border-transparent'
                           }`}
                           style={{ backgroundColor: c.value }}
                         />
@@ -318,16 +315,16 @@ export default function ProductTypesManagement() {
                   </div>
                 </div>
 
-                <hr className="border-gray-100" />
+                <hr className="border-neutral-100" />
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Selling Units</label>
+                  <label className="block text-sm font-medium text-neutral-700 mb-2">Selling Units</label>
                   {(formData.units || []).length > 0 && (
                     <div className="flex flex-wrap gap-1.5 mb-2">
                       {(formData.units || []).map((u, i) => (
-                        <span key={i} className="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-50 text-blue-700 text-sm rounded-full">
+                        <span key={i} className="inline-flex items-center gap-1 px-2.5 py-1 bg-primary-50 text-primary-700 text-sm rounded-full">
                           {u}
-                          <button type="button" onClick={() => removeUnit(i)} className="text-blue-400 hover:text-blue-700 leading-none">×</button>
+                          <button type="button" onClick={() => removeUnit(i)} className="text-primary-400 hover:text-primary-700 leading-none">×</button>
                         </span>
                       ))}
                     </div>
@@ -341,12 +338,12 @@ export default function ProductTypesManagement() {
                         if (e.key === 'Enter') { e.preventDefault(); addUnit(unitInput); setUnitInput(''); }
                       }}
                       placeholder="Type a unit and press Enter"
-                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                      className="flex-1 px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-400 focus:border-primary-400"
                     />
                     <button
                       type="button"
                       onClick={() => { addUnit(unitInput); setUnitInput(''); }}
-                      className="px-3 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm hover:bg-gray-200 transition-colors"
+                      className="px-3 py-2 bg-neutral-100 text-neutral-700 rounded-lg text-sm hover:bg-neutral-200 transition-colors"
                     >
                       Add
                     </button>
@@ -360,8 +357,8 @@ export default function ProductTypesManagement() {
                         disabled={(formData.units || []).includes(u)}
                         className={`px-2.5 py-1 text-xs rounded-full border transition-colors ${
                           (formData.units || []).includes(u)
-                            ? 'bg-blue-50 text-blue-400 border-blue-100 cursor-default'
-                            : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200'
+                            ? 'bg-primary-50 text-primary-400 border-primary-100 cursor-default'
+                            : 'bg-neutral-50 text-neutral-600 border-neutral-200 hover:bg-primary-50 hover:text-primary-600 hover:border-primary-200'
                         }`}
                       >
                         {u}
@@ -370,18 +367,18 @@ export default function ProductTypesManagement() {
                   </div>
                 </div>
 
-                <hr className="border-gray-100" />
+                <hr className="border-neutral-100" />
 
                 <div className="flex items-center justify-between">
                   <div>
-                    <span className="text-sm font-medium text-gray-700">Active</span>
-                    <p className="text-xs text-gray-400">Available for creating products</p>
+                    <span className="text-sm font-medium text-neutral-700">Active</span>
+                    <p className="text-xs text-neutral-400">Available for creating products</p>
                   </div>
                   <button
                     type="button"
                     onClick={() => setFormData(p => ({ ...p, isActive: !p.isActive }))}
-                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                      formData.isActive ? 'bg-gradient-to-r from-orange-500 to-green-500' : 'bg-gray-300'
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-400 focus-visible:ring-offset-1 ${
+                      formData.isActive ? 'bg-primary-500' : 'bg-neutral-300'
                     }`}
                   >
                     <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
@@ -393,13 +390,13 @@ export default function ProductTypesManagement() {
               </form>
             </div>
 
-            <div className="px-6 py-4 border-t border-gray-200 flex justify-end gap-3 bg-gray-50 flex-shrink-0">
+            <div className="px-6 py-4 border-t border-neutral-200 flex justify-end gap-3 bg-neutral-50 flex-shrink-0">
               <button type="button" onClick={resetForm}
-                className="px-4 py-2 text-sm text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+                className="px-4 py-2 text-sm text-neutral-700 bg-white border border-neutral-300 rounded-lg hover:bg-neutral-50 transition-colors">
                 Cancel
               </button>
               <button type="submit" form="pt-form"
-                className="px-5 py-2 text-sm font-medium text-white bg-gradient-to-r from-orange-500 to-green-500 rounded-lg hover:opacity-90 transition-opacity">
+                className="btn-primary text-sm px-5 py-2">
                 {editingType ? 'Update' : 'Create'}
               </button>
             </div>

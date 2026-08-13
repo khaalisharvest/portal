@@ -1,12 +1,16 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { motion } from 'framer-motion';
 import CategoryTabs from '@/components/ui/CategoryTabs';
 import ProductLoader from '@/components/ui/ProductLoader';
 import Icon from '@/components/ui/Icon';
 import { useFilter } from '@/contexts/FilterContext';
+import { useAuth } from '@/contexts/AuthContext';
+import { useWishlist } from '@/contexts/WishlistContext';
+import { toast } from 'sonner';
 
 interface Product {
   id: string;
@@ -76,6 +80,12 @@ export default function ProductsSection({
   className = '',
 }: ProductsSectionProps) {
   const { selectedCategory, selectedProductType } = useFilter();
+  const { user } = useAuth();
+  const { refresh: refreshWishlistCount } = useWishlist();
+
+  // Per-card wishlist state: productId → boolean
+  const [wishlistMap, setWishlistMap] = useState<Record<string, boolean>>({});
+  const [wishlistLoading, setWishlistLoading] = useState<Record<string, boolean>>({});
 
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -139,13 +149,32 @@ export default function ProductsSection({
       const data = await res.json();
 
       if (data.success) {
-        setProducts(data.data.products ?? []);
+        const fetched: Product[] = data.data.products ?? [];
+        setProducts(fetched);
         if (Array.isArray(data.data.categories))   setCategories(data.data.categories);
         if (Array.isArray(data.data.productTypes)) setProductTypes(data.data.productTypes);
         const limit = showOnly ?? 12;
         const total = data.data.total ?? 0;
         setTotalPages(Math.ceil(total / limit));
         setTotalProducts(total);
+
+        // Fetch wishlist status for these products if logged in
+        if (user && fetched.length > 0) {
+          Promise.allSettled(
+            fetched.map(p =>
+              fetch(`/api/v1/wishlist/${p.id}`, { credentials: 'include' })
+                .then(r => r.ok ? r.json() : null)
+                .then(json => {
+                  const d = json?.data ?? json;
+                  return { id: p.id, wishlisted: d?.isWishlisted ?? false };
+                })
+            )
+          ).then(results => {
+            const map: Record<string, boolean> = {};
+            results.forEach(r => { if (r.status === 'fulfilled' && r.value) map[r.value.id] = r.value.wishlisted; });
+            setWishlistMap(map);
+          });
+        }
       }
     } catch {
       setError('Failed to load products');
@@ -207,6 +236,30 @@ export default function ProductsSection({
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  const handleWishlistToggle = useCallback(async (e: React.MouseEvent, productId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!user) { toast.error('Sign in to save to wishlist'); return; }
+    if (wishlistLoading[productId]) return;
+    const optimistic = !wishlistMap[productId];
+    setWishlistMap(prev => ({ ...prev, [productId]: optimistic }));
+    setWishlistLoading(prev => ({ ...prev, [productId]: true }));
+    try {
+      const res = await fetch(`/api/v1/wishlist/${productId}`, { method: 'POST', credentials: 'include' });
+      if (!res.ok) throw new Error();
+      const json = await res.json();
+      const actual = (json?.data ?? json)?.added ?? optimistic;
+      setWishlistMap(prev => ({ ...prev, [productId]: actual }));
+      refreshWishlistCount();
+      toast.success(actual ? 'Added to wishlist' : 'Removed from wishlist');
+    } catch {
+      setWishlistMap(prev => ({ ...prev, [productId]: !optimistic }));
+      toast.error('Could not update wishlist');
+    } finally {
+      setWishlistLoading(prev => ({ ...prev, [productId]: false }));
+    }
+  }, [user, wishlistMap, wishlistLoading, refreshWishlistCount]);
+
   // ── render ────────────────────────────────────────────────────────────────
   if (loading) {
     return (
@@ -227,7 +280,7 @@ export default function ProductsSection({
   return (
     <div className={className}>
       {/* Search Bar */}
-      <div className="mb-4">
+      <div className="pt-4 mb-4">
         <div className="relative w-full">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
             <Icon name="search" className="h-5 w-5 text-neutral-400" />
@@ -273,15 +326,14 @@ export default function ProductsSection({
         className="mb-6"
       />
 
-      {/* Filter-change loading overlay */}
-      {filterLoading && (
-        <div className="flex justify-center items-center py-4">
-          <ProductLoader size="sm" />
-        </div>
-      )}
-
       {/* Products Grid */}
-      <div className={`relative transition-opacity duration-200 ${filterLoading ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}>
+      <div className={`relative transition-opacity duration-300 ${filterLoading ? 'opacity-40 pointer-events-none' : 'opacity-100'}`}>
+        {/* Filter-change spinner — absolutely overlaid so it never shifts layout */}
+        {filterLoading && (
+          <div className="absolute inset-x-0 top-6 z-10 flex justify-center pointer-events-none">
+            <ProductLoader size="sm" />
+          </div>
+        )}
         {products.length === 0 ? (
           <div className="text-center py-12">
             <div className="w-12 h-12 mx-auto mb-4 relative">
@@ -303,73 +355,123 @@ export default function ProductsSection({
                 ? 'grid-cols-2 sm:grid-cols-2 lg:grid-cols-4'
                 : 'grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
             }`}>
-              {products.map((product) => {
-                const priceNum = Number(product.price);
+              {products.map((product, index) => {
+                const priceNum  = Number(product.price);
                 const safePrice = Number.isFinite(priceNum) ? priceNum : 0;
-                const origNum = product.originalPrice != null ? Number(product.originalPrice) : undefined;
+                const origNum   = product.originalPrice != null ? Number(product.originalPrice) : undefined;
                 const hasDiscount = origNum != null && Number.isFinite(origNum) && origNum > safePrice;
+                const discountPct = hasDiscount ? Math.round(((origNum! - safePrice) / origNum!) * 100) : 0;
+                const isWishlisted = wishlistMap[product.id] ?? false;
+                const isWishlistBusy = wishlistLoading[product.id] ?? false;
 
                 return (
-                  <Link
+                  <motion.div
                     key={product.id}
-                    href={`/products/${product.id}`}
-                    className="group relative bg-white rounded-xl shadow-sm hover:shadow-md overflow-hidden cursor-pointer flex flex-col transition-shadow duration-200"
+                    initial={{ opacity: 0, y: 16 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.25, delay: Math.min(index * 0.05, 0.3), ease: 'easeOut' }}
+                    whileHover={{ y: -3, transition: { duration: 0.15 } }}
+                    className="h-full"
                   >
-                    {/* Image */}
-                    <div className="relative h-36 sm:h-40 md:h-44 lg:h-48 overflow-hidden">
-                      <Image
-                        src={product.images?.[0] || '/images/placeholder.svg'}
-                        alt={product.name}
-                        fill
-                        className="object-cover group-hover:scale-105 transition-transform duration-300"
-                        sizes="(max-width: 640px) 50vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
-                        onError={(e) => { (e.target as HTMLImageElement).src = '/images/placeholder.svg'; }}
-                      />
+                    <Link
+                      href={`/products/${product.id}`}
+                      className="group relative bg-white rounded-2xl border border-neutral-100 shadow-xs hover:shadow-md overflow-hidden flex flex-col h-full transition-shadow duration-200"
+                    >
+                      {/* ── Image ── */}
+                      <div className="relative aspect-square overflow-hidden bg-neutral-50">
+                        <Image
+                          src={product.images?.[0] || '/images/placeholder.svg'}
+                          alt={product.name}
+                          fill
+                          className={`object-cover group-hover:scale-105 transition-transform duration-500 ${!product.isAvailable ? 'opacity-60' : ''}`}
+                          sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                          onError={(e) => { (e.target as HTMLImageElement).src = '/images/placeholder.svg'; }}
+                        />
 
-                      {/* Badges */}
-                      <div className="absolute top-2 left-2 flex flex-col gap-1">
-                        {product.isOrganic && (
-                          <span className="badge-organic text-[9px] sm:text-[10px] font-semibold px-1.5 py-0.5 rounded-full">
-                            Organic
-                          </span>
+                        {/* Out of stock overlay */}
+                        {!product.isAvailable && (
+                          <div className="absolute inset-0 flex items-center justify-center bg-neutral-900/20">
+                            <span className="bg-neutral-900/70 text-white text-[10px] font-semibold px-2.5 py-1 rounded-full backdrop-blur-sm">
+                              Out of Stock
+                            </span>
+                          </div>
                         )}
-                        {product.featured && (
-                          <span className="bg-secondary-100 text-secondary-700 border border-secondary-200 text-[9px] sm:text-[10px] font-semibold px-1.5 py-0.5 rounded-full">
-                            Featured
-                          </span>
-                        )}
-                      </div>
 
-                      {hasDiscount && (
-                        <span className="absolute top-2 right-2 bg-error-500 text-white text-[9px] sm:text-[10px] font-bold px-1.5 py-0.5 rounded-full">
-                          -{Math.round(((origNum! - safePrice) / origNum!) * 100)}%
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Content */}
-                    <div className="px-2.5 py-2 flex-1 flex flex-col justify-between gap-1">
-                      <h3 className="text-xs sm:text-sm font-semibold line-clamp-2 text-neutral-900 leading-snug">
-                        {product.name}
-                      </h3>
-
-                      <div className="flex flex-col">
-                        {hasDiscount && (
-                          <span className="text-[10px] sm:text-xs line-through text-neutral-400">
-                            ₨{origNum}
-                          </span>
-                        )}
-                        <div className="flex items-baseline gap-1">
-                          <span className="text-sm sm:text-base font-bold text-neutral-900">
-                            ₨{safePrice}
-                          </span>
-                          <span className="text-[9px] sm:text-[10px] text-neutral-400">
-                            / {product.unit}
-                          </span>
+                        {/* Top-left badges */}
+                        <div className="absolute top-2 left-2 flex flex-col gap-1">
+                          {product.isOrganic && (
+                            <span className="badge-organic text-[9px] font-bold px-2 py-0.5 rounded-full shadow-sm">
+                              Organic
+                            </span>
+                          )}
+                          {product.featured && !product.isOrganic && (
+                            <span className="bg-secondary-100 text-secondary-700 text-[9px] font-bold px-2 py-0.5 rounded-full shadow-sm">
+                              Featured
+                            </span>
+                          )}
                         </div>
+
+                        {/* Discount badge — top right */}
+                        {hasDiscount && (
+                          <span className="absolute top-2 right-2 bg-error-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full shadow-sm">
+                            -{discountPct}%
+                          </span>
+                        )}
+
+                        {/* Wishlist heart — bottom right, only when no discount badge */}
+                        {user && (
+                          <motion.button
+                            whileTap={{ scale: 0.8 }}
+                            onClick={(e) => handleWishlistToggle(e, product.id)}
+                            disabled={isWishlistBusy}
+                            className={`absolute bottom-2 right-2 w-7 h-7 flex items-center justify-center rounded-full shadow-md transition-all duration-150 ${
+                              isWishlisted ? 'bg-error-500 text-white' : 'bg-white/90 text-neutral-400 hover:text-error-500'
+                            }`}
+                          >
+                            {isWishlistBusy ? (
+                              <span className="w-3 h-3 border-2 border-current/30 border-t-current rounded-full animate-spin" />
+                            ) : (
+                              <svg className="w-3.5 h-3.5" fill={isWishlisted ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                              </svg>
+                            )}
+                          </motion.button>
+                        )}
                       </div>
-                    </div>
-                  </Link>
+
+                      {/* ── Content ── */}
+                      <div className="px-3 pt-3 pb-3.5 flex-1 flex flex-col gap-2">
+
+                        {/* Name */}
+                        <h3 className="text-xs sm:text-sm font-semibold line-clamp-2 text-neutral-900 leading-snug">
+                          {product.name}
+                        </h3>
+
+                        {/* Price block */}
+                        <div className="mt-auto">
+                          {hasDiscount && (
+                            <div className="text-[10px] text-neutral-400 line-through tabular-nums">
+                              ₨{origNum!.toLocaleString('en-PK')}
+                            </div>
+                          )}
+                          <div className="flex items-baseline gap-1.5">
+                            <span className="text-sm sm:text-base font-bold text-neutral-900 tabular-nums">
+                              ₨{safePrice.toLocaleString('en-PK')}
+                            </span>
+                            <span className="text-[9px] sm:text-[10px] text-neutral-400 font-medium">
+                              /{product.unit}
+                            </span>
+                            {product.hasVariants && product.variants && product.variants.length > 0 && (
+                              <span className="ml-auto text-[9px] text-neutral-400">
+                                {product.variants.length} options
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                      </div>
+                    </Link>
+                  </motion.div>
                 );
               })}
             </div>

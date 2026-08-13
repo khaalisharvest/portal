@@ -162,14 +162,18 @@ export class AdminOrdersController {
   @ApiQuery({ name: 'status', required: false, enum: OrderStatus })
   @ApiQuery({ name: 'paymentStatus', required: false, enum: PaymentStatus })
   @ApiQuery({ name: 'search', required: false, type: String, description: 'Search by order number' })
+  @ApiQuery({ name: 'dateFrom', required: false, type: String, description: 'Filter orders from date (ISO string)' })
+  @ApiQuery({ name: 'dateTo', required: false, type: String, description: 'Filter orders to date (ISO string)' })
   getAllOrders(
     @Query('page') page?: number,
     @Query('limit') limit?: number,
     @Query('status') status?: OrderStatus,
     @Query('paymentStatus') paymentStatus?: PaymentStatus,
-    @Query('search') search?: string
+    @Query('search') search?: string,
+    @Query('dateFrom') dateFrom?: string,
+    @Query('dateTo') dateTo?: string
   ) {
-    return this.ordersService.getAllOrders(page, limit, status, paymentStatus, search);
+    return this.ordersService.getAllOrders(page, limit, status, paymentStatus, search, dateFrom, dateTo);
   }
 
   @Get(':id')

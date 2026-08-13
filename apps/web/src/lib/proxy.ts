@@ -93,9 +93,11 @@ export async function proxy(
     } else {
       headers['Content-Type'] = 'application/json';
       try {
-        body = JSON.stringify(await request.json());
+        const text = await request.text();
+        // Empty body is valid for toggle-style POSTs — forward as empty object
+        body = text.trim() ? text : '{}';
       } catch {
-        return NextResponse.json({ error: 'Invalid JSON in request body' }, { status: 400 });
+        body = '{}';
       }
     }
   } else {

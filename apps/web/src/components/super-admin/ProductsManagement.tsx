@@ -10,6 +10,7 @@ import CategoryTabs from '@/components/ui/CategoryTabs';
 import Icon from '@/components/ui/Icon';
 import ConfirmationDialog from '@/components/ui/ConfirmationDialog';
 import toast from 'react-hot-toast';
+import { PRODUCT_UNITS } from '@/constants/units';
 
 interface Product {
   id: string;
@@ -42,11 +43,19 @@ interface Product {
     originalPrice?: number;
     isAvailable?: boolean;
   }>;
+  // Food labeling fields
+  ingredients?: string;
+  nutritionalInfo?: Record<string, string>;
+  expiryInfo?: string;
+  batchNumber?: string;
+  cprNumber?: string;
+  allergens?: string;
+  manufacturerInfo?: string;
   createdAt: string;
   updatedAt: string;
 }
 
-const ALL_UNITS = ['kg', 'g', 'lb', 'liter', 'ml', 'piece', 'dozen', 'pack', 'bunch', 'box', 'bag', 'bottle', 'jar', 'plant', 'seedling'];
+const ALL_UNITS = [...PRODUCT_UNITS];
 
 export default function ProductsManagement() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -134,6 +143,14 @@ export default function ProductsManagement() {
     hasVariants: false,
     variantName: '',
     variants: [] as Array<{name: string; price: number; originalPrice?: number; isAvailable?: boolean}>,
+    // Food labeling
+    ingredients: '',
+    nutritionalRows: [] as Array<{id: string; name: string; value: string}>,
+    expiryInfo: '',
+    batchNumber: '',
+    cprNumber: '',
+    allergens: '',
+    manufacturerInfo: '',
   });
 
   useEffect(() => {
@@ -275,6 +292,16 @@ export default function ProductsManagement() {
         hasVariants: formData.hasVariants,
         variantName: formData.hasVariants ? formData.variantName : undefined,
         variants: formData.hasVariants ? formData.variants.filter(v => v.name && v.price > 0) : undefined,
+        // Food labeling
+        ingredients: formData.ingredients || undefined,
+        nutritionalInfo: formData.nutritionalRows.length > 0
+          ? Object.fromEntries(formData.nutritionalRows.filter(r => r.name.trim()).map(r => [r.name.trim(), r.value]))
+          : undefined,
+        expiryInfo: formData.expiryInfo || undefined,
+        batchNumber: formData.batchNumber || undefined,
+        cprNumber: formData.cprNumber || undefined,
+        allergens: formData.allergens || undefined,
+        manufacturerInfo: formData.manufacturerInfo || undefined,
       };
 
       const url = editingProduct
@@ -335,6 +362,16 @@ export default function ProductsManagement() {
       hasVariants: product.hasVariants || false,
       variantName: product.variantName || '',
       variants: (product.variants as any) || [],
+      // Food labeling
+      ingredients: product.ingredients || '',
+      nutritionalRows: Object.entries(product.nutritionalInfo || {}).map(([name, value]) => ({
+        id: `${Date.now()}_${Math.random()}`, name, value,
+      })),
+      expiryInfo: product.expiryInfo || '',
+      batchNumber: product.batchNumber || '',
+      cprNumber: product.cprNumber || '',
+      allergens: product.allergens || '',
+      manufacturerInfo: product.manufacturerInfo || '',
     });
 
     // Update dropdown values
@@ -401,6 +438,14 @@ export default function ProductsManagement() {
       hasVariants: false,
       variantName: '',
       variants: [],
+      // Food labeling
+      ingredients: '',
+      nutritionalRows: [],
+      expiryInfo: '',
+      batchNumber: '',
+      cprNumber: '',
+      allergens: '',
+      manufacturerInfo: '',
     });
 
     // Revoke any local blob previews to free memory
@@ -919,7 +964,7 @@ export default function ProductsManagement() {
                         type="text"
                         value={formData.name}
                         onChange={(e) => setFormData(prev => ({...prev, name: e.target.value}))}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-400 focus:border-primary-400 transition-colors"
                         placeholder="Enter product name"
                         required
                       />
@@ -934,7 +979,7 @@ export default function ProductsManagement() {
                         step="0.01"
                         value={formData.price}
                         onChange={(e) => setFormData(prev => ({...prev, price: e.target.value}))}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-400 focus:border-primary-400 transition-colors"
                         placeholder="0.00"
                         required
                       />
@@ -949,7 +994,7 @@ export default function ProductsManagement() {
                         step="0.01"
                         value={formData.originalPrice}
                         onChange={(e) => setFormData(prev => ({...prev, originalPrice: e.target.value}))}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-400 focus:border-primary-400 transition-colors"
                         placeholder="0.00"
                       />
                     </div>
@@ -987,7 +1032,7 @@ export default function ProductsManagement() {
                     <textarea
                       value={formData.description}
                       onChange={(e) => setFormData(prev => ({...prev, description: e.target.value}))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors resize-none"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-400 focus:border-primary-400 transition-colors resize-none"
                       rows={3}
                       placeholder="Describe the product..."
                     />
@@ -1016,7 +1061,7 @@ export default function ProductsManagement() {
                       {pendingFiles.map(({ preview }, idx) => (
                         <div key={`pending-${idx}`} className="relative w-20 h-20">
                           <img src={preview} alt="" className="w-full h-full object-cover rounded-lg opacity-80" />
-                          <span className="absolute bottom-0 left-0 right-0 text-center text-xs bg-orange-500 text-white rounded-b-lg py-0.5 leading-tight">
+                          <span className="absolute bottom-0 left-0 right-0 text-center text-xs bg-primary-500 text-white rounded-b-lg py-0.5 leading-tight">
                             on save
                           </span>
                           <button
@@ -1031,7 +1076,7 @@ export default function ProductsManagement() {
                       ))}
                     </div>
                     {/* Choose file — stored locally, NO upload until Save */}
-                    <label className="flex items-center gap-2 cursor-pointer bg-neutral-50 border-2 border-dashed border-neutral-300 rounded-xl px-4 py-3 hover:border-orange-400 transition-colors">
+                    <label className="flex items-center gap-2 cursor-pointer bg-neutral-50 border-2 border-dashed border-neutral-300 rounded-xl px-4 py-3 hover:border-primary-400 transition-colors">
                       <svg className="w-5 h-5 text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                       </svg>
@@ -1060,7 +1105,7 @@ export default function ProductsManagement() {
                         value={urlInput}
                         onChange={(e) => setUrlInput(e.target.value)}
                         placeholder="Paste image URL and press Enter to add"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-sm"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-400 focus:border-primary-400 transition-colors text-sm"
                         onKeyDown={(e) => {
                           if (e.key === 'Enter') {
                             e.preventDefault();
@@ -1092,8 +1137,8 @@ export default function ProductsManagement() {
                       <button
                         type="button"
                         onClick={() => setFormData(prev => ({...prev, hasVariants: !prev.hasVariants}))}
-                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 ${
-                          formData.hasVariants ? 'bg-blue-600' : 'bg-gray-300'
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 cursor-pointer select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-400 focus-visible:ring-offset-1 ${
+                          formData.hasVariants ? 'bg-primary-500' : 'bg-gray-300'
                         }`}
                       >
                         <span
@@ -1116,7 +1161,7 @@ export default function ProductsManagement() {
                           type="text"
                           value={formData.variantName}
                           onChange={(e) => setFormData(prev => ({...prev, variantName: e.target.value}))}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-400 focus:border-primary-400 transition-colors"
                           placeholder="e.g., Size, Quality, Leaf Size, Color"
                           required={formData.hasVariants}
                         />
@@ -1144,7 +1189,7 @@ export default function ProductsManagement() {
                                     newVariants[index] = { ...newVariants[index], name: e.target.value };
                                     setFormData(prev => ({...prev, variants: newVariants}));
                                   }}
-                                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-400 focus:border-primary-400 transition-colors"
                                   placeholder="Option name (e.g., Small, Large, Premium)"
                                   required
                                 />
@@ -1161,7 +1206,7 @@ export default function ProductsManagement() {
                                     newVariants[index] = { ...newVariants[index], price: parseFloat(e.target.value) || 0 };
                                     setFormData(prev => ({...prev, variants: newVariants}));
                                   }}
-                                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-400 focus:border-primary-400 transition-colors"
                                   placeholder="Price"
                                   required
                                 />
@@ -1178,7 +1223,7 @@ export default function ProductsManagement() {
                                     newVariants[index] = { ...newVariants[index], originalPrice: parseFloat(e.target.value) || 0 };
                                     setFormData(prev => ({...prev, variants: newVariants}));
                                   }}
-                                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-400 focus:border-primary-400 transition-colors"
                                   placeholder="Original"
                                 />
                               </div>
@@ -1192,8 +1237,8 @@ export default function ProductsManagement() {
                                     newVariants[index] = { ...newVariants[index], isAvailable: !newVariants[index].isAvailable };
                                     setFormData(prev => ({...prev, variants: newVariants}));
                                   }}
-                                  className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors duration-200 ${
-                                    variant.isAvailable !== false ? 'bg-green-600' : 'bg-gray-300'
+                                  className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors duration-200 cursor-pointer select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-400 focus-visible:ring-offset-1 ${
+                                    variant.isAvailable !== false ? 'bg-primary-500' : 'bg-gray-300'
                                   }`}
                                   title={variant.isAvailable !== false ? 'Available' : 'Unavailable'}
                                 >
@@ -1231,7 +1276,7 @@ export default function ProductsManagement() {
                               variants: [...prev.variants, { name: '', price: 0, originalPrice: 0, isAvailable: true }]
                             }));
                           }}
-                          className="w-full py-2 px-4 border-2 border-dashed border-gray-300 rounded-lg text-gray-600 hover:border-blue-500 hover:text-blue-500 transition-colors flex items-center justify-center space-x-2"
+                          className="w-full py-2 px-4 border-2 border-dashed border-gray-300 rounded-lg text-gray-600 hover:border-primary-400 hover:text-primary-600 transition-colors flex items-center justify-center space-x-2"
                         >
                           <Icon name="plus" className="w-4 h-4" />
                           <span>Add Variant Option</span>
@@ -1282,7 +1327,7 @@ export default function ProductsManagement() {
                             type="text"
                             value={formData.supplierName}
                             onChange={e => setFormData(prev => ({...prev, supplierName: e.target.value}))}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-400 focus:border-primary-400 transition-colors"
                             placeholder="Enter supplier name"
                           />
                         </div>
@@ -1294,7 +1339,7 @@ export default function ProductsManagement() {
                             type="text"
                             value={formData.supplierContact}
                             onChange={e => setFormData(prev => ({...prev, supplierContact: e.target.value}))}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-400 focus:border-primary-400 transition-colors"
                             placeholder="Enter supplier contact"
                           />
                         </div>
@@ -1317,8 +1362,8 @@ export default function ProductsManagement() {
                       <button
                         type="button"
                         onClick={() => setFormData(prev => ({...prev, isAvailable: !prev.isAvailable}))}
-                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 ${
-                          formData.isAvailable ? 'bg-blue-600' : 'bg-gray-300'
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 cursor-pointer select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-400 focus-visible:ring-offset-1 ${
+                          formData.isAvailable ? 'bg-primary-500' : 'bg-gray-300'
                         }`}
                       >
                         <span
@@ -1337,8 +1382,8 @@ export default function ProductsManagement() {
                       <button
                         type="button"
                         onClick={() => setFormData(prev => ({...prev, featured: !prev.featured}))}
-                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 ${
-                          formData.featured ? 'bg-blue-600' : 'bg-gray-300'
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 cursor-pointer select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-400 focus-visible:ring-offset-1 ${
+                          formData.featured ? 'bg-primary-500' : 'bg-gray-300'
                         }`}
                       >
                         <span
@@ -1357,8 +1402,8 @@ export default function ProductsManagement() {
                       <button
                         type="button"
                         onClick={() => setFormData(prev => ({...prev, isOrganic: !prev.isOrganic}))}
-                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 ${
-                          formData.isOrganic ? 'bg-blue-600' : 'bg-gray-300'
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 cursor-pointer select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-400 focus-visible:ring-offset-1 ${
+                          formData.isOrganic ? 'bg-primary-500' : 'bg-gray-300'
                         }`}
                       >
                         <span
@@ -1372,17 +1417,188 @@ export default function ProductsManagement() {
 
                   {/* Tags */}
                   <div className="mt-4">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Tags
-                    </label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Tags</label>
                     <input
                       type="text"
                       value={formData.tags}
                       onChange={(e) => setFormData(prev => ({...prev, tags: e.target.value}))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-400 focus:border-primary-400 transition-colors"
                       placeholder="Enter tags, comma separated (e.g., organic, fresh, local)"
                     />
                     <p className="text-xs text-gray-500 mt-1">Separate tags with commas</p>
+                  </div>
+                </div>
+
+                {/* Food Labeling — PFA Compliance */}
+                <div>
+                  <div className="flex items-center gap-2 mb-3">
+                    <h4 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">Food Labeling</h4>
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-primary-100 text-primary-700">PFA Required</span>
+                  </div>
+                  <p className="text-xs text-gray-400 mb-4">Required for packaged food products sold under the Khaalis Harvest brand (Punjab Food Authority compliance).</p>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* CPR Number */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                        PFA CPR Number
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.cprNumber}
+                        onChange={(e) => setFormData(prev => ({...prev, cprNumber: e.target.value}))}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-400 focus:border-primary-400 transition-colors text-sm"
+                        placeholder="e.g. PFA-CPR-2026-XXXXX"
+                      />
+                      <p className="text-xs text-gray-400 mt-1">Issued by Punjab Food Authority per product</p>
+                    </div>
+
+                    {/* Batch Number */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1.5">Batch / Lot Number</label>
+                      <input
+                        type="text"
+                        value={formData.batchNumber}
+                        onChange={(e) => setFormData(prev => ({...prev, batchNumber: e.target.value}))}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-400 focus:border-primary-400 transition-colors text-sm"
+                        placeholder="e.g. KH-2026-08-001"
+                      />
+                    </div>
+
+                    {/* Expiry Info */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1.5">Expiry / Shelf Life</label>
+                      <input
+                        type="text"
+                        value={formData.expiryInfo}
+                        onChange={(e) => setFormData(prev => ({...prev, expiryInfo: e.target.value}))}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-400 focus:border-primary-400 transition-colors text-sm"
+                        placeholder="e.g. 6 months from packing date"
+                      />
+                    </div>
+
+                    {/* Allergens */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1.5">Allergen Warnings</label>
+                      <input
+                        type="text"
+                        value={formData.allergens}
+                        onChange={(e) => setFormData(prev => ({...prev, allergens: e.target.value}))}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-400 focus:border-primary-400 transition-colors text-sm"
+                        placeholder="e.g. Contains gluten. May contain traces of nuts."
+                      />
+                    </div>
+                  </div>
+
+                  {/* Ingredients */}
+                  <div className="mt-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Ingredients</label>
+                    <textarea
+                      value={formData.ingredients}
+                      onChange={(e) => setFormData(prev => ({...prev, ingredients: e.target.value}))}
+                      rows={3}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-400 focus:border-primary-400 transition-colors text-sm resize-none"
+                      placeholder="List all ingredients in descending order by weight, e.g. Whole wheat flour (100%)"
+                    />
+                  </div>
+
+                  {/* Manufacturer Info */}
+                  <div className="mt-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Manufacturer / Packer Info</label>
+                    <textarea
+                      value={formData.manufacturerInfo}
+                      onChange={(e) => setFormData(prev => ({...prev, manufacturerInfo: e.target.value}))}
+                      rows={2}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-400 focus:border-primary-400 transition-colors text-sm resize-none"
+                      placeholder="e.g. Packed by M/S Khaalis Harvest, 167/A Railway Burt Colony, Garhi Shahu, Lahore"
+                    />
+                  </div>
+
+                  {/* Nutritional Info — dynamic key-value editor */}
+                  <div className="mt-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="block text-sm font-medium text-gray-700">Nutritional Information</label>
+                      <button
+                        type="button"
+                        onClick={() => setFormData(prev => ({
+                          ...prev,
+                          nutritionalRows: [...prev.nutritionalRows, { id: `${Date.now()}`, name: '', value: '' }],
+                        }))}
+                        className="inline-flex items-center gap-1 text-xs font-medium text-primary-600 hover:text-primary-700 transition-colors"
+                      >
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                        </svg>
+                        Add Row
+                      </button>
+                    </div>
+
+                    {formData.nutritionalRows.length === 0 ? (
+                      <div className="flex items-center justify-center py-6 border-2 border-dashed border-gray-200 rounded-lg">
+                        <div className="text-center">
+                          <p className="text-xs text-gray-400 mb-2">No nutritional info added yet</p>
+                          <button
+                            type="button"
+                            onClick={() => setFormData(prev => ({
+                              ...prev,
+                              nutritionalRows: [{ id: `${Date.now()}`, name: 'Energy (kcal)', value: '' }],
+                            }))}
+                            className="text-xs font-medium text-primary-600 hover:text-primary-700 transition-colors"
+                          >
+                            + Add first row
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <div className="grid grid-cols-[1fr_1fr_auto] gap-2 px-1">
+                          <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide">Field Name</span>
+                          <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide">Value</span>
+                          <span className="w-6" />
+                        </div>
+                        {formData.nutritionalRows.map(row => (
+                          <div key={row.id} className="grid grid-cols-[1fr_1fr_auto] gap-2 items-center">
+                            <input
+                              type="text"
+                              value={row.name}
+                              onChange={(e) => setFormData(prev => ({
+                                ...prev,
+                                nutritionalRows: prev.nutritionalRows.map(r =>
+                                  r.id === row.id ? { ...r, name: e.target.value } : r
+                                ),
+                              }))}
+                              className="px-3 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-400 focus:border-primary-400 transition-colors text-sm"
+                              placeholder="e.g. Energy (kcal)"
+                            />
+                            <input
+                              type="text"
+                              value={row.value}
+                              onChange={(e) => setFormData(prev => ({
+                                ...prev,
+                                nutritionalRows: prev.nutritionalRows.map(r =>
+                                  r.id === row.id ? { ...r, value: e.target.value } : r
+                                ),
+                              }))}
+                              className="px-3 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-400 focus:border-primary-400 transition-colors text-sm"
+                              placeholder="e.g. 340 kcal"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setFormData(prev => ({
+                                ...prev,
+                                nutritionalRows: prev.nutritionalRows.filter(r => r.id !== row.id),
+                              }))}
+                              className="w-6 h-6 flex items-center justify-center text-gray-400 hover:text-red-500 transition-colors rounded"
+                            >
+                              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                              </svg>
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    <p className="text-xs text-gray-400 mt-2">Add any field — e.g. "Energy (kcal)", "Protein (g)", "Moisture (%)"</p>
                   </div>
                 </div>
 
@@ -1401,7 +1617,7 @@ export default function ProductsManagement() {
                 type="submit"
                 form="product-form"
                 disabled={isSaving}
-                className="px-5 py-2 text-sm font-medium text-white bg-gradient-to-r from-orange-500 to-green-500 rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+                className="btn-primary text-sm px-5 py-2 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isSaving ? 'Saving...' : editingProduct ? 'Update Product' : 'Create Product'}
               </button>

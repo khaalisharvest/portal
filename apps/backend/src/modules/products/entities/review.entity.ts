@@ -3,9 +3,12 @@ import { ApiProperty } from '@nestjs/swagger';
 import { Product } from './product.entity';
 import { User } from '../../users/entities/user.entity';
 
+export type ReviewStatus = 'pending' | 'approved' | 'rejected';
+
 @Entity('reviews')
-@Index(['productId', 'isActive']) // Composite index for performance
-@Index(['userId', 'productId'], { unique: true }) // One review per user per product
+@Index(['productId', 'status'])   // fast public query: approved reviews per product
+@Index(['userId', 'productId'], { unique: true }) // one review per user per product
+@Index(['status', 'createdAt'])   // fast admin moderation queue
 export class Review {
   @ApiProperty()
   @PrimaryGeneratedColumn('uuid')
@@ -29,7 +32,7 @@ export class Review {
 
   @ApiProperty()
   @Column('int', { default: 5 })
-  rating: number; // 1-5 stars
+  rating: number;
 
   @ApiProperty()
   @Column('text', { nullable: true })
@@ -40,16 +43,8 @@ export class Review {
   comment: string;
 
   @ApiProperty()
-  @Column({ type: 'json', nullable: true })
-  images: string[]; // Review images
-
-  @ApiProperty()
-  @Column({ type: 'json', nullable: true })
-  pros: string[]; // What they liked
-
-  @ApiProperty()
-  @Column({ type: 'json', nullable: true })
-  cons: string[]; // What they didn't like
+  @Column({ type: 'varchar', length: 20, default: 'pending' })
+  status: ReviewStatus;
 
   @ApiProperty()
   @Column({ default: true })
@@ -57,15 +52,11 @@ export class Review {
 
   @ApiProperty()
   @Column({ default: false })
-  isVerified: boolean; // Verified purchase
-
-  @ApiProperty()
-  @Column({ default: 0 })
-  helpfulCount: number; // How many found this helpful
+  isVerified: boolean; // auto-set: true when user has a delivered order for this product
 
   @ApiProperty()
   @Column({ type: 'json', nullable: true })
-  metadata?: Record<string, any>; // Additional review data
+  metadata?: Record<string, any>;
 
   @CreateDateColumn()
   createdAt: Date;

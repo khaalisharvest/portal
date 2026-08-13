@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 
 interface Category {
   id: string;
@@ -49,6 +50,12 @@ export default function MobileCategoryDropdown({
   const [isManualClick, setIsManualClick] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
+  // Prevent body scroll while sheet is open (avoids scrollbar layout shift)
+  useEffect(() => {
+    if (isOpen) document.body.style.overflow = 'hidden';
+    else document.body.style.overflow = '';
+    return () => { document.body.style.overflow = ''; };
+  }, [isOpen]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -126,18 +133,26 @@ export default function MobileCategoryDropdown({
     return productTypesByCategory[categoryId] || [];
   }, [productTypesByCategory]);
 
-  if (!isOpen) return null;
-
   return (
-    <div
+    <AnimatePresence>
+      {isOpen && (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.2 }}
       className="md:hidden fixed inset-0 z-50 bg-black/40"
       onClick={onClose}
       role="dialog"
       aria-modal="true"
       aria-labelledby="category-dropdown-title"
     >
-      <div
+      <motion.div
         ref={dropdownRef}
+        initial={{ y: '100%' }}
+        animate={{ y: 0 }}
+        exit={{ y: '100%' }}
+        transition={{ duration: 0.3, ease: [0.25, 0.46, 0.45, 0.94] }}
         className="absolute bottom-0 left-0 right-0 bg-white rounded-t-3xl shadow-2xl max-h-[85vh] overflow-hidden"
         onClick={(e) => e.stopPropagation()}
         role="document"
@@ -290,7 +305,9 @@ export default function MobileCategoryDropdown({
             )}
           </div>
         </div>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
+      )}
+    </AnimatePresence>
   );
 }

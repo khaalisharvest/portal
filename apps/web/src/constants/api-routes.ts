@@ -69,10 +69,6 @@ export const API = {
     orders: '/api/v1/settings/orders',
     notificationBar: '/api/v1/settings/notification-bar',
   },
-  userTypes: {
-    list: '/api/super-admin/user-types',
-    byId: (id: string) => `/api/super-admin/user-types/${id}`,
-  },
   wishlist: {
     list: '/api/v1/wishlist',
     toggle: (productId: string) => `/api/v1/wishlist/${productId}`,

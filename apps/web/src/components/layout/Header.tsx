@@ -5,15 +5,18 @@ import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import Image from 'next/image';
 import { AnimatePresence, motion } from 'framer-motion';
+import { ShoppingCartIcon } from '@heroicons/react/24/outline';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCart } from '@/contexts/CartContext';
 import { useFilter } from '@/contexts/FilterContext';
+import { useWishlist } from '@/contexts/WishlistContext';
 import MobileCategoryDropdown from '@/components/ui/MobileCategoryDropdown';
 import { useCategories, useProductTypes } from '@/hooks/useProducts';
 
 const NAV_LINKS = [
   { href: '/',        label: 'Home'     },
   { href: '/products',label: 'Products' },
+  { href: '/about',   label: 'About'    },
   { href: '/contact', label: 'Contact'  },
 ];
 
@@ -23,6 +26,7 @@ export default function Header() {
 
   const { user, logout, isLoading } = useAuth();
   const { state: cartState }        = useCart();
+  const { count: wishlistCount }    = useWishlist();
   const {
     selectedCategory,
     selectedProductType,
@@ -94,14 +98,14 @@ export default function Header() {
               className="flex items-center gap-0.5 flex-shrink-0 group"
               onClick={closeMobile}
             >
-              <div className="relative h-16 w-16 flex-shrink-0 overflow-hidden transition-transform duration-300 group-hover:scale-105">
+              <div className="relative h-11 w-11 flex-shrink-0 transition-transform duration-300 group-hover:scale-105">
                 <Image
                   src="/images/logo.png"
                   alt="Khaalis Harvest"
                   fill
                   priority
-                  sizes="64px"
-                  className="object-contain scale-[1.3]"
+                  sizes="44px"
+                  className="object-contain"
                 />
               </div>
               <div className="flex flex-col leading-none">
@@ -151,12 +155,12 @@ export default function Header() {
                 </div>
               ) : (
                 <>
-                  {/* Wishlist — logged-in customers only */}
-                  {user && !isAdmin && (
+                  {/* Wishlist — logged-in users */}
+                  {user && (
                     <Link
                       href="/wishlist"
-                      aria-label="My Wishlist"
-                      className={`p-2.5 rounded-lg transition-all duration-200 ${
+                      aria-label={`My Wishlist${wishlistCount > 0 ? ` — ${wishlistCount} items` : ''}`}
+                      className={`relative p-2.5 rounded-lg transition-all duration-200 ${
                         pathname === '/wishlist'
                           ? 'text-rose-500 bg-rose-50'
                           : 'text-neutral-400 hover:text-rose-500 hover:bg-rose-50'
@@ -166,6 +170,20 @@ export default function Header() {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75}
                           d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
                       </svg>
+                      <AnimatePresence>
+                        {wishlistCount > 0 && (
+                          <motion.span
+                            key="wishlist-badge"
+                            initial={{ scale: 0 }}
+                            animate={{ scale: 1 }}
+                            exit={{ scale: 0 }}
+                            transition={{ type: 'spring', stiffness: 500, damping: 25 }}
+                            className="absolute -top-0.5 -right-0.5 h-[18px] min-w-[18px] px-1 bg-rose-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center leading-none"
+                          >
+                            {wishlistCount > 9 ? '9+' : wishlistCount}
+                          </motion.span>
+                        )}
+                      </AnimatePresence>
                     </Link>
                   )}
 
@@ -179,10 +197,7 @@ export default function Header() {
                         : 'text-neutral-400 hover:text-primary-600 hover:bg-primary-50'
                     }`}
                   >
-                    <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75}
-                        d="M16 11V7a4 4 0 00-8 0v4M5 9h14l-1 7a2 2 0 01-2 2H8a2 2 0 01-2-2L5 9z" />
-                    </svg>
+                    <ShoppingCartIcon className="h-5 w-5" />
                     <AnimatePresence>
                       {cartState.totalItems > 0 && (
                         <motion.span
@@ -321,10 +336,7 @@ export default function Header() {
                 aria-label="Cart"
                 className="relative p-2 text-neutral-500 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-all duration-200"
               >
-                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75}
-                    d="M16 11V7a4 4 0 00-8 0v4M5 9h14l-1 7a2 2 0 01-2 2H8a2 2 0 01-2-2L5 9z" />
-                </svg>
+                <ShoppingCartIcon className="h-5 w-5" />
                 <AnimatePresence>
                   {cartState.totalItems > 0 && (
                     <motion.span

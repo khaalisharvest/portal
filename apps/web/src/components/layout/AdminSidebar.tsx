@@ -1,350 +1,233 @@
 'use client';
 
-import React, { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import Icon from '@/components/ui/Icon';
-import toast from 'react-hot-toast';
 
-interface SidebarItem {
-  id: string;
+interface NavItem {
   label: string;
-  icon: string;
   href: string;
+  icon: string;
   roles: string[];
-  children?: SidebarItem[];
+  badge?: number;
+  children?: NavItem[];
 }
 
-const getSidebarItems = (userRole: string): SidebarItem[] => {
-  return [
-    {
-      id: 'dashboard',
-      label: 'Dashboard',
-      icon: 'chart',
-      href: '/admin/dashboard',
-      roles: ['super_admin', 'staff']
-    },
-    {
-      id: 'products',
-      label: 'Products',
-      icon: 'leaf',
-      href: '/admin/products',
-      roles: ['super_admin', 'staff'],
-      children: [
-        {
-          id: 'categories',
-          label: 'Categories',
-          icon: 'folder',
-          href: '/admin/products/categories',
-          roles: ['super_admin', 'staff']
-        },
-        {
-          id: 'product-types',
-          label: 'Product Types',
-          icon: 'tag',
-          href: '/admin/products/types',
-          roles: ['super_admin', 'staff']
-        },
-        {
-          id: 'inventory',
-          label: 'Inventory',
-          icon: 'chart',
-          href: '/admin/products/inventory',
-          roles: ['super_admin', 'staff']
-        }
-      ]
-    },
-    {
-      id: 'orders',
-      label: 'Orders',
-      icon: 'shopping-cart',
-      href: '/admin/orders',
-      roles: ['super_admin', 'staff']
-    },
-    {
-      id: 'staff',
-      label: 'Staff',
-      icon: 'user',
-      href: '/admin/staff',
-      roles: ['super_admin']
-    },
-    {
-      id: 'customers',
-      label: 'Customers',
-      icon: 'user',
-      href: '/admin/customers',
-      roles: ['super_admin']
-    },
-    {
-      id: 'contacts',
-      label: 'Contact Messages',
-      icon: 'envelope',
-      href: '/admin/contacts',
-      roles: ['super_admin']
-    },
-    {
-      id: 'settings',
-      label: 'Settings',
-      icon: 'cog',
-      href: '/admin/settings',
-      roles: ['super_admin']
-    }
-  ];
-};
-
-
-interface AdminSidebarProps {
-  isCollapsed: boolean;
-  onToggle: () => void;
+interface NavGroup {
+  label: string;
+  items: NavItem[];
 }
 
-export default function AdminSidebar({ isCollapsed, onToggle }: AdminSidebarProps) {
+export default function AdminSidebar() {
   const { user, logout } = useAuth();
   const pathname = usePathname();
-  const router = useRouter();
-  const [expandedItems, setExpandedItems] = useState<string[]>([]);
+  const [badges, setBadges] = useState<{ reviews: number; messages: number }>({ reviews: 0, messages: 0 });
+  const [productsExpanded, setProductsExpanded] = useState(false);
+  const [settingsExpanded, setSettingsExpanded] = useState(false);
 
-  const sidebarItems = React.useMemo(() => getSidebarItems(user?.role || 'super_admin'), [user?.role]);
+  useEffect(() => {
+    if (!user) return;
+    fetch('/api/v1/admin/dashboard', { credentials: 'include' })
+      .then(r => r.json())
+      .then(d => {
+        const data = d.data || d;
+        setBadges({ reviews: data.pendingReviewsCount || 0, messages: data.unreadMessagesCount || 0 });
+      })
+      .catch(() => {});
+  }, [user]);
 
-  // Auto-expand parent items when child is active
-  React.useEffect(() => {
-    const findActiveParents = (items: SidebarItem[]): string[] => {
-      const parents: string[] = [];
+  useEffect(() => {
+    if (pathname.startsWith('/admin/products')) setProductsExpanded(true);
+    if (pathname.startsWith('/admin/settings')) setSettingsExpanded(true);
+  }, [pathname]);
 
-      for (const item of items) {
-        // Check if the item itself is active (for parent items with valid hrefs)
-        const isItemActive = pathname === item.href || pathname.startsWith(item.href + '/');
+  const role = user?.role ?? '';
 
-        if (item.children) {
-          const hasActiveChild = item.children.some(child =>
-            pathname === child.href || pathname.startsWith(child.href + '/')
-          );
+  const navGroups: NavGroup[] = [
+    {
+      label: 'Overview',
+      items: [
+        { label: 'Dashboard', href: '/admin/dashboard', icon: 'home', roles: ['super_admin', 'staff'] },
+      ],
+    },
+    {
+      label: 'Catalogue',
+      items: [
+        {
+          label: 'Products', href: '/admin/products', icon: 'cube', roles: ['super_admin', 'staff'],
+          children: [
+            { label: 'All Products', href: '/admin/products', icon: 'list-bullet', roles: ['super_admin', 'staff'] },
+            { label: 'Categories', href: '/admin/products/categories', icon: 'tag', roles: ['super_admin', 'staff'] },
+            { label: 'Types', href: '/admin/products/types', icon: 'squares-2x2', roles: ['super_admin', 'staff'] },
+            { label: 'Inventory', href: '/admin/products/inventory', icon: 'archive-box', roles: ['super_admin', 'staff'] },
+          ],
+        },
+      ],
+    },
+    {
+      label: 'Sales',
+      items: [
+        { label: 'Orders', href: '/admin/orders', icon: 'shopping-bag', roles: ['super_admin', 'staff'] },
+        { label: 'Reviews', href: '/admin/reviews', icon: 'star', roles: ['super_admin', 'staff'], badge: badges.reviews },
+        { label: 'Wishlist', href: '/admin/wishlist', icon: 'heart', roles: ['super_admin', 'staff'] },
+      ],
+    },
+    {
+      label: 'People',
+      items: [
+        { label: 'Customers', href: '/admin/customers', icon: 'users', roles: ['super_admin'] },
+        { label: 'Staff', href: '/admin/staff', icon: 'user-group', roles: ['super_admin'] },
+      ],
+    },
+    {
+      label: 'Store',
+      items: [
+        { label: 'Messages', href: '/admin/contacts', icon: 'envelope', roles: ['super_admin'], badge: badges.messages },
+        {
+          label: 'Settings', href: '/admin/settings/delivery', icon: 'cog-6-tooth', roles: ['super_admin'],
+          children: [
+            { label: 'Delivery',          href: '/admin/settings/delivery',          icon: 'truck',         roles: ['super_admin'] },
+            { label: 'Payment',           href: '/admin/settings/payment',           icon: 'credit-card',   roles: ['super_admin'] },
+            { label: 'Contact',           href: '/admin/settings/contact',           icon: 'phone',         roles: ['super_admin'] },
+            { label: 'Social Links',      href: '/admin/settings/social',            icon: 'share',         roles: ['super_admin'] },
+            { label: 'Store',             href: '/admin/settings/store',             icon: 'building-storefront', roles: ['super_admin'] },
+            { label: 'Orders',            href: '/admin/settings/orders',            icon: 'clipboard-list', roles: ['super_admin'] },
+            { label: 'Notification Bar',  href: '/admin/settings/notification-bar',  icon: 'bell',          roles: ['super_admin'] },
+          ],
+        },
+      ],
+    },
+  ];
 
-          if (hasActiveChild || isItemActive) {
-            parents.push(item.id);
-            // Recursively check nested children
-            parents.push(...findActiveParents(item.children));
-          }
-        }
-      }
+  const isActive = (href: string) => {
+    if (href === '/admin/products') return pathname === '/admin/products';
+    return pathname === href || pathname.startsWith(href + '/');
+  };
 
-      return parents;
-    };
+  const hasRole = (roles: string[]) => roles.includes(role);
 
-    const activeParents = findActiveParents(sidebarItems);
-    setExpandedItems(prev => {
-      const newExpanded = Array.from(new Set([...prev, ...activeParents]));
-      return newExpanded;
-    });
-  }, [pathname, sidebarItems]);
+  const renderNavItem = (item: NavItem, indented = false) => {
+    if (!hasRole(item.roles)) return null;
+    const active = isActive(item.href);
 
-  const toggleExpanded = (itemId: string) => {
-    setExpandedItems(prev =>
-      prev.includes(itemId)
-        ? prev.filter(id => id !== itemId)
-        : [...prev, itemId]
+    return (
+      <Link
+        key={item.href}
+        href={item.href}
+        className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors ${
+          active
+            ? 'bg-primary-50 text-primary-700 font-medium'
+            : 'text-neutral-600 hover:bg-neutral-50 hover:text-neutral-900'
+        } ${indented ? 'pl-8' : ''}`}
+      >
+        <Icon name={item.icon} className={`w-4 h-4 flex-shrink-0 ${active ? 'text-primary-600' : 'text-neutral-400'}`} />
+        <span className="truncate flex-1">{item.label}</span>
+        {(item.badge ?? 0) > 0 && (
+          <span className="bg-error-500 text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center flex-shrink-0">
+            {(item.badge ?? 0) > 9 ? '9+' : item.badge}
+          </span>
+        )}
+      </Link>
     );
   };
 
-  const isItemActive = (href: string, children?: SidebarItem[]): boolean => {
-    if (pathname === href) return true;
-    if (pathname.startsWith(href + '/')) return true;
-
-    // Check if any child is active
-    if (children) {
-      return children.some(child => isItemActive(child.href, child.children));
-    }
-
-    return false;
-  };
-
-  const hasPermission = (roles: string[]) => {
-    return roles.includes(user?.role || 'super_admin');
-  };
-
-  const handleLogout = async () => {
-    try {
-      await logout();
-      toast.success('Logged out successfully');
-      router.push('/');
-    } catch (error) {
-      toast.error('Error logging out');
-    }
-  };
-
-  const renderSidebarItem = (item: SidebarItem, level = 0) => {
-    if (!hasPermission(item.roles)) return null;
-
-    const isActive = isItemActive(item.href, item.children);
-    const isExpanded = expandedItems.includes(item.id);
-    const hasChildren = item.children && item.children.length > 0;
-
-    const handleItemClick = (e: React.MouseEvent) => {
-      // Only prevent navigation for items that are purely expandable (no valid href)
-      if (hasChildren && item.href === '#') {
-        e.preventDefault();
-        toggleExpanded(item.id);
-      }
-      // For items with both href and children, always allow navigation and toggle expansion
-      else if (hasChildren && item.href !== '#') {
-        toggleExpanded(item.id);
-        // Don't prevent default - let the link navigate to parent page
-      }
-      // For items without children, always allow navigation (remove the preventDefault for active items)
-      // This ensures the first click always works
-    };
-
+  const renderExpandableGroup = (
+    item: NavItem,
+    expanded: boolean,
+    setExpanded: (fn: (v: boolean) => boolean) => void,
+    parentPrefix: string,
+  ) => {
+    if (!hasRole(item.roles)) return null;
+    const parentActive = pathname.startsWith(parentPrefix);
     return (
-      <div key={item.id}>
-        <div className="relative">
-          {hasChildren ? (
-            <Link
-              href={item.href}
-              onClick={handleItemClick}
-              className={`flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors group ${isActive
-                  ? 'bg-primary-100 text-primary-700 border-r-2 border-primary-500'
-                  : 'text-neutral-700 hover:bg-primary-50 hover:text-neutral-900'
-                } ${level > 0 ? 'ml-4' : ''}`}
-            >
-              <Icon
-                name={item.icon}
-                className={`w-5 h-5 mr-3 flex-shrink-0 ${isActive ? 'text-primary-500' : 'text-neutral-400 group-hover:text-neutral-500'
-                  }`}
-              />
-              {!isCollapsed && (
-                <>
-                  <span className="truncate">{item.label}</span>
-                  <Icon
-                    name={isExpanded ? 'chevron-up' : 'chevron-down'}
-                    className="w-4 h-4 text-gray-400 ml-auto"
-                  />
-                </>
-              )}
-            </Link>
-          ) : (
-            <Link
-              href={item.href}
-              className={`flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors group ${isActive
-                  ? 'bg-primary-100 text-primary-700 border-r-2 border-primary-500'
-                  : 'text-neutral-700 hover:bg-primary-50 hover:text-neutral-900'
-                } ${level > 0 ? 'ml-4' : ''}`}
-            >
-              <Icon
-                name={item.icon}
-                className={`w-5 h-5 mr-3 flex-shrink-0 ${isActive ? 'text-primary-500' : 'text-neutral-400 group-hover:text-neutral-500'
-                  }`}
-              />
-              {!isCollapsed && (
-                <span className="truncate">{item.label}</span>
-              )}
-            </Link>
-          )}
-        </div>
-
-        {/* Children */}
-        {hasChildren && !isCollapsed && isExpanded && (
-          <div className="mt-1 space-y-1">
-            {item.children?.map(child => renderSidebarItem(child, level + 1))}
+      <div key={item.href}>
+        <button
+          onClick={() => setExpanded(e => !e)}
+          className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors ${
+            parentActive && !expanded
+              ? 'bg-primary-50 text-primary-700 font-medium'
+              : 'text-neutral-600 hover:bg-neutral-50 hover:text-neutral-900'
+          }`}
+        >
+          <Icon name={item.icon} className={`w-4 h-4 flex-shrink-0 ${parentActive ? 'text-primary-600' : 'text-neutral-400'}`} />
+          <span className="truncate flex-1 text-left">{item.label}</span>
+          <Icon name={expanded ? 'chevron-up' : 'chevron-down'} className="w-3.5 h-3.5 text-neutral-400 flex-shrink-0" />
+        </button>
+        {expanded && item.children && (
+          <div className="mt-0.5 space-y-0.5 border-l-2 border-neutral-100 ml-5 pl-2">
+            {item.children.map(child => renderNavItem(child, false))}
           </div>
         )}
       </div>
     );
   };
 
+  const renderProductsGroup = (item: NavItem) =>
+    renderExpandableGroup(item, productsExpanded, setProductsExpanded, '/admin/products');
+
+  const renderSettingsGroup = (item: NavItem) =>
+    renderExpandableGroup(item, settingsExpanded, setSettingsExpanded, '/admin/settings');
+
   return (
-    <div className={`bg-white border-r border-primary-100 transition-all duration-300 ${isCollapsed ? 'w-16' : 'w-64'
-      }`}>
-      {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-primary-100">
-        <Link
-          href="/"
-          className="flex items-center justify-center p-2 hover:bg-primary-50 rounded-lg transition-colors group"
-        >
-          <div className="h-24 w-24 relative group-hover:scale-105 transition-transform">
-            <Image
-              src="/images/logo.png"
-              alt="Khaalis Harvest Logo"
-              fill
-              sizes="96px"
-              className="object-contain"
-            />
+    <div className="bg-white border-r border-neutral-200 w-60 flex-shrink-0 flex flex-col h-screen sticky top-0">
+      {/* Logo */}
+      <div className="px-5 py-4 border-b border-neutral-100 flex items-center">
+        <Link href="/" className="flex items-center gap-2">
+          <div className="relative w-8 h-8">
+            <Image src="/images/logo.png" alt="Khaalis Harvest" fill sizes="32px" className="object-contain" />
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-neutral-900 leading-tight">Khaalis</p>
+            <p className="text-[10px] text-neutral-400 leading-tight">Harvest Admin</p>
           </div>
         </Link>
-        <button
-          onClick={onToggle}
-          className="p-2 rounded-md hover:bg-gray-100 transition-colors"
-        >
-          <Icon
-            name={isCollapsed ? 'chevron-right' : 'chevron-left'}
-            className="w-5 h-5 text-gray-500"
-          />
-        </button>
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-        {sidebarItems.map(item => renderSidebarItem(item))}
+      <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-5">
+        {navGroups.map(group => {
+          const visibleItems = group.items.filter(item => hasRole(item.roles));
+          if (!visibleItems.length) return null;
+          return (
+            <div key={group.label}>
+              <p className="px-2 mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-neutral-400">
+                {group.label}
+              </p>
+              <div className="space-y-0.5">
+                {visibleItems.map(item => {
+                  if (!item.children) return renderNavItem(item);
+                  if (item.href.startsWith('/admin/settings')) return renderSettingsGroup(item);
+                  return renderProductsGroup(item);
+                })}
+              </div>
+            </div>
+          );
+        })}
       </nav>
 
-      {/* Footer */}
-      <div className="p-4 border-t border-gray-200">
-        {!isCollapsed ? (
-          <div className="space-y-3">
-            {/* User Info */}
-            <div className="flex items-center space-x-3 p-2 bg-gray-50 rounded-lg">
-              <div className="h-8 w-8 bg-gradient-to-br from-orange-500 to-green-500 rounded-full flex items-center justify-center">
-                <span className="text-white font-bold text-sm">
-                  {user?.name?.charAt(0)?.toUpperCase() || 'A'}
-                </span>
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-900 truncate">
-                  {user?.name || 'Admin'}
-                </p>
-                <p className="text-xs text-gray-500 truncate">
-                  {user?.phone || 'Admin User'}
-                </p>
-              </div>
-            </div>
-
-            {/* Logout Button */}
-            <button
-              onClick={handleLogout}
-              className="w-full flex items-center px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 hover:text-red-700 rounded-md transition-colors group"
-            >
-              <Icon name="logout" className="w-5 h-5 mr-3 text-red-500 group-hover:text-red-600" />
-              <span>Logout</span>
-            </button>
-
-            {/* Version Info */}
-            <div className="text-xs text-gray-500 text-center">
-              <p>Khaalis Harvest Admin v1.0.0</p>
-            </div>
+      {/* User footer */}
+      <div className="p-3 border-t border-neutral-100">
+        <div className="flex items-center gap-3 p-2 rounded-lg">
+          <div className="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center flex-shrink-0">
+            <span className="text-xs font-bold text-primary-700">
+              {user?.name?.charAt(0)?.toUpperCase() ?? 'A'}
+            </span>
           </div>
-        ) : (
-          /* Collapsed Footer */
-          <div className="space-y-2">
-            {/* User Avatar */}
-            <div className="flex justify-center">
-              <div className="h-8 w-8 bg-gradient-to-br from-orange-500 to-green-500 rounded-full flex items-center justify-center">
-                <span className="text-white font-bold text-sm">
-                  {user?.name?.charAt(0)?.toUpperCase() || 'A'}
-                </span>
-              </div>
-            </div>
-
-            {/* Logout Button */}
-            <button
-              onClick={handleLogout}
-              className="w-full flex items-center justify-center p-2 text-red-600 hover:bg-red-50 hover:text-red-700 rounded-md transition-colors group"
-              title="Logout"
-            >
-              <Icon name="logout" className="w-5 h-5 text-red-500 group-hover:text-red-600" />
-            </button>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-neutral-800 truncate">{user?.name ?? 'Admin'}</p>
+            <p className="text-xs text-neutral-400 capitalize">{role?.replace('_', ' ')}</p>
           </div>
-        )}
+          <button
+            onClick={() => logout()}
+            title="Logout"
+            className="text-neutral-400 hover:text-error-500 transition-colors"
+          >
+            <Icon name="logout" className="w-4 h-4" />
+          </button>
+        </div>
       </div>
     </div>
   );

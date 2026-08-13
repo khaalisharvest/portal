@@ -1,11 +1,9 @@
+import ProductLoader from '@/components/ui/ProductLoader';
+
 export default function Loading() {
   return (
-    <div className="min-h-screen bg-neutral-50 py-8">
-      <div className="container-custom">
-        <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary-600" />
-        </div>
-      </div>
+    <div className="min-h-screen bg-neutral-50 flex items-center justify-center">
+      <ProductLoader size="lg" />
     </div>
   );
 }

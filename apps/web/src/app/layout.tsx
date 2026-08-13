@@ -1,12 +1,15 @@
 import type { Metadata, Viewport } from 'next';
-import { Poppins } from 'next/font/google';
+import { Poppins, Playfair_Display } from 'next/font/google';
 import './globals.css';
 import { Providers } from './providers';
 import ConditionalHeader from '@/components/layout/ConditionalHeader';
 import ConditionalFooter from '@/components/layout/ConditionalFooter';
 import ConditionalNotificationBar from '@/components/layout/ConditionalNotificationBar';
 import WhatsAppButton from '@/components/ui/WhatsAppButton';
+import MaintenanceBanner from '@/components/ui/MaintenanceBanner';
+import MobileBottomNav from '@/components/layout/MobileBottomNav';
 import { APP_URL } from '@/config/env';
+import NavigationLoader from '@/components/ui/NavigationLoader';
 
 const poppins = Poppins({
   subsets: ['latin'],
@@ -15,9 +18,13 @@ const poppins = Poppins({
   display: 'swap',
 });
 
-// Disable static generation - app uses React Context (AuthContext, CartContext, FilterContext)
-// which requires dynamic rendering at request time, not static generation at build time
-export const dynamic = 'force-dynamic';
+const playfair = Playfair_Display({
+  subsets: ['latin'],
+  weight: ['400', '600', '700'],
+  style: ['normal', 'italic'],
+  variable: '--font-playfair',
+  display: 'swap',
+});
 
 export const viewport: Viewport = {
   width: 'device-width',
@@ -79,15 +86,18 @@ export default function RootLayout({
           href="https://fonts.googleapis.com/css2?family=Noto+Nastaliq+Urdu:wght@400;700&display=swap"
         />
       </head>
-      <body className={`${poppins.variable} font-sans bg-neutral-50 text-neutral-800`}>
+      <body className={`${poppins.variable} ${playfair.variable} font-sans bg-neutral-50 text-neutral-800`}>
         <Providers>
+          <NavigationLoader />
           <ConditionalNotificationBar />
           <ConditionalHeader />
-          <main className="min-h-screen">
+          <main className="min-h-screen pb-16 md:pb-0">
             {children}
           </main>
           <ConditionalFooter />
+          <MobileBottomNav />
           <WhatsAppButton />
+          <MaintenanceBanner />
         </Providers>
       </body>
     </html>

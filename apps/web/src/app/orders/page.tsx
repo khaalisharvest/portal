@@ -8,7 +8,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import Icon from '@/components/ui/Icon';
 import ProductLoader from '@/components/ui/ProductLoader';
 import ConfirmationDialog from '@/components/ui/ConfirmationDialog';
-import toast from 'react-hot-toast';
+import { toast } from 'sonner';
 
 function fmt(n: number) {
   return Number(n).toLocaleString('en-PK', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
@@ -122,6 +122,7 @@ export default function OrdersPage() {
       const response = await fetch(`/api/v1/orders?${params}`, {
         headers: {
         },
+        credentials: 'include',
       });
 
       if (response.ok) {
@@ -420,7 +421,7 @@ export default function OrdersPage() {
                         <span>View Details</span>
                       </button>
 
-                      {order.status !== 'delivered' && order.status !== 'cancelled' && order.status !== 'refunded' && (
+                      {order.status === 'pending' && (
                         <button
                           onClick={() => {
                             setPendingCancel({ id: order.id, orderNumber: order.orderNumber });

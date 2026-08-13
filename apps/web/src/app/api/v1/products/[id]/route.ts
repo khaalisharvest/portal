@@ -7,11 +7,11 @@ export const GET = (req: NextRequest, { params }: { params: { id: string } }) =>
 
 // Protected: update product (super_admin, staff)
 export const PUT = (req: NextRequest, { params }: { params: { id: string } }) =>
-  proxy(req, { path: `/api/v1/products/${params.id}`, requireAuth: true });
+  proxy(req, { path: `/api/v1/products/${params.id}`, requireAuth: true, requireRole: ['super_admin', 'staff'] });
 
 export const PATCH = (req: NextRequest, { params }: { params: { id: string } }) =>
-  proxy(req, { path: `/api/v1/products/${params.id}`, requireAuth: true });
+  proxy(req, { path: `/api/v1/products/${params.id}`, requireAuth: true, requireRole: ['super_admin', 'staff'] });
 
 // Protected: delete product (super_admin, staff)
 export const DELETE = (req: NextRequest, { params }: { params: { id: string } }) =>
-  proxy(req, { path: `/api/v1/products/${params.id}`, requireAuth: true });
+  proxy(req, { path: `/api/v1/products/${params.id}`, requireAuth: true, requireRole: ['super_admin', 'staff'] });

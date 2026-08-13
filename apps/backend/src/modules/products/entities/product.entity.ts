@@ -22,7 +22,7 @@ export class Product {
   name: string;
 
   @ApiProperty()
-  @Column({ type: 'text' })
+  @Column({ type: 'text', default: '' })
   description: string;
 
   @ApiProperty()
@@ -125,6 +125,36 @@ export class Product {
     originalPrice?: number;
     isAvailable?: boolean;
   }>;
+
+  // ── Food Labeling Fields (PFA compliance) ──────────────────────────────
+
+  @ApiProperty({ required: false })
+  @Column({ type: 'text', nullable: true })
+  ingredients?: string;
+
+  @ApiProperty({ required: false })
+  @Column({ type: 'json', nullable: true })
+  nutritionalInfo?: Record<string, string>;
+
+  @ApiProperty({ required: false })
+  @Column({ nullable: true })
+  expiryInfo?: string;
+
+  @ApiProperty({ required: false })
+  @Column({ nullable: true })
+  batchNumber?: string;
+
+  @ApiProperty({ required: false })
+  @Column({ nullable: true })
+  cprNumber?: string;
+
+  @ApiProperty({ required: false })
+  @Column({ nullable: true })
+  allergens?: string;
+
+  @ApiProperty({ required: false })
+  @Column({ type: 'text', nullable: true })
+  manufacturerInfo?: string;
 
   @ApiProperty()
   @CreateDateColumn()

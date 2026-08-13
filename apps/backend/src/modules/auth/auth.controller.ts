@@ -49,7 +49,7 @@ export class AuthController {
   @Throttle({ default: { limit: 5, ttl: 300000 } }) // 5 requests per 5 minutes
   @ApiOperation({ summary: 'Reset password using token from email' })
   resetPassword(@Body() dto: ResetPasswordDto) {
-    return this.authService.resetPassword(dto.token, dto.newPassword);
+    return this.authService.resetPassword(dto.otp, dto.identifier, dto.newPassword);
   }
 
   @Post('refresh')

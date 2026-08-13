@@ -67,7 +67,7 @@ function cartReducer(state: CartState, action: CartAction): CartState {
         newItems = [...state.items, action.payload];
       }
 
-      const totalItems = newItems.length; // Count unique products, not total quantity
+      const totalItems = newItems.length;
       const totalPrice = newItems.reduce((total, item) => total + (item.price * item.quantity), 0);
 
       return {
@@ -79,11 +79,11 @@ function cartReducer(state: CartState, action: CartAction): CartState {
     }
 
     case 'REMOVE_FROM_CART': {
-      const newItems = state.items.filter(item => 
-        !(item.productId === action.payload.productId && 
+      const newItems = state.items.filter(item =>
+        !(item.productId === action.payload.productId &&
           item.selectedVariant === action.payload.selectedVariant)
       );
-      const totalItems = newItems.length; // Count unique products, not total quantity
+      const totalItems = newItems.length;
       const totalPrice = newItems.reduce((total, item) => total + (item.price * item.quantity), 0);
 
       return {
@@ -96,13 +96,13 @@ function cartReducer(state: CartState, action: CartAction): CartState {
 
     case 'UPDATE_QUANTITY': {
       const newItems = state.items.map(item =>
-        item.productId === action.payload.productId && 
+        item.productId === action.payload.productId &&
         item.selectedVariant === action.payload.selectedVariant
           ? { ...item, quantity: action.payload.quantity }
           : item
       ).filter(item => item.quantity > 0);
 
-      const totalItems = newItems.length; // Count unique products, not total quantity
+      const totalItems = newItems.length;
       const totalPrice = newItems.reduce((total, item) => total + (item.price * item.quantity), 0);
 
       return {
@@ -141,7 +141,7 @@ function cartReducer(state: CartState, action: CartAction): CartState {
       };
 
     case 'LOAD_CART': {
-      const totalItems = action.payload.length; // Count unique products, not total quantity
+      const totalItems = action.payload.length;
       const totalPrice = action.payload.reduce((total, item) => total + (item.price * item.quantity), 0);
 
       return {

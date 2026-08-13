@@ -1,33 +1,14 @@
-import { API_URL, APP_NAME, APP_DESCRIPTION, DEFAULT_CURRENCY, DEFAULT_LANGUAGE } from '@/config/env';
+import { APP_NAME, APP_DESCRIPTION, DEFAULT_CURRENCY, DEFAULT_LANGUAGE } from '@/config/env';
 
 export interface AppConfig {
-  // Pagination
-  defaultPaginationLimit: number;
-  maxPaginationLimit: number;
-  
-  // Inventory
-  lowStockThreshold: number;
-  defaultMarketplaceMinQuantity: number;
-  defaultMarketplaceMaxQuantity: number;
-  
-  // Orders
-  minOrderAmount: number;
-  maxOrderAmount: number;
-  
-  // Delivery
+  // Delivery — always from DB via /api/v1/settings/delivery
   deliveryFee: number;
   freeDeliveryThreshold: number;
   isDeliveryEnabled: boolean;
-  
-  // UI
+
+  // UI — from .env only
   defaultCurrency: string | undefined;
   defaultLanguage: string | undefined;
-  
-  // Performance
-  cacheDuration: number;
-  maxSearchResults: number;
-  
-  // App Info
   appName: string | undefined;
   appDescription: string | undefined;
 }
@@ -37,69 +18,30 @@ class ConfigService {
   private configPromise: Promise<AppConfig> | null = null;
 
   async getConfig(): Promise<AppConfig> {
-    if (this.config) {
-      return this.config;
-    }
-
-    if (this.configPromise) {
-      return this.configPromise;
-    }
-
+    if (this.config) return this.config;
+    if (this.configPromise) return this.configPromise;
     this.configPromise = this.fetchConfig();
     this.config = await this.configPromise;
     return this.config;
   }
 
   private async fetchConfig(): Promise<AppConfig> {
-    try {
-      const deliveryResponse = await fetch(`/api/v1/settings/delivery`, {
-        headers: {
-          
-        },
-      });
-      
-      if (!deliveryResponse.ok) {
-        throw new Error('Failed to fetch delivery settings');
-      }
-      
-      const deliveryResponseData = await deliveryResponse.json();
-      const deliverySettings = deliveryResponseData.data || deliveryResponseData;
-      
-      return {
-        // Pagination
-        defaultPaginationLimit: 20,
-        maxPaginationLimit: 100,
-        
-        // Inventory
-        lowStockThreshold: 10,
-        defaultMarketplaceMinQuantity: 1,
-        defaultMarketplaceMaxQuantity: 999999,
-        
-        // Orders
-        minOrderAmount: 500,
-        maxOrderAmount: 50000,
-        
-        // Delivery - Use backend settings only
-        deliveryFee: deliverySettings.deliveryFee,
-        freeDeliveryThreshold: deliverySettings.freeDeliveryThreshold,
-        isDeliveryEnabled: deliverySettings.isDeliveryEnabled,
-        
-        // UI - Only from .env, no fallbacks
-        defaultCurrency: DEFAULT_CURRENCY,
-        defaultLanguage: DEFAULT_LANGUAGE,
-        
-        // Performance
-        cacheDuration: 300000,
-        maxSearchResults: 1000,
-        
-        // App Info - Only from .env, no fallbacks
-        appName: APP_NAME,
-        appDescription: APP_DESCRIPTION
-      };
-    } catch (error) {
-      console.error('Failed to fetch configuration:', error);
-      throw error; // Don't fallback, let the error propagate
-    }
+    const res = await fetch('/api/v1/settings/delivery');
+    if (!res.ok) throw new Error('Failed to fetch delivery settings');
+    const json = await res.json();
+    const d = json.data ?? json;
+
+    return {
+      // Delivery values come exclusively from the database — no hardcoded fallbacks
+      deliveryFee:          d.deliveryFee,
+      freeDeliveryThreshold: d.freeDeliveryThreshold,
+      isDeliveryEnabled:    d.isDeliveryEnabled,
+
+      defaultCurrency: DEFAULT_CURRENCY,
+      defaultLanguage: DEFAULT_LANGUAGE,
+      appName:         APP_NAME,
+      appDescription:  APP_DESCRIPTION,
+    };
   }
 
   async refreshConfig(): Promise<AppConfig> {
@@ -108,44 +50,12 @@ class ConfigService {
     return this.getConfig();
   }
 
-  // Helper methods for common config values
-  async getPaginationLimit(requestedLimit?: number): Promise<number> {
-    const config = await this.getConfig();
-    return Math.min(requestedLimit || config.defaultPaginationLimit, config.maxPaginationLimit);
-  }
-
-  async getLowStockThreshold(): Promise<number> {
-    const config = await this.getConfig();
-    return config.lowStockThreshold;
-  }
-
   async getDeliverySettings() {
-    try {
-      const config = await this.getConfig();
-      return {
-        deliveryFee: config.deliveryFee,
-        freeDeliveryThreshold: config.freeDeliveryThreshold,
-        isDeliveryEnabled: config.isDeliveryEnabled
-      };
-    } catch (error) {
-      console.error('Failed to get delivery settings:', error);
-      throw new Error('Unable to load delivery settings. Please try again.');
-    }
-  }
-
-  async getOrderLimits() {
     const config = await this.getConfig();
     return {
-      minOrderAmount: config.minOrderAmount,
-      maxOrderAmount: config.maxOrderAmount
-    };
-  }
-
-  async getMarketplaceLimits() {
-    const config = await this.getConfig();
-    return {
-      minQuantity: config.defaultMarketplaceMinQuantity,
-      maxQuantity: config.defaultMarketplaceMaxQuantity
+      deliveryFee:          config.deliveryFee,
+      freeDeliveryThreshold: config.freeDeliveryThreshold,
+      isDeliveryEnabled:    config.isDeliveryEnabled,
     };
   }
 }

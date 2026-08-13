@@ -15,9 +15,13 @@ export class CloudinaryService {
   /** Extract Cloudinary public_id from a CDN URL. Returns null for non-Cloudinary URLs. */
   getPublicId(url: string): string | null {
     if (!url?.includes('cloudinary.com')) return null;
-    // URL format: .../upload/v1234567/folder/filename.ext
-    const match = url.match(/\/upload\/(?:v\d+\/)?(.+?)(?:\.[^./]+)?$/);
-    return match ? match[1] : null;
+    // Handle URLs with transformation params before version: .../upload/q_auto,f_auto/v{n}/public_id.ext
+    // or without transformation params: .../upload/v{n}/public_id.ext
+    const withVersion = url.match(/\/v\d+\/(.+?)(?:\.[^./]+)?$/);
+    if (withVersion) return withVersion[1];
+    // Fallback: no version in URL — take path directly after /upload/
+    const withoutVersion = url.match(/\/upload\/(.+?)(?:\.[^./]+)?$/);
+    return withoutVersion ? withoutVersion[1] : null;
   }
 
   /** Delete a single image from Cloudinary. Silently skips non-Cloudinary URLs. */

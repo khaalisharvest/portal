@@ -2,10 +2,12 @@
 
 import { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
-import toast from 'react-hot-toast';
+import { toast } from 'sonner';
 import { categoriesApi, Category, CreateCategoryDto } from '@/services/categories';
 import Icon from '@/components/ui/Icon';
 import ConfirmationDialog from '@/components/ui/ConfirmationDialog';
+import PageHeader from '@/components/admin/PageHeader';
+import { AdminSkeletonRow } from '@/components/admin/AdminSkeletonRow';
 
 export default function CategoriesManagement() {
   const [categories, setCategories] = useState<Category[]>([]);
@@ -142,47 +144,40 @@ export default function CategoriesManagement() {
     setShowForm(false);
   };
 
-  if (loading) {
-    return <div className="text-center py-8">Loading categories...</div>;
-  }
-
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900 font-['Poppins']">Organic Product Categories</h2>
-          <p className="text-gray-600 font-['Open_Sans']">Create and manage categories for all organic products - from fresh produce to dairy, plants, and natural goods</p>
-        </div>
-        <button
-          onClick={() => setShowForm(true)}
-          className="bg-gradient-to-r from-orange-500 to-green-500 text-white px-6 py-2 rounded-lg hover:from-orange-600 hover:to-green-600 transition-all duration-200 flex items-center space-x-2"
-          title="Add new category"
-        >
-          <Icon name="plus" className="w-5 h-5" />
-          <span>Add Category</span>
-        </button>
-      </div>
+      <PageHeader
+        title="Categories"
+        breadcrumbs={[{ label: 'Admin', href: '/admin/dashboard' }, { label: 'Products', href: '/admin/products' }, { label: 'Categories' }]}
+        action={
+          <button onClick={() => { setEditingCategory(null); setShowForm(true); }} className="btn-primary text-sm px-4 py-2">
+            + Add Category
+          </button>
+        }
+      />
 
       {/* Categories List */}
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h3 className="text-lg font-medium text-gray-900">All Categories</h3>
+      <div className="bg-white rounded-xl border border-neutral-200 overflow-hidden">
+        <div className="px-6 py-4 border-b border-neutral-200">
+          <h3 className="text-lg font-medium text-neutral-900">All Categories</h3>
         </div>
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+          <table className="min-w-full divide-y divide-neutral-200">
+            <thead className="bg-neutral-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Order</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">Category</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">Description</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">Order</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">Status</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {categories.length === 0 ? (
+            <tbody className="bg-white divide-y divide-neutral-200">
+              {loading ? (
+                Array.from({ length: 4 }).map((_, i) => <AdminSkeletonRow key={i} cols={5} />)
+              ) : categories.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
+                  <td colSpan={5} className="px-6 py-12 text-center text-neutral-500">
                     <div className="flex flex-col items-center space-y-4">
                       <div className="h-16 w-16 relative">
                         <Image
@@ -199,7 +194,7 @@ export default function CategoriesManagement() {
                 </tr>
               ) : (
                 categories.map((category) => (
-                  <tr key={category.id} className="hover:bg-gray-50">
+                  <tr key={category.id} className="hover:bg-neutral-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
                         <div className="flex-shrink-0 h-10 w-10">
@@ -216,19 +211,19 @@ export default function CategoriesManagement() {
                           )}
                         </div>
                         <div className="ml-4">
-                          <div className="text-sm font-medium text-gray-900">{category.name}</div>
-                          <div className="text-sm text-gray-500">ID: {category.id.slice(0, 8)}...</div>
+                          <div className="text-sm font-medium text-neutral-900">{category.name}</div>
+                          <div className="text-sm text-neutral-500">ID: {category.id.slice(0, 8)}...</div>
                         </div>
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <div className="text-sm text-gray-900 max-w-xs truncate">
+                      <div className="text-sm text-neutral-900 max-w-xs truncate">
                         {category.description || 'No description'}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary-100 text-primary-800">
                           {category.sortOrder}
                         </span>
                       </div>
@@ -275,11 +270,11 @@ export default function CategoriesManagement() {
           {/* Panel */}
           <div className="w-full max-w-md bg-white flex flex-col shadow-2xl overflow-hidden">
             {/* Header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-900">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-200">
+              <h3 className="text-lg font-semibold text-neutral-900">
                 {editingCategory ? 'Edit Category' : 'New Category'}
               </h3>
-              <button onClick={resetForm} className="text-gray-400 hover:text-gray-600">
+              <button onClick={resetForm} className="text-neutral-400 hover:text-neutral-600">
                 <Icon name="close" className="w-5 h-5" />
               </button>
             </div>
@@ -290,7 +285,7 @@ export default function CategoriesManagement() {
 
                 {/* Name */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-neutral-700 mb-1">
                     Name <span className="text-red-500">*</span>
                   </label>
                   <input
@@ -302,15 +297,16 @@ export default function CategoriesManagement() {
                       const normalizedNext = next.trim().toLowerCase();
                       const normalizedCurrent = editingCategory?.name?.trim().toLowerCase();
                       const duplicate = categories.some(
-                        c => c.name.trim().toLowerCase() === normalizedNext && normalizedNext !== normalizedCurrent
+                        c => c.name.trim().toLowerCase() === normalizedNext &&
+                             (!editingCategory || c.id !== editingCategory.id)
                       );
                       setIsDuplicateName(duplicate);
                     }}
                     onBlur={() => setNameTouched(true)}
-                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors ${
+                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-400 focus:border-primary-400 transition-colors ${
                       isDuplicateName && nameTouched
                         ? 'border-red-400 focus:ring-red-500 focus:border-red-500'
-                        : 'border-gray-300'
+                        : 'border-neutral-300'
                     }`}
                     placeholder="e.g., Fresh Produce, Dairy Products"
                     required
@@ -326,11 +322,11 @@ export default function CategoriesManagement() {
 
                 {/* Description */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                  <label className="block text-sm font-medium text-neutral-700 mb-1">Description</label>
                   <textarea
                     value={formData.description}
                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors resize-none"
+                    className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-400 focus:border-primary-400 transition-colors resize-none"
                     rows={2}
                     placeholder="Describe this category and what products it includes..."
                   />
@@ -338,7 +334,7 @@ export default function CategoriesManagement() {
 
                 {/* Image */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Image</label>
+                  <label className="block text-sm font-medium text-neutral-700 mb-2">Image</label>
 
                   {/* Preview — shows local blob OR saved URL */}
                   {(pendingImagePreview || formData.image) && (
@@ -346,10 +342,10 @@ export default function CategoriesManagement() {
                       <img
                         src={pendingImagePreview || formData.image}
                         alt="Preview"
-                        className="w-full h-full object-cover rounded-lg border border-gray-200"
+                        className="w-full h-full object-cover rounded-lg border border-neutral-200"
                       />
                       {pendingImagePreview && (
-                        <span className="absolute bottom-0 left-0 right-0 text-center text-xs bg-orange-500 text-white rounded-b-lg py-0.5">
+                        <span className="absolute bottom-0 left-0 right-0 text-center text-xs bg-primary-500 text-white rounded-b-lg py-0.5">
                           Saves on Save
                         </span>
                       )}
@@ -368,11 +364,11 @@ export default function CategoriesManagement() {
 
                   {/* Upload button — stores file locally, no network call yet */}
                   {!pendingImageFile && !pendingImagePreview && !formData.image && (
-                    <label className="flex items-center gap-2 cursor-pointer bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg px-4 py-2.5 hover:border-orange-400 transition-colors mb-2">
-                      <svg className="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <label className="flex items-center gap-2 cursor-pointer bg-neutral-50 border-2 border-dashed border-neutral-300 rounded-lg px-4 py-2.5 hover:border-primary-400 transition-colors mb-2">
+                      <svg className="w-4 h-4 text-neutral-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                       </svg>
-                      <span className="text-sm text-gray-500">Choose image (JPG, PNG, WebP — max 5MB)</span>
+                      <span className="text-sm text-neutral-500">Choose image (JPG, PNG, WebP — max 5MB)</span>
                       <input
                         type="file"
                         accept="image/jpeg,image/png,image/webp"
@@ -399,7 +395,7 @@ export default function CategoriesManagement() {
                       type="text"
                       value={formData.image}
                       onChange={(e) => setFormData({ ...formData, image: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors text-sm"
+                      className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-400 focus:border-primary-400 transition-colors text-sm"
                       placeholder="Or paste image URL directly"
                     />
                   )}
@@ -408,16 +404,16 @@ export default function CategoriesManagement() {
                 {/* Active toggle */}
                 <div className="flex items-center justify-between">
                   <div>
-                    <span className="text-sm font-medium text-gray-700">Active</span>
-                    <p className="text-xs text-gray-400">Make this category visible to customers</p>
+                    <span className="text-sm font-medium text-neutral-700">Active</span>
+                    <p className="text-xs text-neutral-400">Make this category visible to customers</p>
                   </div>
                   <button
                     type="button"
                     onClick={() => setFormData({ ...formData, active: !formData.active })}
-                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 ${
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 cursor-pointer select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-400 focus-visible:ring-offset-1 ${
                       formData.active
-                        ? 'bg-gradient-to-r from-orange-500 to-green-500'
-                        : 'bg-gray-300'
+                        ? 'bg-primary-500'
+                        : 'bg-neutral-300'
                     }`}
                     aria-pressed={formData.active}
                     aria-label="Toggle category active"
@@ -434,11 +430,11 @@ export default function CategoriesManagement() {
             </div>
 
             {/* Footer */}
-            <div className="px-6 py-4 border-t border-gray-200 flex justify-end gap-3 bg-gray-50">
+            <div className="px-6 py-4 border-t border-neutral-200 flex justify-end gap-3 bg-neutral-50">
               <button
                 type="button"
                 onClick={resetForm}
-                className="px-4 py-2 text-sm text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                className="px-4 py-2 text-sm text-neutral-700 bg-white border border-neutral-300 rounded-lg hover:bg-neutral-50 transition-colors"
               >
                 Cancel
               </button>
@@ -446,7 +442,7 @@ export default function CategoriesManagement() {
                 type="submit"
                 form="cat-form"
                 disabled={isDuplicateName || !formData.name.trim()}
-                className="px-5 py-2 text-sm font-medium text-white bg-gradient-to-r from-orange-500 to-green-500 rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+                className="btn-primary text-sm px-5 py-2 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {editingCategory ? 'Update' : 'Create'}
               </button>
