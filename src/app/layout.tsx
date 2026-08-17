@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import { Poppins } from 'next/font/google';
 import './globals.css';
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://khaalisharvest.com';
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://www.khaalisharvest.com';
 
 const poppins = Poppins({
   subsets: ['latin'],

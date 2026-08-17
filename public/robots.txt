@@ -11,5 +11,5 @@ Disallow: /super-admin/
 Disallow: /auth/
 
 # Sitemap location
-Sitemap: https://khaalisharvest.duckdns.org/sitemap.xml
+Sitemap: https://www.khaalisharvest.com/sitemap.xml
 

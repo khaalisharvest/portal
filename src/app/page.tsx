@@ -12,7 +12,7 @@ export const metadata: Metadata = {
     title: 'Khaalis Harvest — Something Pure is Coming',
     description:
       "Lahore's first truly organic marketplace. No chemicals. No shortcuts. No compromises. Coming soon.",
-    url: 'https://khaalisharvest.com',
+    url: 'https://www.khaalisharvest.com',
     siteName: 'Khaalis Harvest',
     locale: 'en_US',
     type: 'website',
@@ -32,7 +32,7 @@ export const metadata: Metadata = {
     images: ['/images/og-image.jpg'],
   },
   alternates: {
-    canonical: 'https://khaalisharvest.com',
+    canonical: 'https://www.khaalisharvest.com',
   },
 };
 
